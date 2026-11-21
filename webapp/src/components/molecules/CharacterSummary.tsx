@@ -15,7 +15,7 @@ export interface CharacterSummaryProps {
 export function CharacterSummary({ character, stale }: CharacterSummaryProps) {
   return (
     <div className="ft-charline">
-      <span className="ft-charline__name">
+      <span className="ft-charline__name" title={`${character.firstName} ${character.surname}`}>
         {character.firstName} {character.surname}
       </span>
       <Badge tone={character.faction}>{FACTION_LABEL[character.faction]}</Badge>

@@ -25,9 +25,11 @@ export interface CharacterPanelProps {
   error?: string | null;
   /** Where "Get the addon" points. Defaults to ADDON_URL; null renders plain text. */
   addonUrl?: string | null;
+  /** Only the part behind "Edit": details, update and remove, without the card or the one-line summary (the strip shows those). */
+  embedded?: boolean;
 }
 
-export function CharacterPanel({ character, now, onSubmitCode, onForget, busy, error, addonUrl = ADDON_URL }: CharacterPanelProps) {
+export function CharacterPanel({ character, now, onSubmitCode, onForget, busy, error, addonUrl = ADDON_URL, embedded }: CharacterPanelProps) {
   const [replacing, setReplacing] = useState(false);
 
   if (!character) {
@@ -59,11 +61,11 @@ export function CharacterPanel({ character, now, onSubmitCode, onForget, busy, e
   const stale = ageS > STALE_CODE_AFTER_S;
   const showForm = replacing || !!error;
 
-  return (
-    <Card title="Your character">
-      <CharacterSummary character={character} stale={stale} />
-      {stale && <Notice tone="warn">Code is {formatAge(ageS)} old. Refresh in the addon.</Notice>}
-      <Details summary="Details">
+  const body = (
+    <>
+      {!embedded && <CharacterSummary character={character} stale={stale} />}
+      {!embedded && stale && <Notice tone="warn">Code is {formatAge(ageS)} old. Refresh in the addon.</Notice>}
+      <Details summary="Details" defaultOpen={embedded}>
         <Field label="Realm">{character.realmName}</Field>
         <Field label="Region">{character.regionName}</Field>
         <Field label="Zone">{character.zone || "Unknown"}</Field>
@@ -94,6 +96,8 @@ export function CharacterPanel({ character, now, onSubmitCode, onForget, busy, e
           Remove character
         </Button>
       </div>
-    </Card>
+    </>
   );
+  if (embedded) return <div className="ft-charedit">{body}</div>;
+  return <Card title="Your character">{body}</Card>;
 }

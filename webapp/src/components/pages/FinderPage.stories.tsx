@@ -68,6 +68,7 @@ export const IdleOneDungeon: Story = { args: { dungeons: { dungeons: rec.dungeon
 export const IdleThirtyDungeons: Story = { args: { dungeons: manyDungeons(30) } };
 export const IdleAfterStop: Story = { args: { state: makeState({ search: idleSearch() }) } };
 export const IdleOnPhone: Story = { ...phone, args: {} };
+export const StaleCodeOnPhone: Story = { ...phone, args: { state: makeState({ character: makeCharacter({ createdAt: NOW - 95 * MIN }) }) } };
 export const IdleThirtyDungeonsOnPhone: Story = { ...phone, args: { dungeons: manyDungeons(30) } };
 
 /** A code made 95 minutes ago. */

@@ -5,6 +5,7 @@ import { Button } from "../atoms/Button";
 import { Card } from "../atoms/Card";
 import { Notice } from "../atoms/Notice";
 import { Switch } from "../atoms/Toggle";
+import { Heading } from "../atoms/Typography";
 import { DungeonOption } from "../molecules/DungeonOption";
 import { FirstRunStep } from "../molecules/FirstRunStep";
 
@@ -72,8 +73,11 @@ export function DungeonPicker({
   );
 
   return (
-    <Card title="Dungeons">
+    <Card className="ft-picker">
       <div className="ft-picker__head">
+        <Heading level={2} className="ft-card__title">
+          Dungeons
+        </Heading>
         <Switch
           checked={combine}
           disabled={frozen}

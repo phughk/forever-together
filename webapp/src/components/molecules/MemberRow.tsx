@@ -43,7 +43,9 @@ export function MemberRow({ member, revealName, onCopyName }: MemberRowProps) {
       </span>
       <RoleIcon role={member.role} />
       <div className="ft-member__main">
-        <span className="ft-member__name">{member.self ? "You" : revealName && name ? name : ROLE_LABEL[member.role]}</span>
+        <span className="ft-member__name" title={revealName && name && !member.self ? name : undefined}>
+          {member.self ? "You" : revealName && name ? name : ROLE_LABEL[member.role]}
+        </span>
         <span className="ft-member__meta">
           Level {member.level}
           {member.itemLevel > 0 ? `, item level ${member.itemLevel}` : ""}

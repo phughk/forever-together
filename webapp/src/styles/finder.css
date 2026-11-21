@@ -17,7 +17,7 @@
 
 /* Character one-line summary (molecule) */
 .ft-charline { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; min-width: 0; }
-.ft-charline__name { font-weight: 700; overflow-wrap: anywhere; }
+.ft-charline__name { font-weight: 700; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ft-charline__fact { color: var(--text-muted); font-size: 0.92rem; }
 
 /* Dungeon option as a button */
@@ -27,7 +27,21 @@ button.ft-dungeon:focus-visible { outline: 2px solid var(--focus); outline-offse
 button.ft-dungeon:disabled { opacity: 0.6; cursor: not-allowed; }
 .ft-dungeon__go { color: var(--text-muted); font-size: 1.1rem; }
 
+/* Character strip (organism): the idle screen's compact character line */
+.ft-strip { display: grid; gap: var(--space-2); padding: var(--space-2) var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; }
+.ft-strip__row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-width: 0; }
+.ft-strip__row > .ft-charline { flex: 1 1 auto; }
+.ft-strip__stale { margin: 0; font-size: 0.88rem; color: var(--warn); }
+.ft-charedit { display: grid; gap: var(--space-3); padding-top: var(--space-2); border-top: 1px solid var(--border); min-width: 0; }
+
+/* Idle screen: the page is exactly one viewport tall and the dungeon list takes what is left, scrolling inside itself. */
+.ft-page:has(.ft-picker__region) { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+.ft-page:has(.ft-picker__region) .ft-page__main { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.ft-card.ft-picker { display: flex; flex-direction: column; flex: 0 1 auto; min-height: 0; }
+.ft-picker > * { flex: none; }
+.ft-picker > .ft-picker__region { flex: 1 1 auto; }
+
 /* Dungeon picker list region */
 .ft-picker__head { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: space-between; }
-.ft-picker__region { display: grid; gap: var(--space-2); max-height: max(12rem, min(34rem, calc(100dvh - 30.5rem))); overflow-y: auto; overscroll-behavior: contain; padding-right: var(--space-1); }
+.ft-picker__region { display: grid; gap: var(--space-2); align-content: start; min-height: 8rem; overflow-y: auto; overscroll-behavior: contain; padding-right: var(--space-1); }
 .ft-picker__bar { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; background: var(--surface); border-top: 1px solid var(--border); }
