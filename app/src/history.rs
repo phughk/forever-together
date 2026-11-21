@@ -1,6 +1,7 @@
 //! Search history (ADR 0027): one small entry per finished search, kept in the key-value store
-//! so data accumulates. Nothing reads it for the player yet (estimates are stage 8b), and it is
-//! never part of the API, logs, exports or pairing.
+//! so data accumulates. The only reader is the pure `estimate` submodule, which gives at most one
+//! banded outlook and never shows data; the entries themselves are never part of the API, logs,
+//! exports or pairing.
 //!
 //! Pure functions over `&dyn Store` with the time passed in, so `MemStore` and a fake clock
 //! cover the tests. The engine only emits a `SearchFacts` record; the app layer builds the
@@ -10,6 +11,8 @@
 //! Entries hold no name, no peer id and no zone text. They do hold level, own role, dungeon,
 //! realm, faction and UTC times, which is a log of when the player plays: see the ADR for the
 //! retention rules (clear action, cleared with the character).
+
+pub mod estimate;
 
 use crate::code::{Faction, Role};
 use crate::config::{

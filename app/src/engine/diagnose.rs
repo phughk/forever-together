@@ -370,7 +370,12 @@ mod tests {
 
     #[test]
     fn bottleneck_agrees_with_the_role_gap_situations() {
-        for own in [None, Some(Role::Tank), Some(Role::Healer), Some(Role::Damage)] {
+        for own in [
+            None,
+            Some(Role::Tank),
+            Some(Role::Healer),
+            Some(Role::Damage),
+        ] {
             for t in 0..3 {
                 for h in 0..3 {
                     for d in 0..5 {

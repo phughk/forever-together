@@ -57,7 +57,10 @@ fn the_live_stats_carry_the_checkpoint_only_once_it_is_taken() {
     let mut c = Cluster::new(&[1]);
     solo(&mut c);
     c.run(50);
-    assert_eq!(c.nodes[0].engine.view(c.now).stats.unwrap().checkpoint, None);
+    assert_eq!(
+        c.nodes[0].engine.view(c.now).stats.unwrap().checkpoint,
+        None
+    );
     c.run(10);
     let cp = c.nodes[0].engine.view(c.now).stats.unwrap().checkpoint;
     assert_eq!(cp.map(|c| c.counts), Some(RoleCounts::default()));
