@@ -31,3 +31,4 @@ Decisions for forever-together (short code `wowft`, working name `p2prdf` in old
 | 0025 | [Peers agree on a party by leader invitations: a tank invites from its own sample, invitees follow the best-ranked leader](0025-leader-invitations.md) | Accepted |
 | 0026 | [The app reports search health from this peer's own observations](0026-search-health-from-own-observations.md) | Accepted (first slice; amends 0011) |
 | 0027 | [The app keeps a local history of finished searches, one entry each, and shows none of it](0027-search-history.md) | Accepted (stage 8a, record only; extends 0008, amends 0013) |
+| 0028 | [The desktop app installs the bundled addon](0028-the-desktop-app-installs-the-bundled-addon.md) | Accepted (first slice; amends 0002, 0013, 0020) |

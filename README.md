@@ -2,7 +2,7 @@
 
 A peer-to-peer random dungeon finder for World of Warcraft Forever (short code `wowft`). Forever has no random dungeon finder, so this app finds a group of five for you without a hosted matchmaking service.
 
-How it works, in short: a small in-game addon shows your character as a text code (and a QR). You paste the code into the desktop app (or open the app's page on your phone), pick dungeons, and the app finds other players over a peer-to-peer network. When five compatible players are found, everyone confirms, and then the names are shown so you can invite each other in game.
+How it works, in short: a small in-game addon shows your character as a text code (and a QR). You install the addon from the desktop app's Settings (or by script, for developers), paste the code into the desktop app (or open the app's page on your phone), pick dungeons, and the app finds other players over a peer-to-peer network. When five compatible players are found, everyone confirms, and then the names are shown so you can invite each other in game.
 
 Status: the code is built and tested without a live game. The unverified assumptions (client calls, the hosted iroh components, the simulation result) are listed in [`docs/spike-s0.md`](docs/spike-s0.md). Read that file before trusting the matching rate.
 
@@ -26,14 +26,14 @@ mise run dev        # desktop app (Tauri + Vite)
 | `mise run test` | Rust unit and integration tests (about 40 s, the multi-instance tests are slow on purpose) |
 | `mise run lint` | clippy with warnings denied, and a rustfmt check |
 | `mise run test-addon` | build the headless WoW Lua VM and run the addon tests in it. The submodule URL is a local path, so git may refuse to clone it ("transport 'file' not allowed"); run `git -c protocol.file.allow=always submodule update --init vendor/wow-forever-addons` once in your own shell |
-| `mise run install-addon` | copy the addon into `$WOW_ADDONS_DIR` (must end in `AddOns`) |
+| `mise run install-addon` | copy the addon into `$WOW_ADDONS_DIR` (must end in `AddOns`). For developers; players install the addon from the desktop app's Settings, in the Addon card |
 | `mise run update-icons` | regenerate the app icons (`app/icons/`) and the addon icon (`addon/ForeverTogether/icon.tga`) from `assets/icon_1024.png` |
 | `mise run check` | typecheck, lint, test and test-addon: everything CI should run |
 | `mise run build` | bundle the app for this platform |
 
 ## Getting your character code and QR in game
 
-1. Set `WOW_ADDONS_DIR` (see `mise.local.toml`; it must end in `AddOns`) and run `mise run install-addon`.
+1. Install the addon. In the desktop app, open Settings and use the Addon card (it finds the game's AddOns folder or takes a pasted path; the first install asks you to confirm the folder; it replaces the whole `ForeverTogether` folder; unverified on a real install, see [ADR 0028](docs/adr/0028-the-desktop-app-installs-the-bundled-addon.md)). Developers can instead set `WOW_ADDONS_DIR` (see `mise.local.toml`; it must end in `AddOns`) and run `mise run install-addon`.
 2. In game, type `/reload` so the client loads the addon (a full client restart also works).
 3. Type `/wowft`. A window opens showing the code as text, the QR, the fields it understood, how old the code is and a Refresh button. Escape closes it. `/wowft code` prints the code in chat instead, and `/wowft help` lists the commands.
 4. Click the text box (it selects all) and press Ctrl+C, then paste it into the app's "Character code from the addon" box.

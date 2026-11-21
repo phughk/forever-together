@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Copy addon/ForeverTogether into the game's AddOns directory. Refuses to run unless $WOW_ADDONS_DIR is set and its
 # last path component is "AddOns", because rsync --delete empties the destination folder.
+# For developers (needs a repo checkout, bash and rsync). Players install the addon from the desktop app's Settings,
+# in the Addon card (ADR 0028).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
