@@ -156,9 +156,11 @@ impl Sample {
     }
 
     /// A peer announced it is in a committed party: drop it and ignore older ads.
-    pub fn mark_taken(&mut self, peer: PeerId, counter: u16) {
-        self.entries.remove(&peer);
+    /// Returns whether an ad of that peer was in the sample (and so is gone now).
+    pub fn mark_taken(&mut self, peer: PeerId, counter: u16) -> bool {
+        let had = self.entries.remove(&peer).is_some();
         self.taken.insert(peer, counter);
+        had
     }
 
     pub fn remove(&mut self, peer: &PeerId) {

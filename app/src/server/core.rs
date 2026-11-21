@@ -105,8 +105,8 @@ pub struct SeenView {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DiagnosisView {
-    /// One of `warming_up`, `not_connected`, `alone`, `no_tank`, `no_healer`,
-    /// `short_on_damage`, `healthy`. A String so a newer server can add codes.
+    /// One of `warming_up`, `not_connected`, `others_grouping`, `alone`, `no_tank`,
+    /// `no_healer`, `short_on_damage`, `nobody_answered`, `healthy`. A String so a newer server can add codes.
     pub situation: String,
     /// The search expired: `seen` is the frozen peak, not live.
     pub ended: bool,
@@ -116,6 +116,27 @@ pub struct DiagnosisView {
     /// The sample hit its cap, so the counts are a slice.
     pub sample_full: bool,
     pub network_peers: u32,
+    /// This node's own attempt counters (ADR 0026); frozen when `ended`. Counts only.
+    #[serde(default)]
+    pub attempts: AttemptsView,
+}
+
+/// What this node sent and received while looking for a party.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AttemptsView {
+    /// Invitations sent as a leader, one per invited peer.
+    pub invites_sent: u32,
+    /// Accepts received for them.
+    pub accepts_got: u32,
+    /// Invitations received as an invitee.
+    pub invites_got: u32,
+    /// Distinct peers whose ads left the sample because a party-taken notice named them.
+    pub taken_seen: u32,
+    /// Parties that fell apart because a member did not answer.
+    pub drops: u32,
+    /// Parties declined or left unconfirmed.
+    pub declines: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

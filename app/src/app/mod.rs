@@ -445,7 +445,9 @@ fn diagnosis_view(view: &View, network_peers: u32) -> Option<DiagnosisView> {
         network_peers,
         seen: c,
         own_role: Some(st.own_role),
+        attempts: st.attempts,
     });
+    let a = st.attempts;
     Some(DiagnosisView {
         situation: situation.code().to_string(),
         ended,
@@ -460,6 +462,14 @@ fn diagnosis_view(view: &View, network_peers: u32) -> Option<DiagnosisView> {
         ),
         sample_full: st.sample_full,
         network_peers,
+        attempts: AttemptsView {
+            invites_sent: a.invites_sent,
+            accepts_got: a.accepts_got,
+            invites_got: a.invites_got,
+            taken_seen: a.taken_seen,
+            drops: a.drops,
+            declines: a.declines,
+        },
     })
 }
 
