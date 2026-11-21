@@ -3,28 +3,43 @@
   --font: "Lora", Georgia, system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  --bg: #f5f4f0;
-  --surface: #ffffff;
-  --surface-2: #ecebe5;
-  --border: #d4d1c7;
-  --text: #1d1c19;
-  --text-muted: #5f5c52;
-  --accent: #8a5a00;
-  --accent-bg: #f6e7c4;
-  --on-accent: #ffffff;
-  --accent-solid: #7a4f00;
-  --good: #1f6b3a;
-  --good-bg: #d9efe0;
-  --warn: #8a5a00;
-  --warn-bg: #fbeacb;
-  --bad: #a3261d;
-  --bad-bg: #f8dcd8;
-  --info: #254f8f;
-  --info-bg: #dce8f9;
-  --focus: #1b5fd1;
+  /* Brand palette (raw). Semantic tokens below are built from these. */
+  --p-orange: #ffae67;
+  --p-pink: #ff40cc;
+  --p-purple: #7a18af;
+  --p-ink: #0e0730;
+  --p-violet: #5b09f2;
+  --p-lavender: #9962ff;
+  --p-orchid: #ed9eff;
+  --p-mint: #ccffc1;
+  --p-green: #60d946;
+  --p-teal: #029a80;
+  --p-navy: #042d5b;
+  --p-aqua: #38e6c8;
 
-  --alliance: #2457b5;
-  --horde: #a3261d;
+  --bg: color-mix(in srgb, var(--p-orchid) 14%, white);
+  --surface: #ffffff;
+  --surface-2: color-mix(in srgb, var(--p-orchid) 30%, white);
+  --border: color-mix(in srgb, var(--p-lavender) 40%, white);
+  --text: var(--p-ink);
+  --text-muted: color-mix(in srgb, var(--p-ink) 72%, white);
+  --accent: var(--p-violet);
+  --accent-bg: color-mix(in srgb, var(--p-lavender) 22%, white);
+  --on-accent: #ffffff;
+  --accent-solid: var(--p-violet);
+  --good: color-mix(in srgb, var(--p-teal) 75%, var(--p-navy));
+  --good-bg: var(--p-mint);
+  --warn: color-mix(in srgb, var(--p-orange) 35%, var(--p-ink));
+  --warn-bg: color-mix(in srgb, var(--p-orange) 38%, white);
+  --bad: color-mix(in srgb, var(--p-pink) 35%, var(--p-purple));
+  --bad-bg: color-mix(in srgb, var(--p-pink) 16%, white);
+  --info: var(--p-navy);
+  --info-bg: color-mix(in srgb, var(--p-aqua) 25%, white);
+  --focus: var(--p-violet);
+  --overlay: color-mix(in srgb, var(--p-ink) 60%, transparent);
+
+  --alliance: var(--p-navy);
+  --horde: var(--bad);
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -39,26 +54,27 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #14130f;
-    --surface: #1e1d18;
-    --surface-2: #2a2922;
-    --border: #3d3b31;
-    --text: #efede4;
-    --text-muted: #a9a698;
-    --accent: #f0b84a;
-    --accent-bg: #3b2f12;
-    --on-accent: #1a1405;
-    --accent-solid: #f0b84a;
-    --good: #6fcf8f;
-    --good-bg: #17301f;
-    --warn: #f0b84a;
-    --warn-bg: #3b2f12;
-    --bad: #ff8d82;
-    --bad-bg: #3a1a17;
-    --info: #8fb8ff;
-    --info-bg: #172640;
-    --focus: #7fb0ff;
-    --alliance: #7fa8ff;
-    --horde: #ff8d82;
+    --bg: var(--p-ink);
+    --surface: color-mix(in srgb, var(--p-violet) 12%, var(--p-ink));
+    --surface-2: color-mix(in srgb, var(--p-violet) 24%, var(--p-ink));
+    --border: color-mix(in srgb, var(--p-lavender) 32%, var(--p-ink));
+    --text: color-mix(in srgb, var(--p-orchid) 15%, white);
+    --text-muted: color-mix(in srgb, var(--p-orchid) 65%, var(--p-ink));
+    --accent: var(--p-orchid);
+    --accent-bg: color-mix(in srgb, var(--p-violet) 38%, var(--p-ink));
+    --on-accent: var(--p-ink);
+    --accent-solid: var(--p-orchid);
+    --good: var(--p-green);
+    --good-bg: color-mix(in srgb, var(--p-green) 16%, var(--p-ink));
+    --warn: var(--p-orange);
+    --warn-bg: color-mix(in srgb, var(--p-orange) 20%, var(--p-ink));
+    --bad: var(--p-pink);
+    --bad-bg: color-mix(in srgb, var(--p-pink) 20%, var(--p-ink));
+    --info: var(--p-aqua);
+    --info-bg: color-mix(in srgb, var(--p-teal) 28%, var(--p-ink));
+    --focus: var(--p-aqua);
+    --overlay: color-mix(in srgb, black 65%, transparent);
+    --alliance: var(--p-lavender);
+    --horde: var(--p-orange);
   }
 }
