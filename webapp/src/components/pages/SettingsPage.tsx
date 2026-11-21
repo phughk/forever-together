@@ -16,6 +16,7 @@ export interface SettingsPageProps {
   error?: string | null;
   onNavigate: (view: View) => void;
   onLanModeChange: (on: boolean) => void | Promise<void>;
+  onLanAddressChange?: (address: string) => void;
   onResetToken: () => void | Promise<void>;
   onKnownPeersSizeChange: (size: number) => void | Promise<void>;
   onAddTrusted: (key: string) => void | Promise<void>;
@@ -32,7 +33,7 @@ export function SettingsPage(p: SettingsPageProps) {
       }
       sections={
         <>
-          <LanSettings lanMode={p.settings.lan_mode} onChange={p.onLanModeChange} pairing={p.pairing} remote={p.remote} />
+          <LanSettings lanMode={p.settings.lan_mode} onChange={p.onLanModeChange} pairing={p.pairing} remote={p.remote} onAddressChange={p.onLanAddressChange} />
           <TokenSettings onReset={p.onResetToken} remote={p.remote} />
           <PeerSettings
             knownPeersSize={p.settings.known_peers_size}

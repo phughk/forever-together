@@ -169,7 +169,7 @@ fn harness_with(web_dir: Option<PathBuf>, assets: &[(&str, &str)]) -> H {
         )),
         web_dir,
         heartbeat: Duration::from_millis(50),
-        lan_ip: Arc::new(|| Some(Ipv4Addr::new(192, 168, 1, 20))),
+        lan_ips: Arc::new(|| vec![Ipv4Addr::new(192, 168, 1, 20), Ipv4Addr::new(10, 0, 0, 7)]),
         listener_generation: watch::channel(0).0,
         ctl,
     });
@@ -558,6 +558,30 @@ async fn pairing_url_uses_the_lan_address_port_and_token() {
         v["url"],
         format!("http://192.168.1.20:{PORT}/#token={}", h.token)
     );
+    assert_eq!(v["address"], "192.168.1.20");
+    assert_eq!(
+        v["addresses"],
+        serde_json::json!(["192.168.1.20", "10.0.0.7"])
+    );
+
+    // A listed address can be chosen; an unknown one falls back to the default.
+    let (_, b, _) = send(
+        &h,
+        rq(Method::GET, "/api/pairing?ip=10.0.0.7").token(&h.token),
+    )
+    .await;
+    let v: serde_json::Value = serde_json::from_str(&b).unwrap();
+    assert_eq!(
+        v["url"],
+        format!("http://10.0.0.7:{PORT}/#token={}", h.token)
+    );
+    let (_, b, _) = send(
+        &h,
+        rq(Method::GET, "/api/pairing?ip=8.8.8.8").token(&h.token),
+    )
+    .await;
+    let v: serde_json::Value = serde_json::from_str(&b).unwrap();
+    assert_eq!(v["address"], "192.168.1.20");
 }
 
 // ---- static files -----------------------------------------------------------------------
@@ -706,7 +730,7 @@ async fn start_server(lan: bool, heartbeat_ms: u64) -> (Server, Arc<FakeCore>) {
             heartbeat: Duration::from_millis(heartbeat_ms),
             lan,
             port: 0,
-            lan_ip: Arc::new(|| Some(Ipv4Addr::new(192, 168, 1, 20))),
+            lan_ips: Arc::new(|| vec![Ipv4Addr::new(192, 168, 1, 20), Ipv4Addr::new(10, 0, 0, 7)]),
         },
     )
     .await

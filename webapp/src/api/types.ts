@@ -122,6 +122,10 @@ export interface AppState {
 
 export interface PairingInfo {
   url: string;
+  /** The address the link uses. */
+  address: string;
+  /** Every private address of this computer; the first is the default. */
+  addresses: string[];
 }
 
 export type ApiEvent = { type: "state"; state: AppState } | { type: "heartbeat" };
@@ -145,6 +149,7 @@ export interface Api {
   declineParty(): Promise<void>;
   getSettings(): Promise<Settings>;
   putSettings(patch: Partial<Settings>): Promise<Settings>;
-  getPairing(): Promise<PairingInfo>;
+  /** `ip` picks one of the listed addresses; without it the app picks the one on the active network. */
+  getPairing(ip?: string): Promise<PairingInfo>;
   resetToken(): Promise<void>;
 }

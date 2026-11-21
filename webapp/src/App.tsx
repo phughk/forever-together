@@ -27,6 +27,7 @@ function Container({ api }: { api: Api }) {
   const [dismissedParty, setDismissedParty] = useState<string | null>(null);
   const [remote, setRemote] = useState(!LOOPBACK.has(window.location.hostname));
   const [pairing, setPairing] = useState<PairingState>({ kind: "off" });
+  const [lanAddress, setLanAddress] = useState<string | undefined>(undefined);
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
   const characterKey = state?.character ? `${state.character.level}|${state.character.zone}|${state.character.createdAt}` : "none";
@@ -54,8 +55,8 @@ function Container({ api }: { api: Api }) {
     let cancelled = false;
     setPairing({ kind: "loading" });
     api
-      .getPairing()
-      .then((p) => !cancelled && setPairing({ kind: "ready", url: p.url }))
+      .getPairing(lanAddress)
+      .then((p) => !cancelled && setPairing({ kind: "ready", url: p.url, address: p.address, addresses: p.addresses }))
       .catch((e: unknown) => {
         if (cancelled) return;
         if (isLoopbackOnly(e)) {
@@ -68,7 +69,7 @@ function Container({ api }: { api: Api }) {
     return () => {
       cancelled = true;
     };
-  }, [api, view, lanMode]);
+  }, [api, view, lanMode, lanAddress]);
 
   const changeSettings = useCallback(
     async (patch: Partial<Settings>) => {
@@ -98,6 +99,7 @@ function Container({ api }: { api: Api }) {
         error={settingsError}
         onNavigate={setView}
         onLanModeChange={(on) => changeSettings({ lan_mode: on })}
+        onLanAddressChange={setLanAddress}
         onResetToken={async () => {
           try {
             await api.resetToken();

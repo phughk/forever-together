@@ -96,10 +96,16 @@ export function createMockApi(opts: MockApiOptions = {}): MockApi {
       push({ ...state, settings });
       return settings;
     },
-    async getPairing() {
+    async getPairing(ip) {
       await delay();
       loopbackOnly();
-      return { url: "http://192.168.1.23:41873/#token=3f9a1c0be27d44a8b6d15e90c7a2f8e14b0d9c63a5e7f1280b4d6c9a1e3f5072" };
+      const addresses = ["192.168.1.23", "10.0.0.7"];
+      const address = ip && addresses.includes(ip) ? ip : "192.168.1.23";
+      return {
+        url: `http://${address}:41873/#token=3f9a1c0be27d44a8b6d15e90c7a2f8e14b0d9c63a5e7f1280b4d6c9a1e3f5072`,
+        address,
+        addresses,
+      };
     },
     async resetToken() {
       await delay();

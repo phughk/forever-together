@@ -26,7 +26,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Defaults: Story = {};
 export const LanModeOnWithPairingQr: Story = {
-  args: { settings: makeSettings({ lan_mode: true }), pairing: { kind: "ready", url: URL } },
+  args: { settings: makeSettings({ lan_mode: true }), pairing: { kind: "ready", url: URL, address: "192.168.1.23", addresses: ["192.168.1.23", "10.0.0.7"] } },
 };
 export const WithTrustedPeers: Story = { args: { settings: makeSettings({ trusted_peers: [key(1), key(2), key(3)] }) } };
 export const ManyTrustedPeersLargeCache: Story = {
@@ -40,5 +40,5 @@ export const ViewedOnPhone: Story = {
 export const SaveRefused: Story = { args: { error: "That can only be changed in the desktop app." } };
 export const PhoneWidthDesktopControls: Story = {
   globals: { viewport: { value: "mobile1", isRotated: false } },
-  args: { settings: makeSettings({ lan_mode: true }), pairing: { kind: "ready", url: URL } },
+  args: { settings: makeSettings({ lan_mode: true }), pairing: { kind: "ready", url: URL, address: "192.168.1.23", addresses: ["192.168.1.23", "10.0.0.7"] } },
 };

@@ -11,12 +11,13 @@ use super::static_files::serve_path;
 use axum::Router;
 use axum::body::{Body, to_bytes};
 use axum::extract::{Request, State};
-use axum::http::{StatusCode, header};
+use axum::http::{StatusCode, Uri, header};
 use axum::middleware::{from_fn, from_fn_with_state};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{delete, get, post};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
+use std::net::Ipv4Addr;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
@@ -171,7 +172,17 @@ async fn put_settings<C: AppCore>(State(s): S<C>, req: Request) -> Response {
     }
 }
 
-async fn get_pairing<C: AppCore>(State(s): S<C>) -> Response {
+/// The `ip` query value, when given. Addresses contain no characters that need decoding.
+fn ip_param(uri: &Uri) -> Option<Ipv4Addr> {
+    uri.query()?
+        .split('&')
+        .find_map(|kv| kv.strip_prefix("ip="))
+        .and_then(|v| v.parse().ok())
+}
+
+/// The pairing link for one of the machine's private addresses (`?ip=` chooses, the default is the
+/// address the system routes through) and the list of addresses to choose from.
+async fn get_pairing<C: AppCore>(State(s): S<C>, uri: Uri) -> Response {
     if !s.core.settings().lan_mode {
         return error_response(
             StatusCode::CONFLICT,
@@ -179,15 +190,23 @@ async fn get_pairing<C: AppCore>(State(s): S<C>) -> Response {
             "Turn on LAN mode to pair a phone",
         );
     }
-    let Some(ip) = (s.lan_ip)() else {
+    let addresses = (s.lan_ips)();
+    let Some(default) = addresses.first().copied() else {
         return error_response(
             StatusCode::CONFLICT,
             "no_lan_address",
             "No private network address was found",
         );
     };
+    let ip = ip_param(&uri)
+        .filter(|ip| addresses.contains(ip))
+        .unwrap_or(default);
     let port = s.guard.port.load(Ordering::Relaxed);
-    json(&serde_json::json!({ "url": pairing_url(ip, port, &s.guard.tokens.current()) }))
+    json(&serde_json::json!({
+        "url": pairing_url(ip, port, &s.guard.tokens.current()),
+        "address": ip.to_string(),
+        "addresses": addresses.iter().map(|a| a.to_string()).collect::<Vec<_>>(),
+    }))
 }
 
 async fn post_token_reset<C: AppCore>(State(s): S<C>) -> Response {

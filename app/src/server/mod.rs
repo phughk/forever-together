@@ -42,7 +42,7 @@ pub struct ServerConfig {
     pub lan: bool,
     /// 0 picks a random free port.
     pub port: u16,
-    pub lan_ip: Arc<dyn Fn() -> Option<Ipv4Addr> + Send + Sync>,
+    pub lan_ips: Arc<dyn Fn() -> Vec<Ipv4Addr> + Send + Sync>,
 }
 
 impl ServerConfig {
@@ -56,7 +56,7 @@ impl ServerConfig {
             heartbeat: events::HEARTBEAT,
             lan,
             port: 0,
-            lan_ip: Arc::new(pairing::detect_lan_ip),
+            lan_ips: Arc::new(pairing::detect_lan_ips),
         }
     }
 }
@@ -68,7 +68,7 @@ pub struct Shared<C> {
     pub assets: Arc<dyn Assets>,
     pub web_dir: Option<PathBuf>,
     pub heartbeat: Duration,
-    pub lan_ip: Arc<dyn Fn() -> Option<Ipv4Addr> + Send + Sync>,
+    pub lan_ips: Arc<dyn Fn() -> Vec<Ipv4Addr> + Send + Sync>,
     /// Bumped when the listener restarts, which ends open event streams.
     pub listener_generation: watch::Sender<u64>,
     ctl: mpsc::UnboundedSender<Ctl>,
@@ -172,7 +172,7 @@ impl Server {
             assets,
             web_dir: cfg.web_dir,
             heartbeat: cfg.heartbeat,
-            lan_ip: cfg.lan_ip,
+            lan_ips: cfg.lan_ips,
             listener_generation: generation,
             ctl: ctl.clone(),
         });

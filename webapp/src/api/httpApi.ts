@@ -68,7 +68,7 @@ export function createHttpApi({ tokens, baseUrl = "", fetchImpl }: HttpApiOption
     declineParty: () => request<void>("POST", "/api/party/decline"),
     getSettings: () => request<Settings>("GET", "/api/settings"),
     putSettings: (patch) => request<Settings>("PUT", "/api/settings", patch),
-    getPairing: () => request<PairingInfo>("GET", "/api/pairing"),
+    getPairing: (ip) => request<PairingInfo>("GET", ip ? `/api/pairing?ip=${encodeURIComponent(ip)}` : "/api/pairing"),
     async resetToken() {
       // The desktop window receives the new token in the response and keeps working.
       const res = await request<{ token?: string } | undefined>("POST", "/api/token/reset");

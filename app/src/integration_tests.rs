@@ -92,7 +92,7 @@ async fn spawn_instance(
             heartbeat: Duration::from_secs(15),
             lan: false,
             port: 0,
-            lan_ip: Arc::new(|| None),
+            lan_ips: Arc::new(Vec::new),
         },
     )
     .await
