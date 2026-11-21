@@ -1,3 +1,4 @@
+pub mod addon_install;
 pub mod app;
 pub mod cli;
 pub mod code;
