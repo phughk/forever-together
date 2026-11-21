@@ -82,7 +82,7 @@ impl Identity {
     }
 
     /// Load the stored key, or create and store one. The key is created only if missing.
-    pub fn load_or_create(store: &dyn Store) -> Result<Self, IdentityError> {
+    pub fn load_or_create<S: Store + ?Sized>(store: &S) -> Result<Self, IdentityError> {
         match store.get(KEY_IDENTITY_SECRET)? {
             Some(b) => {
                 let secret: [u8; 32] = b.try_into().map_err(|_| IdentityError::BadStoredKey)?;

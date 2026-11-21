@@ -9,6 +9,7 @@ pub mod history;
 pub mod identity;
 #[cfg(test)]
 mod integration_tests;
+pub mod keys;
 pub mod net;
 pub mod runtime;
 pub mod server;
