@@ -4,14 +4,14 @@
 * **Kind:** feature
 * **Source:** author, 2026-11-21
 * **ADRs:** [0038](../docs/adr/0038-scan-log-and-opt-in-export.md)
-* **EGM:** none
+* **EGM:** [0043-key-management](../docs/egm/0043-key-management/README.md)
 
 ## What
 
 Encrypt the exported scan log to `net::trusted::BUILTIN[0]` (ADR 0038 amendment).
 
-* Decide: reuse the trusted peer's Ed25519 key (converted to X25519) or ship a dedicated intake key beside it. Default in the ADR is a sealed box on the converted key.
-* File: header (format version, recipient key id) plus ciphertext, suffix `.wowft-scans`. No plain export. Export unavailable until `BUILTIN` has a key (ticket 0008).
+* Decided: encrypt to `BUILTIN[0]` with the `age` ssh-ed25519 recipient (no dedicated intake key).
+* File: `age` ASCII armor, `scans-<date>.wowft-scans.age`, no custom header. No plain export. Export unavailable until `BUILTIN` has a key (ticket 0008).
 * Review step: show the player what will be sent before it is encrypted.
 * No decrypt command in the app: the author decrypts with `age -d -i <exported key>`. Add a round-trip test (encrypt with the recipient code, decrypt with an identity loaded from the exported OpenSSH file), using invented characters.
 

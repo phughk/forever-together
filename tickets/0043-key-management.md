@@ -4,19 +4,20 @@
 * **Kind:** feature
 * **Source:** author, 2026-11-21
 * **ADRs:** [0039](../docs/adr/0039-key-management.md)
-* **EGM:** none
+* **EGM:** [0043-key-management](../docs/egm/0043-key-management/README.md)
 
 ## What
 
-Handle keys properly. This ticket covers ticket 0009 (load a chosen key) and the key side of 0008 and 0003.
+Handle keys properly (ADR 0039; working papers in `docs/egm/0043-key-management/`). This ticket covers 0009 (closed into it), 0003 (reduced to verification) and the key side of 0008 and 0044.
 
-* Command-line export, import and reset of the iroh secret key (ADR 0039).
-* Decide: command names (for example `key export`, `key import`, `key reset` beside `--print-public-key`), the key file format, whether a file can be passphrase-protected, and how a cloud node gets its key (file path, environment variable or import at deploy).
-* File permissions on write and on read (refuse a world-readable key file); refuse to overwrite; refuse while the app runs on that data directory; reset needs confirmation.
-* Say what a key change does: new peer ID, remembered peers kept, trusted-peer key change needs a release.
-* Back up the author's trusted and decryption keys offline (a process, written down).
-* Coordinate with 0003 (`varaq` store permissions) and 0008 (`BUILTIN` key).
+Part 1 (this ticket, build first):
+
+* The `key` subcommand group: `show`, `export [--stdout] [--public] <file>`, `import [--force] <file>`, `reset [--yes]`; `--print-public-key` as an alias for `key show`. No subcommand opens the window.
+* `app/src/keys.rs`, generic over the store (no `dyn`); OpenSSH ed25519 key file, unencrypted, owner-only on Unix, refuse to overwrite on export, no permission check on read.
+* Running-app guard by the store's own lock (depends on ticket 0003 verifying `varaq`).
+* Tests: round trip gives the same peer ID, every refusal, a headless start after `key import`, a fresh headless start generating a key.
+* Docs: README keys section and backup process, CLAUDE.md, ADR 0039, `docs/spike-s0.md` rows.
 
 ## Done when
 
-Commands work on macOS and Linux (Windows checked or ticketed); tests with a temp data dir cover export, import round trip (same public key), reset (new public key), refusal cases; ADR 0039 updated with the final names and format.
+The commands work on macOS and Linux (Windows ticketed); the Rust tests and clippy for the touched modules pass; `ssh-keygen -y -f` accepts an exported key and its public key equals the peer ID.

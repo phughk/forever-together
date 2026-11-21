@@ -4,7 +4,7 @@
 * **Kind:** prerequisite
 * **Source:** CLAUDE.md; ADR 0023
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [0043-key-management](../docs/egm/0043-key-management/README.md)
 
 **Also needed by ticket 0044:** the first `BUILTIN` key is the recipient of encrypted scan exports. Back up its private key (ticket 0043) before shipping it.
 

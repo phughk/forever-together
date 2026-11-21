@@ -1,6 +1,6 @@
 # 0009. Load a chosen private key into an instance
 
-* **Status:** open
+* **Status:** done (folded into ticket 0043; delivery is `key import`)
 * **Kind:** feature
 * **Source:** the tickets in `tickets/`
 * **ADRs:** none

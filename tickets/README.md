@@ -12,7 +12,7 @@ One file per ticket, named `NNNN-slug.md`. Status is `open` unless it says other
 | 0006 | [Verify the addon installer on a real install](0006-verify-addon-installer-real-install.md) | verification |
 | 0007 | [Addon installer stage 2: native folder dialog and Linux detection](0007-addon-installer-stage-2.md) | feature |
 | 0008 | [Supply the built-in trusted peer key](0008-trusted-peer-builtin-key.md) | prerequisite |
-| 0009 | [Load a chosen private key into an instance](0009-load-private-key-into-instance.md) | feature |
+| 0009 | [Load a chosen private key into an instance (done, in 0043)](0009-load-private-key-into-instance.md) | feature |
 | 0010 | [Decide who may run trusted peers and how keys are added](0010-trusted-peer-deployment-policy.md) | decision |
 | 0011 | [Supply the addon page URL](0011-addon-page-url.md) | prerequisite |
 | 0012 | [Addon release flow and update tracking](0012-addon-releases-and-updates.md) | feature |

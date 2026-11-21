@@ -1,32 +1,29 @@
 # 0039. The app's keys can be exported, imported and reset from the command line
 
-* **Status:** Accepted for the requirements (decided by the author 2026-11-21); details open in ticket 0043 and not built. Extends [0008](0008-iroh-and-local-storage.md) (permanent keys in the `varaq` store), [0016](0016-peers-identified-by-key.md) and [0023](0023-no-supernodes.md). Used by [0038](0038-scan-log-and-opt-in-export.md).
+* **Status:** Accepted (decided by the author 2026-11-21; not built). Extends [0008](0008-iroh-and-local-storage.md) (permanent keys in the `varaq` store), [0016](0016-peers-identified-by-key.md) and [0023](0023-no-supernodes.md). Used by [0038](0038-scan-log-and-opt-in-export.md). Working papers: `docs/egm/0043-key-management/`.
 * **Date:** 2026-11-21
 * **Deciders:** Hugh Kaznowski
 
 ## Context
 
-The app generates an iroh secret key on first start and stores it ([0008](0008-iroh-and-local-storage.md)). Today the only key tool is `--print-public-key`. The author will run trusted nodes on cloud instances, needs backups of the trusted key, will hold the private key that decrypts exported scan logs ([0038](0038-scan-log-and-opt-in-export.md)), and needs to reset a key that leaked or was lost.
+The app generates an iroh secret key on first start and stores it (32 bytes under `identity/secret`, [0008](0008-iroh-and-local-storage.md)). The only key tool is `--print-public-key`. The author runs trusted nodes on cloud machines, needs backups of the trusted key, and holds the private key that decrypts exported scan logs ([0038](0038-scan-log-and-opt-in-export.md)).
 
 ## Decision
 
-The command line gets three operations, besides the existing `--print-public-key`:
-
-* **Export** the secret key to a file, for backup and deployment.
-* **Import** a secret key from a file, so a node starts with a chosen, stable identity and prints the same public key every time.
-* **Reset** the key: discard the stored key and generate a new one.
-
-Rules, *defaults* where the author did not specify:
-
-* The secret key never goes to the web app, the API or a log, and never to standard output unless asked for with an explicit flag. These are command-line operations only.
-* An exported file is written with owner-only permissions and refuses to overwrite an existing file. Import refuses to replace an existing key unless told to, and says what will change.
-* Reset asks for confirmation, and a node refuses to reset or import while the app is running on that data directory.
-* Any key change changes the peer ID ([0016](0016-peers-identified-by-key.md)): the app's remembered peers stay, but other nodes see a new peer. Resetting a trusted peer's key means a new release with the new `BUILTIN` key ([0034](0034-system-overview-goals-and-risks.md) risk table). The command says so.
-* The same key file format is used by export and import. The format, whether it is protected by a passphrase, and the exact command names are open (ticket 0043).
-* The private key that decrypts scan exports is an ordinary exported key held offline by the author; the app only ever uses the public half.
+* **A `key` subcommand group:** `key show`, `key export`, `key import`, `key reset`. `--print-public-key` stays as an alias for `key show`. Running with no subcommand opens the window. Headless is the same binary and the same command line: it generates a key at first start and takes the same commands. A cloud node gets a chosen key by `key import` before its first start; there is no key path or environment variable read at every start.
+* **The key file is a plain key.** Export writes what is in the store as an unencrypted OpenSSH ed25519 private key file, so ssh, `age` and similar tools can read it. No passphrase and no encryption layer. Keeping the file safe is the user's job; the app does not treat it as a risk to solve. The app creates exported files owner-only on Unix, refuses to overwrite an existing file, and does not check permissions when it reads one.
+* **`key export --stdout`** prints the key for piping. Without it nothing secret goes to standard output. The key is never reachable from the web app, the API or logs.
+* **`key import`** parses and checks the file fully, then replaces the stored key in one write. It refuses to replace an existing key without `--force`, and rejects an encrypted file or another key type.
+* **`key reset`** discards the key and generates a new one, after confirmation (`--yes` skips it). Both commands print the old and new peer IDs.
+* **Running-app guard:** `key import` and `key reset` rely on the store's own lock and refuse if the store cannot be opened. Whether `varaq` refuses a second opener is unverified (ticket 0003); if it does not, this decision is reopened.
+* **A key change changes the peer ID** ([0016](0016-peers-identified-by-key.md)). Remembered peers stay. A changed trusted-peer key needs a release ([0034](0034-system-overview-goals-and-risks.md)). The command says so.
+* **The scan-log decryption key is the trusted peer's own key** (`BUILTIN[0]`, see [0038](0038-scan-log-and-opt-in-export.md)). The author decrypts with `age -d -i <exported key file>`. The app has no decrypt command and holds no decrypting identity.
+* **Backups:** the trusted key is exported with `key export` and kept offline by the author, as a written process in `README.md`.
+* **Style:** new code uses generics and enums, not `dyn` (existing `dyn Store` use is ticket 0045).
 
 ## Consequences
 
 * A cloud node can be rebuilt with the same identity from a backup.
-* Losing the trusted key without a backup means new key, new release, and unreadable old scan files.
-* Permission checks for the stored key (ticket 0003) matter more now that keys can be exported.
+* Losing the trusted key without a backup means a new key, a new release, and unreadable old scan files.
+* Anyone who can read the data directory or an exported file has the identity.
+* New dependencies: an OpenSSH key crate, and `age` for the scan export. Not yet in `app/Cargo.toml`.

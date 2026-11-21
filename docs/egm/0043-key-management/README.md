@@ -1,9 +1,9 @@
 # 0043-key-management: Key management
 
-* **Status:** open (drafting)
+* **Status:** open (draft finished, awaiting review)
 * **Ticket:** [0043](../../../tickets/0043-key-management.md)
 * **ADRs:** [0039](../../adr/0039-key-management.md), [0038](../../adr/0038-scan-log-and-opt-in-export.md)
-* **Rounds:** none yet
+* **Rounds:** draft only; reconciliation against ADRs 0038, 0039 and tickets done, decisions in `design_draft.md`
 
 ## Question
 

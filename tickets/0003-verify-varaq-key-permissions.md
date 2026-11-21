@@ -4,7 +4,7 @@
 * **Kind:** verification
 * **Source:** ADR 0008; docs/spike-s0.md
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [0043-key-management](../docs/egm/0043-key-management/README.md)
 
 **Also:** check whether `varaq` refuses a second process opening the same data directory. The key commands (ticket 0043, decision 6) rely on that for their running-app guard; if it does not, the design is reopened.
 
