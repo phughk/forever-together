@@ -1,6 +1,6 @@
 # 0024. A committed party needs a Ready check, a human Confirm, and a Decline without penalty
 
-* **Status:** Accepted (window lengths are starting values)
+* **Status:** Accepted (window lengths are starting values). Amended by [0025](0025-leader-invitations.md): `Ready` carries the sender's own ad, and the commit comes from a leader's announcement instead of five matching announcements.
 * **Date:** 2026-11-21
 * **Deciders:** Hugh Kaznowski
 

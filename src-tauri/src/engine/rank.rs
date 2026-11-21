@@ -17,6 +17,18 @@ pub fn order_key(epoch: u64, peer: &PeerId) -> (u64, PeerId) {
     (rank(epoch, peer), *peer)
 }
 
+/// A leader's own shuffle of a candidate: the first 8 bytes of
+/// `SHA-256(epoch as 8 bytes big-endian || leader ID || candidate ID)`. Different leaders order
+/// the same candidates differently, which spreads their invitations.
+pub fn pair_rank(epoch: u64, leader: &PeerId, candidate: &PeerId) -> u64 {
+    let mut h = Sha256::new();
+    h.update(epoch.to_be_bytes());
+    h.update(leader.0);
+    h.update(candidate.0);
+    let d = h.finalize();
+    u64::from_be_bytes(d[..8].try_into().unwrap())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

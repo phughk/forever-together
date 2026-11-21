@@ -53,16 +53,20 @@ pub enum Message {
         peer: PeerId,
         counter: u16,
     },
+    /// The leader tells the four it invited and accepted that the party is formed (direct).
     PartyAnnounce {
         peer: PeerId,
         epoch: u64,
         members: [PeerId; 5],
         party_id: PartyId,
     },
+    /// The sender's app is alive and shows the prompt. Carries the sender's own ad so the other
+    /// members learn its name and details from the member itself.
     Ready {
         peer: PeerId,
         party_id: PartyId,
         nonce: u64,
+        ad: Ad,
     },
     Confirm {
         peer: PeerId,
@@ -81,6 +85,18 @@ pub enum Message {
         peer: PeerId,
         party_id: PartyId,
         nonce: u64,
+    },
+    /// A leader (a tank) invites a peer to the party it is building (direct). Carries the
+    /// leader's ad so the invitee can check compatibility without having it in its sample.
+    Invite {
+        peer: PeerId,
+        epoch: u64,
+        ad: Ad,
+    },
+    /// An invitee takes the best invitation it got this epoch (direct to that leader).
+    Accept {
+        peer: PeerId,
+        epoch: u64,
     },
 }
 
@@ -141,10 +157,24 @@ pub fn event_from_message(topic: TopicId, msg: Message) -> super::state::Event {
             members,
             party_id,
         },
-        Message::Ready { peer, party_id, .. } => Event::ReadyReceived {
+        Message::Ready {
+            peer, party_id, ad, ..
+        } => Event::ReadyReceived {
             topic,
             from: peer,
             party_id,
+            ad,
+        },
+        Message::Invite { peer, epoch, ad } => Event::InviteReceived {
+            topic,
+            from: peer,
+            epoch,
+            ad,
+        },
+        Message::Accept { peer, epoch } => Event::AcceptReceived {
+            topic,
+            from: peer,
+            epoch,
         },
         Message::Confirm { peer, party_id } => Event::ConfirmReceived {
             topic,

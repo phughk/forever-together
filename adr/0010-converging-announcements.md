@@ -1,6 +1,6 @@
 # 0010. Peers agree on parties by converging announcements and a human Confirm
 
-* **Status:** Accepted as the baseline. Revised 2026-11-21 (see below); a proposer model is under evaluation in spike S0.
+* **Status:** Superseded by [0025](0025-leader-invitations.md) on 2026-11-21. The simulation in spike S0 showed converging announcements commit about 2% of eligible peers at 3,000 peers, a sample of 100 and delivery 0.95. The human Confirm, `Taken` and Decline rules below stay in force.
 * **Date:** 2026-11-20
 * **Deciders:** Hugh Kaznowski
 

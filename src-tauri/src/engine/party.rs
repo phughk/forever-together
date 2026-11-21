@@ -1,4 +1,7 @@
-//! Deterministic party building for the baseline mechanism (converging announcements).
+//! Deterministic party building of the converging-announcements mechanism (ADR 0010), which
+//! ADR 0025 replaced. The engine no longer uses `build_parties`: it stays as the baseline the
+//! simulation compares against and as the central greedy build for its upper bound. `Party` and
+//! `party_id` are still the engine's.
 
 use super::ad::{Ad, PartyId, Role, compatible, pair_stage};
 use super::rank::order_key;

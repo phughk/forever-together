@@ -83,18 +83,21 @@ Messages are serialized with `postcard`. Every gossip message carries the author
 |---------|--------|---------|
 | `Ad` | `peer, counter, role, secondaryRole, level, itemLevel, faction, stage, firstName, surname, zone, createdAt` | a peer is searching. `createdAt` is the sender's clock and is informational only. |
 | `Taken` | `peer, counter` | the peer committed to a party. Others drop it from their samples. This is a core rule. |
-| `PartyAnnounce` | `peer, epoch, members[5], partyId` | baseline mechanism |
-| `Ready` | `peer, partyId, nonce` | the peer's app is alive and has shown the Confirm prompt |
+| `Invite` | `peer, epoch, ad` | direct. A leader (a tank) invites a peer to the party it is building. `ad` is the leader's own ad. |
+| `Accept` | `peer, epoch` | direct, to the leader. The invitee takes the best invitation it got for that epoch. |
+| `PartyAnnounce` | `peer, epoch, members[5], partyId` | direct, from the leader to the four members that accepted: the party is formed |
+| `Ready` | `peer, partyId, nonce, ad` | the peer's app is alive and has shown the Confirm prompt. `ad` is the sender's own ad, the source of its name and details for the other members. |
 | `Confirm` | `peer, partyId` | the human pressed Confirm |
 | `Decline` | `peer, partyId` | the human did not press Confirm in time, or pressed Decline. No penalty. |
 | `Heartbeat` / `HeartbeatAck` | `peer, partyId, nonce` | liveness check among party members, signed |
-| `Propose` / `Respond` | **provisional**, defined only if the proposer model is adopted | see the design, section 6 |
 
 `partyId = SHA-256(topic || epoch as 8 bytes big-endian || the five peer IDs sorted ascending, 32 bytes each)`.
 
-Epoch ordering hash: `hash(epoch, peerId)` is the first 8 bytes of SHA-256 of `epoch as 8 bytes big-endian || peer ID`.
+Epoch ordering hash: `rank(epoch, peerId)` is the first 8 bytes of SHA-256 of `epoch as 8 bytes big-endian || peer ID`. An invitee that got several `Invite`s for an epoch accepts the one whose leader has the lowest `(rank(epoch, leader), leader)`.
 
-The proposer model, if adopted, replaces `PartyAnnounce` with `Propose` and `Respond`. The author's description: a partial group advertises the roles it needs, responders reply, and the proposer decides within a short window. A responder accepts one proposer at a time.
+Leader's own order: `pair_rank(epoch, leader, candidate)` is the first 8 bytes of SHA-256 of `epoch as 8 bytes big-endian || leader ID || candidate ID`. A leader sorts its candidates by it, so different leaders try different candidates first. The sample's tie-break among ads at the same level distance is `pair_rank(0, owner, peer)`, the higher value dropped first (ADR 0025).
+
+Agreement by leader invitations (ADR 0025). Once per epoch (5 s) every tank with a complete compatible party in its own sample sends `Invite` to one healer and three damage peers plus a few spares (2 healers, 5 damage). At `epochStart + 2 s` an invitee answers the invitations of that epoch: it checks each (author equals `ad.peer`, `ad.role` is tank, own role is not tank, compatible at the stricter stage), accepts the best-ranked leader with one `Accept` and ignores the rest. The leader commits as soon as the acceptors contain a healer and three damage peers compatible with each other and with it, sends `PartyAnnounce` to the four and `Taken` and `Ready` to the topic. An invitee commits only on a `PartyAnnounce` from the leader it accepted, for that epoch, that names it, so a peer is in at most one committed party.
 
 ## 4. Peer exchange
 

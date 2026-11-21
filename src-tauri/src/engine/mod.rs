@@ -2,6 +2,7 @@
 //! No I/O. `Network` and `NetError` live here so `net` can implement them later.
 
 pub mod ad;
+pub mod lead;
 pub mod party;
 pub mod rank;
 pub mod sample;
@@ -97,7 +98,8 @@ pub(crate) mod testkit {
         pub alive: bool,
         pub shown: Vec<View>,
         pub bans: Vec<PeerId>,
-        pub announces_by_epoch: std::collections::BTreeMap<u64, u32>,
+        /// Distinct parties this node announced, by epoch.
+        pub announces_by_epoch: std::collections::BTreeMap<u64, BTreeSet<PartyId>>,
     }
 
     pub struct Cluster {
@@ -185,11 +187,15 @@ pub(crate) mod testkit {
             msg: Message,
             queue: &mut VecDeque<(usize, Event)>,
         ) {
-            if let Message::PartyAnnounce { epoch, .. } = &msg {
-                *self.nodes[from]
+            if let Message::PartyAnnounce {
+                epoch, party_id, ..
+            } = &msg
+            {
+                self.nodes[from]
                     .announces_by_epoch
                     .entry(*epoch)
-                    .or_default() += 1;
+                    .or_default()
+                    .insert(*party_id);
             }
             if self.muted.contains(&from)
                 && matches!(msg, Message::Ready { .. } | Message::Confirm { .. })
@@ -391,13 +397,15 @@ mod tests {
         let mut c = Cluster::new(&[1, 2, 3, 4, 5]);
         five_alliance(&mut c);
         c.run(12);
-        let committed_at = c.now - secs(2); // the commit happened at the epoch boundary
+        // The first invitations go out at the second epoch boundary (5 s) and are answered 2 s
+        // later, so the commit happened 7 s after the start.
+        let committed_at = c.now - secs(5);
         for i in 0..4 {
             c.send(i, Event::UserConfirm);
         }
-        c.run(12);
+        c.run(8);
         assert_eq!(c.modes(), vec![Mode::Committed; 5]);
-        c.run(2);
+        c.run(3);
         assert!(c.now - committed_at >= secs(15));
         // The human on node 4 never clicked: it declined, everyone is searching again.
         assert!(
@@ -428,7 +436,7 @@ mod tests {
         five_alliance(&mut c);
         // Node 4's Ready never arrives (its app died right after announcing).
         c.muted.insert(4);
-        c.run(12);
+        c.run(9); // the commit is at 7 s
         let dead = PeerId([5; 32]);
         for i in 0..4 {
             assert_eq!(c.nodes[i].engine.mode(), Mode::Committed, "node {i}");
@@ -495,11 +503,26 @@ mod tests {
         c.run(60);
         for n in &c.nodes {
             assert!(
-                n.announces_by_epoch.values().all(|&k| k <= 1),
+                n.announces_by_epoch.values().all(|p| p.len() <= 1),
                 "{:?}",
                 n.announces_by_epoch
             );
         }
+        // An invitee answers at most one invitation per epoch, and only a tank invites.
+        let mut accepts = std::collections::BTreeSet::new();
+        for (from, _, m) in &c.log {
+            match m {
+                Message::Accept { epoch, .. } => {
+                    assert!(
+                        accepts.insert((*from, *epoch)),
+                        "node {from} accepted twice"
+                    );
+                }
+                Message::Invite { ad, .. } => assert_eq!(ad.role, Role::Tank),
+                _ => {}
+            }
+        }
+        assert!(!accepts.is_empty());
     }
 
     #[test]
@@ -523,27 +546,27 @@ mod tests {
     }
 
     #[test]
-    fn late_announcement_for_a_party_i_moved_on_from_does_not_commit_me() {
-        // Peer 1 sees a fully announced party it did not announce itself: it must not commit.
+    fn an_announcement_from_a_leader_i_did_not_accept_does_not_commit_me() {
+        // Peer 9 is searching but accepted nobody. A party announcement naming it must not
+        // commit it, from a tank it never answered or from anyone else.
         let mut c = Cluster::new(&[1, 2, 3, 4, 5, 9]);
         five_alliance(&mut c);
-        c.run(5);
-        let members: [PeerId; 5] = std::array::from_fn(|i| PeerId([i as u8 + 1; 32]));
-        let epoch = c.now.as_secs() / 10;
-        let pid = party::party_id(&topic(), epoch, &members);
-        // Node 9 (never searching) receives all five announcements.
         let i9 = c.idx(9);
         start(
             &mut c,
             i9,
             profile(Role::Damage, 25, 100, Faction::Alliance, "Late"),
         );
-        for m in members {
+        let mut members: [PeerId; 5] = [1, 2, 3, 4, 9].map(|i| PeerId([i; 32]));
+        members.sort();
+        let epoch = c.now.as_secs() / 5;
+        let pid = party::party_id(&topic(), epoch, &members);
+        for from in [PeerId([1; 32]), PeerId([2; 32])] {
             c.send(
                 i9,
                 Event::AnnounceReceived {
                     topic: topic(),
-                    from: m,
+                    from,
                     epoch,
                     members,
                     party_id: pid,
@@ -551,6 +574,138 @@ mod tests {
             );
         }
         assert_eq!(c.nodes[i9].engine.mode(), Mode::Searching);
+    }
+
+    #[test]
+    fn competing_leaders_the_invitee_follows_the_lowest_rank_and_only_one_party_forms() {
+        // Two tanks, one healer, three damage, all compatible: every invitee is invited by both
+        // tanks and accepts the same one (the lower `rank(epoch, tank)`).
+        let mut c = Cluster::new(&[1, 2, 3, 4, 5, 6]);
+        let roles = [
+            Role::Tank,
+            Role::Tank,
+            Role::Healer,
+            Role::Damage,
+            Role::Damage,
+            Role::Damage,
+        ];
+        for (i, role) in roles.into_iter().enumerate() {
+            start(
+                &mut c,
+                i,
+                profile(role, 24, 100, Faction::Alliance, &format!("C{i}")),
+            );
+        }
+        c.run(9);
+        let invited_epoch = c
+            .log
+            .iter()
+            .find_map(|(_, _, m)| match m {
+                Message::Invite { epoch, .. } => Some(*epoch),
+                _ => None,
+            })
+            .expect("the tanks invited");
+        let (a, b) = (PeerId([1; 32]), PeerId([2; 32]));
+        let winner = if rank::rank(invited_epoch, &a) < rank::rank(invited_epoch, &b) {
+            a
+        } else {
+            b
+        };
+        // Both tanks invited the same four, and those four all accepted the winner.
+        let invites = |t: PeerId| {
+            c.log
+                .iter()
+                .filter(|(f, to, m)| {
+                    c.nodes[*f].engine.peer_id() == t
+                        && to.is_some()
+                        && matches!(m, Message::Invite { .. })
+                })
+                .count()
+        };
+        assert_eq!((invites(a), invites(b)), (4, 4));
+        let committed: Vec<usize> = (0..6)
+            .filter(|&i| c.nodes[i].engine.mode() == Mode::Committed)
+            .collect();
+        assert_eq!(committed.len(), 5);
+        for &i in &committed {
+            assert!(c.nodes[i].engine.party_members().contains(&winner));
+        }
+        let loser = if winner == a { b } else { a };
+        assert!(!c.nodes[0].engine.party_members().contains(&loser));
+        let li = c.idx(loser.0[0]);
+        assert_eq!(c.nodes[li].engine.mode(), Mode::Searching);
+    }
+
+    #[test]
+    fn an_invitation_from_a_non_tank_or_an_incompatible_tank_is_ignored() {
+        let mut c = Cluster::new(&[1, 2, 3]);
+        start(
+            &mut c,
+            0,
+            profile(Role::Healer, 24, 100, Faction::Alliance, "Me"),
+        );
+        let epoch = c.now.as_secs() / 5;
+        let mut tank = ad::test_ad(2, Role::Tank, 24, 100);
+        let inv = |ad: Ad, from: PeerId| Event::InviteReceived {
+            topic: topic(),
+            from,
+            epoch,
+            ad,
+        };
+        // A damage peer is not a leader.
+        let mut dps = ad::test_ad(3, Role::Damage, 24, 100);
+        dps.peer = PeerId([3; 32]);
+        c.send(0, inv(dps.clone(), dps.peer));
+        // A tank 12 levels away does not fit at stage 0.
+        tank.level = 36;
+        c.send(0, inv(tank.clone(), tank.peer));
+        // An invitation that claims another author's ad is dropped.
+        let good = ad::test_ad(2, Role::Tank, 24, 100);
+        c.send(0, inv(good.clone(), PeerId([9; 32])));
+        c.run(6);
+        assert!(
+            !c.log
+                .iter()
+                .any(|(_, _, m)| matches!(m, Message::Accept { .. }))
+        );
+        // A good one is answered.
+        let epoch = c.now.as_secs() / 5;
+        c.send(
+            0,
+            Event::InviteReceived {
+                topic: topic(),
+                from: good.peer,
+                epoch,
+                ad: good,
+            },
+        );
+        c.run(3);
+        assert!(
+            c.log
+                .iter()
+                .any(|(_, to, m)| matches!(m, Message::Accept { .. })
+                    && *to == Some(PeerId([2; 32])))
+        );
+    }
+
+    #[test]
+    fn an_accept_from_a_peer_that_was_not_invited_is_ignored() {
+        let mut c = Cluster::new(&[1, 2]);
+        start(
+            &mut c,
+            0,
+            profile(Role::Tank, 24, 100, Faction::Alliance, "Lead"),
+        );
+        c.run(6);
+        c.send(
+            0,
+            Event::AcceptReceived {
+                topic: topic(),
+                from: PeerId([2; 32]),
+                epoch: c.now.as_secs() / 5,
+            },
+        );
+        assert_eq!(c.nodes[0].engine.mode(), Mode::Searching);
     }
 
     #[test]

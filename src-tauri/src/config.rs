@@ -5,8 +5,9 @@ use crate::store::{KEY_SETTINGS, Store, StoreError, get_json, put_json};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-/// Epoch length.
-pub const EPOCH: Duration = Duration::from_secs(10);
+/// Epoch length: one round of leader invitations (ADR 0025). It was 10 s for converging
+/// announcements; an invite, accept and commit exchange needs about 2 s, so 5 s fits.
+pub const EPOCH: Duration = Duration::from_secs(5);
 /// Ad keep-alive: an unchanged ad is re-sent this often.
 pub const AD_KEEPALIVE: Duration = Duration::from_secs(45);
 /// An ad not refreshed within this is dropped.
@@ -19,9 +20,11 @@ pub const SAMPLE_SIZE: usize = 100;
 pub const READY_WINDOW: Duration = Duration::from_secs(4);
 /// Human Confirm click window.
 pub const CONFIRM_WINDOW: Duration = Duration::from_secs(15);
-/// Proposer model (candidate): response window and decision after a response.
-pub const PROPOSER_RESPONSE_WINDOW: Duration = Duration::from_secs(4);
-pub const PROPOSER_DECISION_WINDOW: Duration = Duration::from_secs(4);
+/// Leader invitations (ADR 0025): an invitee answers the invitations of an epoch this long after
+/// the epoch starts, so invitations from slower leaders are in the same decision. A leader
+/// commits as soon as its acceptors make a party, so a party forms about this long into the
+/// epoch.
+pub const INVITE_WINDOW: Duration = Duration::from_secs(2);
 /// Local ban after no heartbeat reply. Never gossiped.
 pub const BAN: Duration = Duration::from_secs(60);
 /// Search time limit.
@@ -84,7 +87,7 @@ mod tests {
         assert!(!s.lan_mode);
         assert_eq!(s.known_peers_cache, 100);
         assert!(s.trusted_peers.is_empty());
-        assert_eq!(EPOCH.as_secs(), 10);
+        assert_eq!(EPOCH.as_secs(), 5);
         assert_eq!(SAMPLE_SIZE, 100);
         assert_eq!(CONFIRM_WINDOW.as_secs(), 15);
         assert_eq!(BAN.as_secs(), 60);

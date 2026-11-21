@@ -48,9 +48,9 @@ Owner: the author. Output file: `docs/spike-s0.md`. For each row, record the res
 | iroh-gossip identifies message authors | if yes, drop signatures (ADR 0019 replaced) |
 | iroh address lookup resolves a trusted peer from its public key | list trusted peer addresses in the app |
 | iroh's default hosted components (relays, DNS) are named, and whether they can be self-hosted or switched off | record as a dependency in the risks table |
-| The seeded simulation (D1) reports the commit rate for converging announcements and for the proposer model at 3,000 peers and a sample of 100, with modelled sample divergence | adopt the better one. If neither reaches the floor, reopen the design. |
+| The seeded simulation (D1) reports the commit rate for converging announcements and for the proposer model at 3,000 peers and a sample of 100, with modelled sample divergence | **Done in the engine, result in `docs/spike-s0.md`: neither reached the floor, so the design was reopened and leader invitations ([ADR 0025](../../adr/0025-leader-invitations.md)) were adopted; they reach it within 30 s in the model.** A live run can still change this: if direct messages are lost, add a retry. |
 
-Floor: at least 70% of peers that have a compatible five in their sample commit within 3 epochs. This is a starting guess.
+Floor: at least 70% of peers that have a compatible five in their sample commit within 3 epochs of 10 s, which is 30 s. This is a starting guess. With the 5 s epoch of ADR 0025 that is 6 rounds. The floor is unchanged, but note that the role mix caps what any mechanism can reach (see the S0 results).
 
 ## Shared definitions
 
@@ -60,14 +60,14 @@ Protocol constants are not user settings. A peer that changes them would break a
 
 | Protocol constant | Default |
 |-------------------|---------|
-| epoch length | 10 s |
+| epoch length (one round of invitations) | 5 s |
 | ad keep-alive / expiry | 45 s / 120 s |
 | ad cutoff before an epoch | 2 s |
+| invitee decision time after the epoch start | 2 s |
 | sample size | 100 ads |
-| accepted clock skew | not applicable: each peer uses its own arrival time. An announcement for epoch n-1 or n+1 is kept for one epoch and then dropped. |
+| accepted clock skew | not applicable: each peer uses its own arrival time. An invitation for epoch n-1 or n+1 is kept for one epoch and then dropped. |
 | heartbeat and Ready reply window | 4 s |
 | human Confirm click window | 15 s |
-| proposer response window / decision after a response (if adopted) | 4 s / 4 s |
 | local ban after no heartbeat reply | 60 s, never gossiped |
 | search time limit | 10 min, then the search stops and the app says so |
 | widening step | 60 s |
@@ -95,10 +95,10 @@ The stricter of two peers' stages applies to a pair. A pair is compatible when b
 ### Engine contract
 
 *   `Ad` fields are in the spec. A compatibility check `compatible(a, b, stage)`: factions are equal; `abs(levelA - levelB) <= spread(stage)`; item level is compatible when either is 0 or `abs(ilA - ilB) <= pct(stage) * min(ilA, ilB)`; both are at least the dungeon's `minLevel`. The check is symmetric.
-*   Party building (baseline): sort peers by `hash(epoch, peerId)`; walk the list; place each peer in the first open party where it is compatible with every member and fills a needed role (1 tank, 1 healer, 3 damage; ties broken by lowest peer ID); peers that fit nowhere wait. A peer announces only the party that contains it.
-*   Worked example for the first engine test: five Alliance peers, levels 24, 24, 25, 25, 26, roles tank, healer, damage, damage, damage, item levels all within 15%, same epoch and sample: every peer computes the same party, the party commits when all five announce it, and no sixth peer is included.
-*   Types: `Event` (`Tick`, `AdReceived`, `AnnounceReceived`, `ReadyReceived`, `ConfirmReceived`, `DeclineReceived`, `HeartbeatTimeout`, `UserConfirm`, `UserDecline`, `UserStart`, `UserStop`), `Action` (`SendAd`, `SendMessage`, `Join`, `Leave`, `ShowState`, `BanLocal(peer, 60 s)`), and a `Network` trait with `join`, `leave`, `broadcast`, `send_direct`, `next_event` and `dial`. All errors are an `enum NetError`. The `net` module verifies signatures before an event reaches `engine`.
-*   A committed peer sends `Taken` and stops announcing. A late peer that sees a commit it is not in does nothing. A peer that announced another party in a later epoch cannot confirm the earlier one, so that party times out through the human click window and its members return to searching.
+*   Party building (leader invitations, ADR 0025): once per epoch a tank takes the ads in its own sample that are old enough (cutoff), compatible with it and not banned, orders them by `pair_rank(epoch, tank, candidate)` and picks the first one healer and three damage peers that are compatible with each other; it also invites up to 2 more healers and 5 more damage peers that fit the party. An invitee answers the invitations of an epoch once, at epoch start plus 2 s, by accepting the leader with the lowest `rank(epoch, leader)`. The tank commits when its acceptors contain a compatible healer and three damage peers (first set in its own order) and sends `PartyAnnounce` to them. A peer fills at most one role in one party (1 tank, 1 healer, 3 damage).
+*   Worked example for the first engine test: five Alliance peers, levels 24, 24, 25, 25, 26, roles tank, healer, damage, damage, damage, item levels all within 15%, same sample: at the second epoch boundary the tank invites the four, they accept 2 s later, the tank announces and all five commit to the same party, and no sixth peer is included.
+*   Types: `Event` (`Tick`, `AdReceived`, `InviteReceived`, `AcceptReceived`, `AnnounceReceived`, `ReadyReceived` (carries the sender's ad), `ConfirmReceived`, `DeclineReceived`, `HeartbeatTimeout`, `UserConfirm`, `UserDecline`, `UserStart`, `UserStop`), `Action` (`SendAd`, `SendMessage`, `Join`, `Leave`, `ShowState`, `BanLocal(peer, 60 s)`), and a `Network` trait with `join`, `leave`, `broadcast`, `send_direct`, `next_event` and `dial`. All errors are an `enum NetError`. The `net` module verifies signatures before an event reaches `engine`.
+*   A committed peer sends `Taken` and stops inviting and answering. A peer commits only on a `PartyAnnounce` from the leader it accepted for that epoch, so a late or unknown announcement does nothing. The sample drops, among ads at the same level distance, the one with the highest `pair_rank(0, owner, peer)`.
 *   Human Confirm: after a commit, each app sends `Ready` within 4 s and shows the prompt. If no click arrives in 15 s the app sends `Decline`, the party is dropped and everyone resumes searching with no penalty. A peer that does not answer a heartbeat within 4 s is banned locally for 60 s. The ban is never gossiped.
 
 ### Local web API
@@ -150,7 +150,7 @@ Each path appears once and is marked Create, Modify or Delete.
 19. `src-tauri/src/identity.rs` (Create). Load or create the secret key once, keep it, expose the peer ID.
 20. `src-tauri/src/code.rs` (Create). Decode and validate per the spec, plus a test-only encoder.
 21. `src-tauri/src/dungeons.rs` (Create) and `src-tauri/data/dungeons.json` (Create, committed by the author before step 3). Recommendation per the spec and `topics_for(character, dungeons) -> Vec<TopicId>`.
-22. `src-tauri/src/engine/` (Create: `mod.rs`, `ad.rs`, `sample.rs`, `rank.rs`, `party.rs`, `widen.rs`, `state.rs`, `sim.rs`). `sim.rs` is the seeded simulation used by S0 and kept as a test. A peer announces at most one party per epoch and confirms at most one.
+22. `src-tauri/src/engine/` (Create: `mod.rs`, `ad.rs`, `sample.rs`, `rank.rs`, `lead.rs`, `party.rs`, `widen.rs`, `state.rs`, `sim.rs`). `sim.rs` is the seeded simulation used by S0 and kept as a test. A peer leads at most one party per epoch, answers one invitation per epoch and confirms at most one party.
 23. `src-tauri/src/net/` (Create: `mod.rs`, `iroh_net.rs`, `gossip.rs`, `exchange.rs`, `bootstrap.rs`, `known_peers.rs`, `trusted.rs`, `fake.rs`). `known_peers.rs` reserves cache slots for the player's active topics before applying least-recently-used eviction. `bootstrap.rs` never contacts a trusted peer while an earlier step works. `trusted.rs` holds the built-in keys (empty until the author supplies one) and takes a `Vec<PeerId>` so tests pass their own.
 24. `src-tauri/src/store/` (Create: `mod.rs`, `varaq_store.rs`, `mem.rs`). Keys: `identity/secret`, `known_peers/<peerId>`, `settings`, `api/token`, `character`.
 25. `src-tauri/src/server/` (Create: `mod.rs`, `routes.rs`, `auth.rs`, `static_files.rs`, `events.rs`, `pairing.rs`). Serves files from `WOWFT_WEB_DIR` first (path normalized so it cannot leave the folder, `/api` never overridden), then the embedded files. Pairing URL `http://<lan-ip>:<port>/#token=<token>`, with the LAN address chosen as the first private IPv4 address of the active interface.
@@ -171,7 +171,7 @@ Each path appears once and is marked Create, Modify or Delete.
     *   `mise run test-addon` for the addon.
     *   `code`: every vector, every error, and the internal-space case.
     *   `dungeons`: 29 entries, 20 available, and recommendation order. Cases: a Barrens character at levels 15, 25 and 38, an end-game character, and a level below every minimum. The exact expected lists are computed by hand from the committed table and written into the tests when the table is committed.
-    *   `engine`: the worked example above; 1 tank, 1 healer and 3 damage per party; a peer announces one party per epoch and confirms at most one; `partyId` is deterministic; a `Taken` peer is dropped from samples; expired ads are dropped; `Decline` returns members to searching with no penalty; a missed heartbeat bans locally for 60 s and the ban is not sent; widening follows the stage table and the search limit; Horde and Alliance never match.
+    *   `engine`: the worked example above; 1 tank, 1 healer and 3 damage per party; a tank invites for at most one party per epoch, an invitee accepts one leader per epoch (the lowest rank) and only that leader's announcement commits it, and a peer confirms at most one; `partyId` is deterministic; a `Taken` peer is dropped from samples; expired ads are dropped; `Decline` returns members to searching with no penalty; a missed heartbeat bans locally for 60 s and the ban is not sent; widening follows the stage table and the search limit; Horde and Alliance never match.
     *   `net`: signature rejection; LRU eviction and persistence across a restart; exchange limits; bootstrap order; backoff bounds; unverified entries do not count until dialed.
     *   `store`: round trips and key layout, and identity persistence across a restart.
     *   `server`: 401 without a token, 403 for a wrong Host, Origin or non-loopback caller on a loopback route, override priority, path escape refused, `/api` not overridable, token reset invalidates the old token, the pairing URL, event streaming, command-line flags.

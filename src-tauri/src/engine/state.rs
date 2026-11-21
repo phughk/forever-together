@@ -2,12 +2,13 @@
 //! since the Unix epoch, so every peer derives the same epoch number) with each event and
 //! carries out the returned actions.
 
-use super::ad::{Ad, Faction, Message, PartyId, Role};
-use super::party::{PARTY_SIZE, Party, build_parties, party_for, party_id};
+use super::ad::{Ad, Faction, Message, PartyId, Role, compatible};
+use super::lead::{choose_party, invite_preference, plan_invites};
+use super::party::{PARTY_SIZE, Party, party_id};
 use super::sample::Sample;
 use super::widen;
 use crate::config::{
-    AD_CUTOFF, AD_KEEPALIVE, BAN, CONFIRM_WINDOW, EPOCH, READY_WINDOW, SAMPLE_SIZE,
+    AD_CUTOFF, AD_KEEPALIVE, BAN, CONFIRM_WINDOW, EPOCH, INVITE_WINDOW, READY_WINDOW, SAMPLE_SIZE,
 };
 use crate::dungeons::TopicId;
 use crate::identity::PeerId;
@@ -45,6 +46,7 @@ pub enum Event {
         peer: PeerId,
         counter: u16,
     },
+    /// A leader says the party it invited me to is formed.
     AnnounceReceived {
         topic: TopicId,
         from: PeerId,
@@ -52,10 +54,25 @@ pub enum Event {
         members: [PeerId; PARTY_SIZE],
         party_id: PartyId,
     },
+    /// A leader invites me to its party.
+    InviteReceived {
+        topic: TopicId,
+        from: PeerId,
+        epoch: u64,
+        ad: Ad,
+    },
+    /// An invitee accepted my invitation.
+    AcceptReceived {
+        topic: TopicId,
+        from: PeerId,
+        epoch: u64,
+    },
     ReadyReceived {
         topic: TopicId,
         from: PeerId,
         party_id: PartyId,
+        /// The sender's own ad.
+        ad: Ad,
     },
     ConfirmReceived {
         topic: TopicId,
@@ -184,18 +201,25 @@ struct Search {
     stage: u8,
     last_ad: Duration,
     samples: BTreeMap<TopicId, Sample>,
-    /// My latest announcement (topic, party, epoch). A peer announces at most one party per
-    /// epoch, and only the latest one can be confirmed.
-    announced: Option<(TopicId, PartyId)>,
     own_ad: Option<Ad>,
     last_epoch: Option<u64>,
-    announces: HashMap<(TopicId, PartyId), Announce>,
+    /// The party I am building as a leader (a tank). At most one per epoch.
+    lead: Option<Lead>,
+    /// Invitations received, by the epoch they name, waiting for the decision time.
+    inbox: BTreeMap<u64, BTreeMap<PeerId, (TopicId, Ad)>>,
+    /// The latest epoch I decided invitations for (I answer each epoch once).
+    decided: Option<u64>,
+    /// The leader I accepted: (topic, epoch, leader). Only its announcement can commit me.
+    lease: Option<(TopicId, u64, PeerId)>,
 }
 
-struct Announce {
+/// A leader's open invitations for one epoch.
+struct Lead {
+    topic: TopicId,
     epoch: u64,
-    members: [PeerId; PARTY_SIZE],
-    from: BTreeSet<PeerId>,
+    /// The invited peers with their ads as the leader saw them.
+    invited: BTreeMap<PeerId, Ad>,
+    accepted: BTreeSet<PeerId>,
 }
 
 struct Commit {
@@ -226,6 +250,8 @@ pub struct Engine {
 }
 
 const MAX_EARLY: usize = 64;
+/// Leaders an invitee keeps invitations from per epoch. More are ignored.
+const MAX_INVITES_PER_EPOCH: usize = 64;
 
 impl Engine {
     pub fn new(me: PeerId) -> Self {
@@ -305,6 +331,15 @@ impl Engine {
                 members,
                 party_id: pid,
             } => self.on_announce(now, topic, from, epoch, members, pid, out),
+            Event::InviteReceived {
+                topic,
+                from,
+                epoch,
+                ad,
+            } => self.on_invite(now, topic, from, epoch, ad),
+            Event::AcceptReceived { topic, from, epoch } => {
+                self.on_accept(now, topic, from, epoch, out)
+            }
             e @ (Event::ReadyReceived { .. }
             | Event::ConfirmReceived { .. }
             | Event::DeclineReceived { .. }) => self.on_party_message(now, e, out),
@@ -406,10 +441,12 @@ impl Engine {
             stage: 0,
             last_ad: now,
             samples,
-            announced: None,
             own_ad: None,
             last_epoch: None,
-            announces: HashMap::new(),
+            lead: None,
+            inbox: BTreeMap::new(),
+            decided: None,
+            lease: None,
         });
         self.mode = Mode::Searching;
         self.send_ads(now, out);
@@ -566,21 +603,30 @@ impl Engine {
         if due {
             self.run_epoch(now, epoch, out);
         }
+        self.decide_invites(now, out);
     }
 
+    /// Once per epoch a tank invites a party from its own sample (ADR 0025). Everyone else waits
+    /// for invitations (`decide_invites`).
     fn run_epoch(&mut self, now: Duration, epoch: u64, out: &mut Vec<Action>) {
         let epoch_start = Duration::from_secs(epoch * EPOCH.as_secs());
         let cutoff = epoch_start.saturating_sub(AD_CUTOFF);
         let me = self.me;
         let bans = self.bans.clone();
-        let mut found: Option<(TopicId, Party)> = None;
         {
             let s = self.search.as_mut().expect("searching");
             s.last_epoch = Some(epoch);
-            s.announces.retain(|_, a| a.epoch + 1 >= epoch);
+            s.lead = None;
+            s.inbox.retain(|e, _| e + 1 >= epoch);
             for sample in s.samples.values_mut() {
                 sample.expire(now);
             }
+        }
+        let Some(own) = self.search.as_ref().and_then(|s| s.own_ad.clone()) else {
+            return;
+        };
+        if own.role != Role::Tank {
+            return;
         }
         let topics: Vec<TopicId> = self
             .search
@@ -590,6 +636,7 @@ impl Engine {
             .iter()
             .copied()
             .collect();
+        let mut found: Option<(TopicId, BTreeMap<PeerId, Ad>)> = None;
         for topic in topics {
             let min_level = self.min_level(&topic);
             let s = self.search.as_ref().unwrap();
@@ -601,36 +648,155 @@ impl Engine {
                 .into_iter()
                 .filter(|a| a.peer == me || !bans.get(&a.peer).is_some_and(|&u| now < u))
                 .collect();
-            let parties = build_parties(&topic, epoch, &cands, min_level);
-            if let Some(p) = party_for(&parties, &me) {
-                found = Some((topic, p));
-                break;
+            let invites = plan_invites(epoch, &own, &cands, min_level);
+            if invites.is_empty() {
+                continue;
             }
+            let invited = cands
+                .iter()
+                .filter(|a| invites.contains(&a.peer))
+                .map(|a| (a.peer, (*a).clone()))
+                .collect();
+            found = Some((topic, invited));
+            break;
         }
-        let Some((topic, party)) = found else { return };
-        let s = self.search.as_mut().unwrap();
-        s.announced = Some((topic, party.id));
-        let entry = s.announces.entry((topic, party.id)).or_insert(Announce {
-            epoch,
-            members: party.members,
-            from: BTreeSet::new(),
-        });
-        entry.from.insert(me);
-        out.push(Action::SendMessage {
+        let Some((topic, invited)) = found else {
+            return;
+        };
+        for peer in invited.keys() {
+            out.push(Action::SendMessage {
+                topic,
+                to: Some(*peer),
+                msg: Message::Invite {
+                    peer: me,
+                    epoch,
+                    ad: own.clone(),
+                },
+            });
+        }
+        self.search.as_mut().unwrap().lead = Some(Lead {
             topic,
-            to: None,
-            msg: Message::PartyAnnounce {
-                peer: me,
-                epoch,
-                members: party.members,
-                party_id: party.id,
-            },
+            epoch,
+            invited,
+            accepted: BTreeSet::new(),
         });
-        self.check_commit(now, topic, party.id, out);
     }
 
     // ---- agreeing on a party ----------------------------------------------------------
 
+    /// An invitation from a leader. Kept until the decision time of its epoch.
+    fn on_invite(&mut self, now: Duration, topic: TopicId, from: PeerId, epoch: u64, ad: Ad) {
+        if self.mode != Mode::Searching
+            || from == self.me
+            || ad.peer != from
+            || ad.role != Role::Tank
+            || self.is_banned(&from, now)
+        {
+            return;
+        }
+        let cur = now.as_secs() / EPOCH.as_secs();
+        // An invitation for the previous or next epoch is kept for one epoch.
+        if epoch + 1 < cur || epoch > cur + 1 {
+            return;
+        }
+        let min_level = self.min_level(&topic);
+        let s = self.search.as_mut().unwrap();
+        let Some(own) = s.own_ad.as_ref() else {
+            return;
+        };
+        if !s.joined.contains(&topic)
+            || own.role == Role::Tank
+            || !compatible(own, &ad, own.stage.min(ad.stage), min_level)
+            || s.decided.is_some_and(|d| epoch <= d)
+        {
+            return;
+        }
+        let group = s.inbox.entry(epoch).or_default();
+        if group.len() < MAX_INVITES_PER_EPOCH || group.contains_key(&from) {
+            group.insert(from, (topic, ad));
+        }
+    }
+
+    /// Answer the invitations of every epoch whose decision time has come: accept the leader
+    /// with the lowest rank, ignore the others. One answer per epoch, and the accepted leader
+    /// is the only one whose announcement can commit this peer.
+    fn decide_invites(&mut self, now: Duration, out: &mut Vec<Action>) {
+        let me = self.me;
+        let s = self.search.as_mut().expect("searching");
+        let due: Vec<u64> = s
+            .inbox
+            .keys()
+            .copied()
+            .filter(|e| now >= Duration::from_secs(e * EPOCH.as_secs()) + INVITE_WINDOW)
+            .collect();
+        for e in due {
+            let group = s.inbox.remove(&e).unwrap_or_default();
+            if s.decided.is_some_and(|d| e <= d) {
+                continue;
+            }
+            s.decided = Some(e);
+            let best = group
+                .into_iter()
+                .min_by_key(|(leader, _)| invite_preference(e, leader));
+            if let Some((leader, (topic, _))) = best {
+                s.lease = Some((topic, e, leader));
+                out.push(Action::SendMessage {
+                    topic,
+                    to: Some(leader),
+                    msg: Message::Accept { peer: me, epoch: e },
+                });
+            }
+        }
+    }
+
+    /// An invitee accepted. As soon as the acceptors make a complete compatible party, announce
+    /// it to them and commit.
+    fn on_accept(
+        &mut self,
+        now: Duration,
+        topic: TopicId,
+        from: PeerId,
+        epoch: u64,
+        out: &mut Vec<Action>,
+    ) {
+        if self.mode != Mode::Searching {
+            return;
+        }
+        let me = self.me;
+        let min_level = self.min_level(&topic);
+        let s = self.search.as_mut().unwrap();
+        let Some(own) = s.own_ad.clone() else {
+            return;
+        };
+        let Some(lead) = s.lead.as_mut() else {
+            return;
+        };
+        if lead.topic != topic || lead.epoch != epoch || !lead.invited.contains_key(&from) {
+            return;
+        }
+        lead.accepted.insert(from);
+        let acc: Vec<&Ad> = lead.accepted.iter().map(|p| &lead.invited[p]).collect();
+        let Some(party) = choose_party(&topic, epoch, &own, &acc, min_level) else {
+            return;
+        };
+        for m in party.members {
+            if m != me {
+                out.push(Action::SendMessage {
+                    topic,
+                    to: Some(m),
+                    msg: Message::PartyAnnounce {
+                        peer: me,
+                        epoch,
+                        members: party.members,
+                        party_id: party.id,
+                    },
+                });
+            }
+        }
+        self.commit_to(now, topic, party, out);
+    }
+
+    /// The leader I accepted says the party is formed.
     #[allow(clippy::too_many_arguments)]
     fn on_announce(
         &mut self,
@@ -645,53 +811,25 @@ impl Engine {
         if self.mode != Mode::Searching {
             return;
         }
-        let cur = now.as_secs() / EPOCH.as_secs();
-        // An announcement for the previous or next epoch is kept for one epoch.
-        if epoch + 1 < cur || epoch > cur + 1 {
-            return;
-        }
         let mut sorted = members;
         sorted.sort();
         if sorted != members || sorted.windows(2).any(|w| w[0] == w[1]) {
             return;
         }
-        if !members.contains(&from) || party_id(&topic, epoch, &members) != pid {
-            return;
-        }
-        let s = self.search.as_mut().unwrap();
-        if !s.joined.contains(&topic) {
-            return;
-        }
-        s.announces
-            .entry((topic, pid))
-            .or_insert(Announce {
-                epoch,
-                members,
-                from: BTreeSet::new(),
-            })
-            .from
-            .insert(from);
-        self.check_commit(now, topic, pid, out);
-    }
-
-    fn check_commit(&mut self, now: Duration, topic: TopicId, pid: PartyId, out: &mut Vec<Action>) {
-        if self.mode != Mode::Searching {
+        if !members.contains(&from)
+            || !members.contains(&self.me)
+            || party_id(&topic, epoch, &members) != pid
+        {
             return;
         }
         let s = self.search.as_ref().unwrap();
-        if s.announced != Some((topic, pid)) {
-            return; // I moved on to another party (or have none): I cannot confirm this one.
-        }
-        let Some(a) = s.announces.get(&(topic, pid)) else {
-            return;
-        };
-        if !a.members.iter().all(|m| a.from.contains(m)) {
-            return;
+        if s.lease != Some((topic, epoch, from)) || !s.joined.contains(&topic) {
+            return; // I did not accept this leader, so I cannot be committed to its party.
         }
         let party = Party {
             id: pid,
-            epoch: a.epoch,
-            members: a.members,
+            epoch,
+            members,
         };
         self.commit_to(now, topic, party, out);
     }
@@ -712,7 +850,7 @@ impl Engine {
                 names.insert(me, (e.ad.first_name.clone(), e.ad.surname.clone()));
                 details.insert(me, details_of(&e.ad));
             }
-            // Members are taken: drop them from every sample. Stop announcing.
+            // Members are taken: drop them from every sample. Stop inviting and answering.
             for sample in s.samples.values_mut() {
                 for m in party.members {
                     if m != me {
@@ -720,7 +858,9 @@ impl Engine {
                     }
                 }
             }
-            s.announces.clear();
+            s.lead = None;
+            s.inbox.clear();
+            s.lease = None;
             // Leave the other topics. Rejoined if the party is dropped.
             for t in s.joined.iter().copied().collect::<Vec<_>>() {
                 if t != topic {
@@ -736,14 +876,19 @@ impl Engine {
                 counter: self.counter,
             },
         ));
-        out.push(self.msg_to_all(
-            topic,
-            Message::Ready {
-                peer: me,
-                party_id: party.id,
-                nonce: 0,
-            },
-        ));
+        if let Some(own) = self.search.as_ref().and_then(|s| s.own_ad.clone()) {
+            names.insert(me, (own.first_name.clone(), own.surname.clone()));
+            details.insert(me, details_of(&own));
+            out.push(self.msg_to_all(
+                topic,
+                Message::Ready {
+                    peer: me,
+                    party_id: party.id,
+                    nonce: 0,
+                    ad: own,
+                },
+            ));
+        }
         self.mode = Mode::Committed;
         let mut ready = BTreeSet::new();
         ready.insert(me);
@@ -798,6 +943,14 @@ impl Engine {
             0 => {
                 c.ready.insert(from);
                 c.alive.insert(from);
+                // A member's own ad is the source for its name and details.
+                if let Event::ReadyReceived { ad, .. } = &ev
+                    && ad.peer == from
+                {
+                    c.names
+                        .insert(from, (ad.first_name.clone(), ad.surname.clone()));
+                    c.details.insert(from, details_of(ad));
+                }
             }
             1 => {
                 c.confirmed.insert(from);
@@ -918,8 +1071,9 @@ impl Engine {
         if let Some(s) = self.search.as_mut() {
             s.stage_start = now;
             s.stage = 0;
-            s.announced = None;
-            s.announces.clear();
+            s.lead = None;
+            s.inbox.clear();
+            s.lease = None;
             s.last_epoch = Some(now.as_secs() / EPOCH.as_secs());
             // Stage 0 again: leave the extra topics, rejoin the primary ones.
             let primary: BTreeSet<TopicId> = s.topics.iter().map(|t| t.topic).collect();

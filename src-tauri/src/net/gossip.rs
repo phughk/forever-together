@@ -60,7 +60,9 @@ pub fn author_of(msg: &Message) -> PeerId {
         | Message::Confirm { peer, .. }
         | Message::Decline { peer, .. }
         | Message::Heartbeat { peer, .. }
-        | Message::HeartbeatAck { peer, .. } => *peer,
+        | Message::HeartbeatAck { peer, .. }
+        | Message::Invite { peer, .. }
+        | Message::Accept { peer, .. } => *peer,
     }
 }
 

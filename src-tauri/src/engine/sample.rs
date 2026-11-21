@@ -5,6 +5,7 @@
 //! drops the same one. The owner's own ad is never dropped.
 
 use super::ad::{Ad, counter_newer};
+use super::rank::pair_rank;
 use crate::config::AD_EXPIRY;
 use crate::identity::PeerId;
 use std::collections::BTreeMap;
@@ -30,9 +31,28 @@ pub struct Sample {
     taken: BTreeMap<PeerId, u16>,
 }
 
+/// How ads at the same level distance are told apart when the sample is full.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Tie {
+    /// Drop the higher peer ID. Every peer drops the same ad, so same-level peers hold nearly
+    /// the same sample (what converging announcements needed), but ads with high IDs are in
+    /// nobody's sample.
+    LowestId,
+    /// Drop by `pair_rank(0, owner, peer)`. Each peer keeps its own random part of the level,
+    /// so every ad is in about the same share of samples (what leader invitations need).
+    OwnerHash,
+}
+
+/// The tie-break the engine uses (ADR 0025).
+pub const TIE: Tie = Tie::OwnerHash;
+
 /// Eviction order: larger is dropped first.
-fn evict_key(own_level: u8, ad: &Ad) -> (u8, PeerId) {
-    (ad.level.abs_diff(own_level), ad.peer)
+fn evict_key(own_level: u8, owner: &PeerId, ad: &Ad, tie: Tie) -> (u8, u64, PeerId) {
+    let t = match tie {
+        Tie::LowestId => 0,
+        Tie::OwnerHash => pair_rank(0, owner, &ad.peer),
+    };
+    (ad.level.abs_diff(own_level), t, ad.peer)
 }
 
 /// The ads a peer of level `own_level` would keep out of `ads` with room for `cap`. Used by
@@ -43,9 +63,10 @@ pub fn keep_nearest<'a>(
     own: &PeerId,
     mut ads: Vec<&'a Ad>,
     cap: usize,
+    tie: Tie,
 ) -> Vec<&'a Ad> {
     if cap > 0 && ads.len() > cap {
-        let key = |a: &&Ad| (a.peer != *own, evict_key(own_level, a));
+        let key = |a: &&Ad| (a.peer != *own, evict_key(own_level, own, a, tie));
         ads.select_nth_unstable_by_key(cap - 1, key);
         ads.truncate(cap);
     }
@@ -114,7 +135,7 @@ impl Sample {
                 .entries
                 .values()
                 .filter(|e| e.ad.peer != me)
-                .max_by_key(|e| evict_key(own, &e.ad))
+                .max_by_key(|e| evict_key(own, &me, &e.ad, TIE))
                 .map(|e| e.ad.peer);
             match worst {
                 Some(p) => {
@@ -237,14 +258,43 @@ mod tests {
     }
 
     #[test]
-    fn equal_distance_ties_drop_the_higher_peer_id() {
-        let mut s = Sample::new(me(), 24, 2);
-        s.insert(test_ad(9, Role::Tank, 25, 0), secs(0));
-        s.insert(test_ad(3, Role::Tank, 23, 0), secs(0));
-        s.insert(test_ad(5, Role::Tank, 25, 0), secs(0));
-        // own ad absent here, three candidates, cap 2: drop the worst (1 away, highest id = 9)
-        assert!(s.get(&PeerId([9; 32])).is_none());
-        assert!(s.get(&PeerId([3; 32])).is_some() && s.get(&PeerId([5; 32])).is_some());
+    fn equal_distance_ties_are_broken_by_a_hash_of_owner_and_peer() {
+        let ads: Vec<Ad> = (1..=30).map(|i| test_ad(i, Role::Damage, 24, 0)).collect();
+        let kept = |owner: u8, order: &[Ad]| {
+            let mut s = Sample::new(PeerId([owner; 32]), 24, 5);
+            for a in order {
+                s.insert(a.clone(), secs(0));
+            }
+            let mut ids: Vec<u8> = order
+                .iter()
+                .filter(|a| s.get(&a.peer).is_some())
+                .map(|a| a.peer.0[0])
+                .collect();
+            ids.sort();
+            ids
+        };
+        // Same owner, any arrival order: the same five.
+        let mut reversed = ads.clone();
+        reversed.reverse();
+        assert_eq!(kept(200, &ads), kept(200, &reversed));
+        assert_eq!(kept(200, &ads).len(), 5);
+        // Different owners keep different parts of the level, so no ad is in nobody's sample.
+        let sets: std::collections::BTreeSet<Vec<u8>> = (100..120).map(|o| kept(o, &ads)).collect();
+        assert!(sets.len() > 10, "{} distinct samples", sets.len());
+        let covered: std::collections::BTreeSet<u8> = sets.into_iter().flatten().collect();
+        assert!(covered.len() > 20, "{} ads covered", covered.len());
+    }
+
+    #[test]
+    fn the_old_tie_break_drops_the_higher_peer_id() {
+        let ads: Vec<Ad> = [9, 3, 5, 7]
+            .iter()
+            .map(|&i| test_ad(i, Role::Tank, 25, 0))
+            .collect();
+        let kept = keep_nearest(24, &me(), ads.iter().collect(), 2, Tie::LowestId);
+        let mut ids: Vec<u8> = kept.iter().map(|a| a.peer.0[0]).collect();
+        ids.sort();
+        assert_eq!(ids, [3, 5]);
     }
 
     #[test]
@@ -252,7 +302,7 @@ mod tests {
         let ads: Vec<Ad> = (1..=6)
             .map(|i| test_ad(i, Role::Damage, 20 + i, 0))
             .collect();
-        let kept = keep_nearest(24, &me(), ads.iter().collect(), 3);
+        let kept = keep_nearest(24, &me(), ads.iter().collect(), 3, TIE);
         let mut ids: Vec<u8> = kept.iter().map(|a| a.peer.0[0]).collect();
         ids.sort();
         assert_eq!(ids, [3, 4, 5]); // levels 23, 24, 25

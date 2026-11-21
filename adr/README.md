@@ -13,7 +13,7 @@ Decisions for forever-together (short code `wowft`, working name `p2prdf` in old
 | 0007 | [Parties are same-faction only, and faction is in the code and the topic](0007-same-faction-parties.md) | Accepted |
 | 0008 | [Use iroh and iroh-gossip, rustls, varaq storage and permanent keys](0008-iroh-and-local-storage.md) | Accepted |
 | 0009 | [Bootstrap through remembered peers, peer exchange, then trusted peers, with an LRU known-peers table](0009-bootstrap-and-peer-exchange.md) | Accepted |
-| 0010 | [Peers agree on parties by converging announcements and a human Confirm](0010-converging-announcements.md) | Accepted (baseline, under evaluation) |
+| 0010 | [Peers agree on parties by converging announcements and a human Confirm](0010-converging-announcements.md) | Superseded by 0025 |
 | 0011 | [A search loosens over time on a shared schedule](0011-search-widening.md) | Accepted (revised) |
 | 0012 | [One web app served by the desktop app to its own window and to phones, with a token for phones](0012-one-web-app-for-phone-and-desktop.md) | Accepted |
 | 0013 | [The desktop app is one Rust crate with modules](0013-single-rust-crate.md) | Accepted |
@@ -27,4 +27,5 @@ Decisions for forever-together (short code `wowft`, working name `p2prdf` in old
 | 0021 | [The headless test VM stays in wow-forever-addons and is referenced as a submodule](0021-test-vm-referenced-from-wow-forever-addons.md) | Accepted |
 | 0022 | [A character's name is two fields, first name and surname](0022-name-is-first-name-and-surname.md) | Accepted |
 | 0023 | [Avoid supernodes: trusted peers are ordinary peers](0023-no-supernodes.md) | Accepted |
-| 0024 | [A committed party needs a Ready check, a human Confirm, and a Decline without penalty](0024-liveness-and-decline.md) | Accepted |
+| 0024 | [A committed party needs a Ready check, a human Confirm, and a Decline without penalty](0024-liveness-and-decline.md) | Accepted (amended by 0025) |
+| 0025 | [Peers agree on a party by leader invitations: a tank invites from its own sample, invitees follow the best-ranked leader](0025-leader-invitations.md) | Accepted |

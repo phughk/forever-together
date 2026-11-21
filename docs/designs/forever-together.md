@@ -68,7 +68,7 @@ The proposed solution is a pair of tools: the addon, which turns the live charac
 *   **Faction.** Should the app check `AreCrossFactionGroupQueuesAllowed`? The faction is carried in the ad as well as the topic, so removing it from the topic later is a version change and not a redesign.
 *   **Item level.** Does `GetAverageItemLevel` work on this client?
 *   **QR scannability** of a QR drawn with `SetColorTexture` at typical UI scales.
-*   **Agreement mechanism.** Converging announcements against a proposer model, chosen by the simulation.
+*   **Agreement mechanism.** Leader invitations: a tank invites a party from its own sample and invitees follow the best-ranked leader ([ADR 0025](../../adr/0025-leader-invitations.md)). Chosen after the simulation rejected converging announcements and the proposer model.
 *   **`varaq` and iroh.** Is `varaq` 0.1.x good enough for the secret key? Does `iroh-gossip` identify message authors? Does address lookup resolve a trusted peer from its key? Which hosted components does iroh use by default?
 
 **Tuning: starting values are in the plan.** Epoch length, ad cutoff, sample size, window lengths, widening steps, level bias in samples (how strong, and does it hurt convergence?), eviction rule for the known-peers cache.
@@ -165,7 +165,7 @@ A topic is `region + realm + faction + dungeon`, hashed with a protocol prefix a
 
 Peers in one swarm hold a partial view: about 5 active connections and 30 passive peers (the `iroh-gossip` defaults). Each peer also keeps a bounded sample of the latest ads it has seen and matches within it. When the sample is full, the peer drops the ads furthest from its own level first, so a dungeon with a wide level range still leaves it with candidates it can group with. This bias is **proposed**: whether it hurts agreement is an Open Question, and the simulation measures it.
 
-**Load estimate (to be confirmed by the simulation).** In a swarm of 3,000 searching peers, each peer sends an ad every 45 seconds, about 67 ads per second across the swarm. Each ad is about 100 bytes plus a 64-byte signature, so about 11 KB per second spread across the swarm, before gossip duplication. With the default fan-out each peer receives each ad a few times, so a peer sees on the order of a few hundred messages per second of ads at the high end. Announcements, Ready and Confirm messages go to the whole swarm in the baseline mechanism, and to the party's members only if the proposer model is adopted. These figures are an intent, not a measurement.
+**Load estimate (to be confirmed by the simulation).** In a swarm of 3,000 searching peers, each peer sends an ad every 45 seconds, about 67 ads per second across the swarm. Each ad is about 100 bytes plus a 64-byte signature, so about 11 KB per second spread across the swarm, before gossip duplication. With the default fan-out each peer receives each ad a few times, so a peer sees on the order of a few hundred messages per second of ads at the high end. `Taken`, `Ready` and `Confirm` messages go to the whole topic. Invitations, acceptances and party announcements are direct messages: a tank sends at most 11 invitations every 5 s, about 0.3 direct messages per second per peer across a swarm of 3,000 with 15% tanks. These figures are an intent, not a measurement.
 
 ### 4. First contact and bootstrap
 
@@ -193,21 +193,25 @@ A search starts strict and loosens in a fixed order on a shared schedule: item l
 
 ### 6. Agreeing on a party
 
-Terms: an **announcement** names a proposed party. A party is **committed** when all five members have announced it. **Ready** says a member's app is alive and has shown the prompt. **Confirm** is the human's click. **Decline** is a failed or refused confirmation. **Taken** says a peer is in a committed party.
+Terms: a **leader** is the tank that builds a party. An **invitation** asks a healer or damage peer to join it. A party is **committed** when its leader has announced it to the four it invited and who accepted. **Ready** says a member's app is alive and has shown the prompt. **Confirm** is the human's click. **Decline** is a failed or refused confirmation. **Taken** says a peer is in a committed party.
 
-Two mechanisms are candidates. The simulation in spike S0 measures both and the better commit rate wins.
+**Leader invitations** ([ADR 0025](../../adr/0025-leader-invitations.md), replacing converging announcements, [ADR 0010](../../adr/0010-converging-announcements.md)). Spike S0 showed that peers cannot agree on a party by each computing it from their own sample: the samples differ, and the simulation commits about 2% of eligible peers that way. So one peer builds the party and nobody needs the samples to match.
 
-**Baseline: converging announcements** ([ADR 0010](../../adr/0010-converging-announcements.md)). Time is divided into epochs. In each epoch every peer runs the same pure function on its sample: use only ads published before a cutoff slightly earlier than the epoch start; order peers by `hash(epoch, peerId)`; build parties greedily, each needing one tank, one healer and three damage dealers, with every member compatible with the others at the stricter stage; announce the party that contains this peer. Each peer announces at most one party per epoch. When the samples of two peers differ at the edges, some announcements do not match and that epoch yields no commit for them. The next epoch uses a new order. Convergence depends on how much the samples overlap.
+*   Time is divided into epochs of 5 s. In each epoch a free tank looks at its own sample (ads published before a cutoff slightly earlier than the epoch start, compatible with it at the stricter stage), picks one healer and three damage dealers that are compatible with each other, and sends each a direct `Invite` that carries its own ad. It also invites a few spares (2 healers, 5 damage) who fit, and tries candidates in its own order, so different tanks try different people first.
+*   Two seconds after the epoch start an invitee answers the invitations of that epoch once. It ignores invitations that are not from a tank, whose author does not match the ad, from banned peers or from tanks it does not fit, and accepts the leader with the lowest `hash(epoch, leaderId)`. All invitees use the same order, so the best-ranked leader always gets everyone it invited. The invitee now holds a lease on that leader for the epoch, and only that leader's announcement can commit it.
+*   As soon as a leader's acceptors contain a healer and three damage dealers that are compatible with each other and with it, the leader announces the party to the four, commits and sends `Taken` and `Ready`. The invitees commit on that announcement.
+*   Role scarcity decides who leads: parties need exactly one tank and tanks are the scarce role, so every tank is a leader and the rest follow. A topic with no tank forms no party.
+*   The sample keeps, among ads at the same level distance, a random part chosen by a hash of the owner and the ad's peer, not the lowest peer IDs. With the old rule two thirds of the peers on a level were in nobody's sample and could never be invited.
 
-**Candidate: proposer with response windows** (the author's description). A partial group advertises the roles it still needs, for example two damage dealers looking for a tank, a healer and a damage dealer. Responders reply, and the proposer must decide within a few seconds of each response. If nobody responds, the group fails. A responder accepts one proposer at a time, which is a lease. The lease is the cost of this model and the reason it was rejected earlier ([Alternative J](#alternative-j-a-proposer-with-per-peer-leases-or-an-elected-coordinator-per-shard)). Its message set is defined in the spec only if it is adopted.
+In the simulation (3,000 peers, sample 100, delivery 0.95) this commits a mean of 78.4% of eligible peers within 30 s (74.6% in the worst of 8 seeds), against 1.9% for converging announcements and 12.1% for the proposer model. The numbers, the role-mix cap on every mechanism and what the model leaves out are in `docs/spike-s0.md`.
 
-**After a commit (both mechanisms).**
+**After a commit.**
 
 ```mermaid
 sequenceDiagram
     participant A as Member app
     participant P as Other four members
-    A->>P: Announce / commit seen (all five)
+    A->>P: Leader's announcement (to the four it invited)
     A->>P: Taken (stop searching, leave samples)
     A->>P: Ready (within 4 s)
     Note over A: Human sees the Confirm prompt (15 s)
@@ -222,9 +226,9 @@ sequenceDiagram
     end
 ```
 
-A peer confirms at most one party. A peer that sees a commit late may already have announced another party in a later epoch. That party can look committed to its other members but cannot be confirmed by the peer that moved on, so it ends in a Decline or timeout and its members search again. The one-party guarantee therefore holds at the confirmation step, and a commit that fails can waste a few seconds for four players. The windows are 4 s for Ready and heartbeats and 15 s for the human click. The times use each peer's own arrival time, so no shared clock is needed. An announcement for the previous or next epoch is kept for one epoch.
+A peer confirms at most one party. A peer answers one epoch once and commits only on the announcement of the leader it accepted, so it is in at most one committed party. A leader whose announcement does not reach a member, or reaches it after it moved on, finds that member missing at the Ready check and the others drop the party after 4 s, with a local ban on the silent member (the cost of a lost message). The windows are 2 s for an invitee's decision, 4 s for Ready and heartbeats and 15 s for the human click. The times use each peer's own arrival time, so no shared clock is needed. An invitation for the previous or next epoch is kept for one epoch.
 
-After the final confirmation, the app shows the other members' first names and surnames, labelled as claimed by the other player. The text to type into the invite is "First Surname", which is unverified on the real client. Members' names arrive in their ads. A party in which two members claim the same first name and surname is refused ([ADR 0016](../../adr/0016-peers-identified-by-key.md)). The character GUID is not carried.
+After the final confirmation, the app shows the other members' first names and surnames, labelled as claimed by the other player. The text to type into the invite is "First Surname", which is unverified on the real client. Members' names arrive in their own `Ready` messages, which carry the member's ad. A party in which two members claim the same first name and surname is refused ([ADR 0016](../../adr/0016-peers-identified-by-key.md)). The character GUID is not carried.
 
 ### 7. The local web app and API
 
@@ -340,7 +344,7 @@ The decisions are recorded in [`adr/`](../../adr/README.md).
 
 *   **Pros**: Leases give a clear rule that a peer holds one proposal at a time. A coordinator sees the whole shard and makes better matches.
 *   **Cons**: Leases need an agreed clock and extra round trips, and waste leases under heavy proposing. A coordinator is a hot spot and a trust point, and two coordinators can both assemble parties when gossip splits.
-*   **Reason for rejection**: Converging announcements were the baseline ([ADR 0010](../../adr/0010-converging-announcements.md)). The proposer model with short response windows is now a candidate and is simulated in S0. The coordinator is not.
+*   **Reason for rejection**: Converging announcements (ADR 0010) and the proposer model were simulated in S0 and did not reach the floor. Leader invitations ([ADR 0025](../../adr/0025-leader-invitations.md)) keep the useful part of both: one peer builds the party and invitees hold a lease on it for one epoch, with a global preference order and spares instead of a coordinator. A coordinator per shard is still rejected: it is a hot spot and a trust point ([ADR 0023](../../adr/0023-no-supernodes.md)).
 
 ### Alternative K: A central matchmaking or rendezvous server
 
