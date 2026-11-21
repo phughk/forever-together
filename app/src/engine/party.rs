@@ -10,6 +10,10 @@ use crate::identity::PeerId;
 use sha2::{Digest, Sha256};
 
 pub const PARTY_SIZE: usize = 5;
+/// The role mix of a party: 1 tank, 1 healer, 3 damage (sums to `PARTY_SIZE`).
+pub const TANKS_PER_PARTY: u8 = 1;
+pub const HEALERS_PER_PARTY: u8 = 1;
+pub const DAMAGE_PER_PARTY: u8 = 3;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Party {
@@ -49,9 +53,9 @@ struct Open<'a> {
 impl Open<'_> {
     fn needs(&self, role: Role) -> bool {
         match role {
-            Role::Tank => self.tank < 1,
-            Role::Healer => self.healer < 1,
-            Role::Damage => self.damage < 3,
+            Role::Tank => self.tank < TANKS_PER_PARTY,
+            Role::Healer => self.healer < HEALERS_PER_PARTY,
+            Role::Damage => self.damage < DAMAGE_PER_PARTY,
         }
     }
     fn add(&mut self, ad: &Ad) {
