@@ -22,6 +22,9 @@
   .ft-page--focus .ft-page__main { grid-column: 1; grid-row: 2 / span 3; max-width: none; margin: 0; }
   .ft-page--focus .ft-header--finder { grid-column: 3; grid-row: 2; align-self: start; margin: 0; }
   .ft-page--focus .ft-page__strip { grid-column: 2; grid-row: 2; align-self: start; }
+  /* Short content sits a little below the top edge, not glued to it. The strip and the card share the offset so their tops line up; the gear stays at the top. */
+  .ft-page--focus { --focus-offset: clamp(0px, calc((100dvh - 38rem) / 2.5), 9rem); }
+  .ft-page--focus .ft-page__main, .ft-page--focus .ft-page__strip { margin-top: var(--focus-offset); }
 }
 
 /* Settings: a responsive grid of section cards. */

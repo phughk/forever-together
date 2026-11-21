@@ -9,7 +9,8 @@ import type { ReactNode } from "react";
  *    which lays itself out as a responsive grid of cards inside its own scroll region.
  *  - "focus": a single card for the current screen (first run, searching, ended, party) at a readable width
  *    (up to about 46rem), centred. At 1100px and wider the strip moves from the top row to a side column beside
- *    the card, so the screen is a two-pane layout and not a lone column.
+ *    the card, so the screen is a two-pane layout and not a lone column. On tall windows the card and the strip
+ *    share a top offset (up to 9rem) so short content sits in the free height; the gear stays at the top.
  *
  * Viewport-fit limits (a 1280x720 window and a 390x844 phone): the main action of the screen must be visible
  * without scrolling the page, so the slots together may use at most the viewport height.
