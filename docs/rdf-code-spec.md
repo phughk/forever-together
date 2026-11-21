@@ -1,6 +1,6 @@
 # forever-together code and protocol specification, version 1
 
-Status: draft, awaiting spike S0 (realm, region and name format verified by live capture 2026-11-21, see "Realm and region"). Values marked **provisional** may change when S0 reports. This file is the single source for the character code and the wire messages. The addon tests and the Rust tests both read `docs/rdf-code-vectors.json` (created in step 1; format below). The design is in [`designs/forever-together.md`](designs/forever-together.md) and the build order is in [`designs/forever-together-implementation-plan.md`](designs/forever-together-implementation-plan.md).
+Status: draft, awaiting spike S0 (realm, region and name format verified by live capture 2026-11-21, see "Realm and region"). Values marked **provisional** may change when S0 reports. This file is the single source for the character code and the wire messages. The addon tests and the Rust tests both read `docs/rdf-code-vectors.json` (created in step 1; format below). The design is in [ADR 0034](adr/0034-system-overview-goals-and-risks.md) and the build order is in [ADR 0035](adr/0035-protocol-constants-engine-contract-and-api.md).
 
 Short code: `wowft`. Names in this file: code prefix `WFT1:`, topic prefix `wowft/1/`, peer exchange ALPN `wowft/peers/1`.
 
