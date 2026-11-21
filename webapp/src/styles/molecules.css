@@ -41,6 +41,7 @@
 .ft-setting:last-child { border-bottom: 0; }
 .ft-setting__text { display: grid; gap: 2px; min-width: 0; }
 .ft-setting__title { font-weight: 600; }
+.ft-setting__titlerow { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 
 .ft-pairing { display: grid; gap: var(--space-3); justify-items: start; }
 .ft-pairing__url { max-width: 100%; word-break: break-all; }
@@ -61,4 +62,10 @@
 .ft-diagnosis { display: grid; gap: var(--space-3); }
 .ft-diagnosis__detail { margin-top: var(--space-1); }
 .ft-diagnosis__seen { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-1); padding: 0; list-style: none; font-size: 0.85rem; color: var(--text-muted); }
+/* Details */
+.ft-details > summary { display: list-item; box-sizing: border-box; min-height: var(--tap); padding: var(--space-2) 0; cursor: pointer; color: var(--text-muted); font-size: 0.9rem; }
+.ft-details[open] > summary { margin-bottom: var(--space-2); }
+.ft-details > summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.ft-details__body { display: grid; gap: var(--space-3); min-width: 0; }
+
 .ft-diagnosis__seen li { display: inline-flex; align-items: center; gap: var(--space-1); }
