@@ -8,7 +8,6 @@ import { Button } from "../atoms/Button";
 import { Card } from "../atoms/Card";
 import { CopyChip } from "../atoms/CopyChip";
 import { Notice } from "../atoms/Notice";
-import { Text } from "../atoms/Typography";
 import { CharacterSummary } from "../molecules/CharacterSummary";
 import { CodePasteForm } from "../molecules/CodePasteForm";
 import { Details } from "../molecules/Details";
@@ -24,13 +23,11 @@ export interface CharacterPanelProps {
   busy?: boolean;
   /** Plain-language reason the last pasted code was refused. */
   error?: string | null;
-  /** The search is running, so the character cannot be replaced. */
-  locked?: boolean;
   /** Where "Get the addon" points. Defaults to ADDON_URL; null renders plain text. */
   addonUrl?: string | null;
 }
 
-export function CharacterPanel({ character, now, onSubmitCode, onForget, busy, error, locked, addonUrl = ADDON_URL }: CharacterPanelProps) {
+export function CharacterPanel({ character, now, onSubmitCode, onForget, busy, error, addonUrl = ADDON_URL }: CharacterPanelProps) {
   const [replacing, setReplacing] = useState(false);
 
   if (!character) {
@@ -84,7 +81,7 @@ export function CharacterPanel({ character, now, onSubmitCode, onForget, busy, e
       )}
       <div className="ft-actions">
         {!showForm && (
-          <Button size="small" disabled={locked} onClick={() => setReplacing(true)}>
+          <Button size="small" onClick={() => setReplacing(true)}>
             Update character
           </Button>
         )}
@@ -93,15 +90,10 @@ export function CharacterPanel({ character, now, onSubmitCode, onForget, busy, e
             Cancel
           </Button>
         )}
-        <Button size="small" variant="ghost" disabled={locked} onClick={() => void onForget()}>
+        <Button size="small" variant="ghost" onClick={() => void onForget()}>
           Remove character
         </Button>
       </div>
-      {locked && (
-        <Text size="small" muted>
-          Stop the search to change the character.
-        </Text>
-      )}
     </Card>
   );
 }

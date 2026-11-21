@@ -161,3 +161,6 @@ mise.local.toml
 # outputs
 webapp/dist/
 webapp/storybook-static/
+
+# Playwright MCP scratch output
+.playwright-mcp/

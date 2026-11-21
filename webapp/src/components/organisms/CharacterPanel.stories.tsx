@@ -47,7 +47,6 @@ export const LongNames: Story = {
   args: { character: makeCharacter({ firstName: "Bartholomewmaximilian", surname: "Featherstonehaugh-Cholmondeley" }) },
 };
 export const NarrowPhone: Story = { decorators: [(Story) => <div style={{ width: 320 }}>{Story()}</div>] };
-export const SearchRunningLocked: Story = { args: { locked: true } };
 export const CodeRefused: Story = {
   args: { error: "This code comes from a different version. Update the addon or the app so both match." },
 };
