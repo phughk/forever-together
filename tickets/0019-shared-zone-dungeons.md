@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** feature
 * **Source:** design doc Open Questions; Alternative G2
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

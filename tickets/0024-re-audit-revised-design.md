@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** review
 * **Source:** CLAUDE.md
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** bug
 * **Source:** ADR 0032
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

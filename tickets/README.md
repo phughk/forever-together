@@ -1,6 +1,6 @@
 # Tickets
 
-One file per ticket, named `NNNN-slug.md`. Status is `open` unless it says otherwise. When work is decided, write an ADR (see CLAUDE.md); a ticket tracks what is still to do.
+One file per ticket, named `NNNN-slug.md`. Status is `open` unless it says otherwise. Each ticket has `Status` (open, in progress, blocked, done, dropped), `Kind`, `Source`, `ADRs` and `EGM` (links, or none). See [ADR 0036](../docs/adr/0036-how-designs-and-decisions-are-maintained.md). When work is decided, write an ADR (see CLAUDE.md); a ticket tracks what is still to do.
 
 | # | Ticket | Kind |
 |---|--------|------|

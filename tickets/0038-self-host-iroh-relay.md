@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** decision
 * **Source:** ADR 0034 (risks)
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** idea
 * **Source:** docs/design-process/archive brief (search diagnosis), staging 7
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

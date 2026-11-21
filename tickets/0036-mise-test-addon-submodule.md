@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** chore
 * **Source:** CLAUDE.md
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

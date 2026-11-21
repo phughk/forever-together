@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** chore
 * **Source:** ADR 0029
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

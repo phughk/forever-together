@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** idea
 * **Source:** ADR 0007
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

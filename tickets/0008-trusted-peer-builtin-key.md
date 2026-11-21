@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** prerequisite
 * **Source:** CLAUDE.md; ADR 0023
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

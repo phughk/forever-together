@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** prerequisite
 * **Source:** ADR 0031; ui audit
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

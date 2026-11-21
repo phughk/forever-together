@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** decision
 * **Source:** design doc Open Questions
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

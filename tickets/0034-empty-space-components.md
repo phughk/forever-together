@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** bug
 * **Source:** the tickets in `tickets/`
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

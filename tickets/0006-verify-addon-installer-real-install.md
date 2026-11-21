@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** verification
 * **Source:** ADR 0028; docs/design-process/archive/addon_installer_concepts_brief.md
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

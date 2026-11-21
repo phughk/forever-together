@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** idea
 * **Source:** the tickets in `tickets/`
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

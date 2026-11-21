@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** feature
 * **Source:** ADR 0027; docs/design-process/archive brief (search diagnosis), resolution 13
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

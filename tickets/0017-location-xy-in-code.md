@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** feature
 * **Source:** the tickets in `tickets/`; design doc Future Improvements
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

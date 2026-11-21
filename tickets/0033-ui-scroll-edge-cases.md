@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** bug
 * **Source:** ADR 0029; ui audit follow-up
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

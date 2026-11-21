@@ -39,3 +39,4 @@ Decisions for forever-together (short code `wowft`, working name `p2prdf` in old
 | 0033 | [The header shows only a gear and Back, and the character strip always offers Change character](0033-header-and-character-strip.md) | Accepted |
 | 0034 | [System overview, goals, user journeys, non-functional requirements and risks](0034-system-overview-goals-and-risks.md) | Accepted (contains the archived design doc) |
 | 0035 | [Protocol constants, widening schedule, engine contract and local API](0035-protocol-constants-engine-contract-and-api.md) | Accepted (contains the archived implementation plan) |
+| 0036 | [Tickets drive work, EGM iterations live in one folder per ticket, and ADRs record the outcome](0036-how-designs-and-decisions-are-maintained.md) | Accepted |

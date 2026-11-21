@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** feature
 * **Source:** the tickets in `tickets/`; ADR 0028
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

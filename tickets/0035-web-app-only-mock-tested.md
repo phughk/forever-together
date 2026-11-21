@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** verification
 * **Source:** CLAUDE.md; ADR 0028
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

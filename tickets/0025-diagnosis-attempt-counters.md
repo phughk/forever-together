@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** feature
 * **Source:** ADR 0026; docs/design-process/archive brief (search diagnosis), staging 6
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

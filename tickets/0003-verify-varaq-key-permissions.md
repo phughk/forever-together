@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** verification
 * **Source:** ADR 0008; docs/spike-s0.md
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 

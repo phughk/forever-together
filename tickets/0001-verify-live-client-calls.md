@@ -3,6 +3,8 @@
 * **Status:** open
 * **Kind:** verification
 * **Source:** docs/spike-s0.md
+* **ADRs:** none
+* **EGM:** none
 
 ## What
 
