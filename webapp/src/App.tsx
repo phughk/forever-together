@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { describeCodeError, isApiError, isLoopbackOnly } from "./api/errors";
-import type { Api, DungeonsResponse, Settings } from "./api/types";
+import { installAddonFlow, type AddonResult } from "./api/addonFlow";
+import { describeAddonError, describeCodeError, isApiError, isLoopbackOnly } from "./api/errors";
+import type { AddonInfo, Api, DungeonsResponse, Settings } from "./api/types";
 import { ApiProvider, useAppState } from "./api/useAppState";
 import { NotPairedPage } from "./components/pages/NotPairedPage";
 import { FinderPage } from "./components/pages/FinderPage";
@@ -27,6 +28,10 @@ function Container({ api }: { api: Api }) {
   const [remote, setRemote] = useState(!LOOPBACK.has(window.location.hostname));
   const [pairing, setPairing] = useState<PairingState>({ kind: "off" });
   const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [addon, setAddon] = useState<AddonInfo | null>(null);
+  const [addonResult, setAddonResult] = useState<AddonResult | null>(null);
+  const [addonBusy, setAddonBusy] = useState(false);
+  const [addonFolderError, setAddonFolderError] = useState<string | null>(null);
 
   const characterKey = state?.character ? `${state.character.level}|${state.character.zone}|${state.character.createdAt}` : "none";
   const hasState = state !== null;
@@ -70,6 +75,52 @@ function Container({ api }: { api: Api }) {
     };
   }, [api, view, lanMode, lanAddress]);
 
+  // The addon card reads the installer state each time Settings opens. A phone gets 403 and the card locks.
+  useEffect(() => {
+    if (view !== "settings") return;
+    let cancelled = false;
+    setAddonResult(null);
+    setAddonFolderError(null);
+    api
+      .getAddon()
+      .then((a) => !cancelled && setAddon(a))
+      .catch((e: unknown) => {
+        if (!cancelled && isLoopbackOnly(e)) setRemote(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, view]);
+
+  const installAddon = useCallback(async () => {
+    if (!addon) return;
+    setAddonBusy(true);
+    setAddonResult(null);
+    setAddonFolderError(null);
+    const out = await installAddonFlow(api, addon);
+    if (out.ok) setAddon(out.info);
+    else if (out.remote) setRemote(true);
+    setAddonResult(out.result);
+    setAddonBusy(false);
+  }, [api, addon]);
+
+  const saveAddonFolder = useCallback(
+    async (folder: string) => {
+      setAddonBusy(true);
+      setAddonResult(null);
+      setAddonFolderError(null);
+      try {
+        setAddon(await api.setAddonFolder(folder));
+      } catch (e) {
+        if (isLoopbackOnly(e)) setRemote(true);
+        setAddonFolderError(isApiError(e) && e.message ? e.message : describeAddonError(isApiError(e) ? e.code : ""));
+      } finally {
+        setAddonBusy(false);
+      }
+    },
+    [api],
+  );
+
   const changeSettings = useCallback(
     async (patch: Partial<Settings>) => {
       setSettingsError(null);
@@ -97,6 +148,12 @@ function Container({ api }: { api: Api }) {
         remote={remote}
         error={settingsError}
         onNavigate={setView}
+        addon={addon}
+        addonResult={addonResult}
+        addonBusy={addonBusy}
+        addonFolderError={addonFolderError}
+        onInstallAddon={installAddon}
+        onSaveAddonFolder={saveAddonFolder}
         onLanModeChange={(on) => changeSettings({ lan_mode: on })}
         onLanAddressChange={(a) => changeSettings({ lan_address: a })}
         onResetToken={async () => {

@@ -50,6 +50,7 @@ export const Settings: StoryObj = {
       sections={
         <>
           <Slot label="section: phone link (main action, about 8 to 14rem)" height={140} />
+          <Slot label="section: addon (badge, values line, one button, about 8rem)" height={120} />
           <Slot label="section: advanced (collapsed, one row)" height={56} />
         </>
       }
