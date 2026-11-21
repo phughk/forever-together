@@ -29,3 +29,4 @@ Decisions for forever-together (short code `wowft`, working name `p2prdf` in old
 | 0023 | [Avoid supernodes: trusted peers are ordinary peers](0023-no-supernodes.md) | Accepted |
 | 0024 | [A committed party needs a Ready check, a human Confirm, and a Decline without penalty](0024-liveness-and-decline.md) | Accepted (amended by 0025) |
 | 0025 | [Peers agree on a party by leader invitations: a tank invites from its own sample, invitees follow the best-ranked leader](0025-leader-invitations.md) | Accepted |
+| 0026 | [The app reports search health from this peer's own observations](0026-search-health-from-own-observations.md) | Accepted (first slice; amends 0011) |
