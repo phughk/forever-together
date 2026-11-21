@@ -11,7 +11,7 @@ export interface DiagnosisCopy {
 
 /**
  * Length limits for the player-facing sentences, for the story docs and for layout:
- * a headline stays within 220 characters and a detail within 140, with up to 3 dungeons named in the scope
+ * a headline stays within 220 characters and a detail within 140 (the longest are the ended "nobody_answered" detail and the healthy detail with attempt counts, both about 110), with up to 3 dungeons named in the scope
  * (the scope is a count, "across 3 dungeons", so the dungeon list never lengthens the sentence).
  */
 export const HEADLINE_MAX_CHARS = 220;
@@ -41,6 +41,19 @@ function mixPhrase(d: DiagnosisView): string {
   const p = (n: number) => (d.sampleFull && n > 0 ? "about " : "");
   const part = (n: number, r: DiagnosisRole) => `${p(n)}${n} ${noun(n, r)}`;
   return `${part(d.seen.tanks, "tank")}, ${part(d.seen.healers, "healer")}, ${part(d.seen.damage, "damage")}`;
+}
+
+/** "about 10 players", for the others this computer saw being taken into groups. Zero or unknown is just "other players". */
+function takenPhrase(d: DiagnosisView): string {
+  const n = d.attempts?.takenSeen ?? 0;
+  return n > 0 ? `about ${n} ${n === 1 ? "player" : "players"}` : "other players";
+}
+
+/** "invited 6, accepted 0" when this computer sent any invitations, else null. Says "invited", never "invitation". */
+export function attemptsPhrase(d: DiagnosisView): string | null {
+  const a = d.attempts;
+  if (!a || a.invitesSent <= 0) return null;
+  return `invited ${a.invitesSent}, accepted ${a.acceptsGot}`;
 }
 
 function scope(dungeonCount: number): string {
@@ -129,18 +142,50 @@ export function diagnosisCopy(d: DiagnosisView, elapsedS: number, dungeonCount: 
             tone: "warn",
           };
 
-    case "healthy":
+    case "others_grouping":
+      return d.ended
+        ? {
+            headline: `In ${over} this computer saw ${takenPhrase(d)} taken into groups${where}, which is why few players were left in the list.`,
+            detail: "Others nearby were forming groups. Wait and search again, or try another dungeon.",
+            tone: "info",
+          }
+        : {
+            headline: `This computer sees ${takenPhrase(d)} being taken into groups${where}, so the list of players looks thin.`,
+            detail: "The app is working: others nearby are forming groups. Keep waiting.",
+            tone: "info",
+          };
+
+    case "nobody_answered": {
+      const sent = d.attempts?.invitesSent ?? 0;
+      const who = sent > 0 ? `${sent} ${sent === 1 ? "player" : "players"}` : "players";
+      return d.ended
+        ? {
+            headline: `In ${over} this computer invited ${who}${where} and none accepted, although the party mix looked possible.`,
+            detail: "Their apps may not have replied or may not be reaching this computer. Search again, or try another dungeon.",
+            tone: "warn",
+          }
+        : {
+            headline: `This computer invited ${who}${where}, but none accepted so far.`,
+            detail: "Other players' apps may not have replied, or may not be reaching this computer.",
+            tone: "warn",
+          };
+    }
+
+    case "healthy": {
+      const tried = attemptsPhrase(d);
+      const lead = tried ? `${tried.charAt(0).toUpperCase()}${tried.slice(1)}. ` : "";
       return d.ended
         ? {
             headline: `Over ${over} this computer saw ${playersPhrase(d)}${where}: ${mixPhrase(d)}. That looked like enough, but no party was completed.`,
-            detail: "Search again, or try another dungeon.",
+            detail: `${lead}Search again, or try another dungeon.`,
             tone: "info",
           }
         : {
             headline: `From what this computer sees${where}, a group looks possible: ${playersPhrase(d)}, ${mixPhrase(d)}.`,
-            detail: "This is only what is visible from here, not a promise that a group will form.",
+            detail: `${lead}This is only what is visible from here, not a promise that a group will form.`,
             tone: "good",
           };
+    }
 
     default:
       return d.ended

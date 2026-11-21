@@ -1,5 +1,5 @@
 import type { DiagnosisRole, DiagnosisView } from "../../api/types";
-import { diagnosisCopy } from "../../lib/diagnosisCopy";
+import { attemptsPhrase, diagnosisCopy } from "../../lib/diagnosisCopy";
 import { Notice } from "../atoms/Notice";
 import { RoleIcon } from "../atoms/RoleIcon";
 import { Text } from "../atoms/Typography";
@@ -25,6 +25,7 @@ export function DiagnosisSummary({ diagnosis, elapsedS, dungeonCount }: Diagnosi
   const copy = diagnosisCopy(diagnosis, elapsedS, dungeonCount);
   const prefix = diagnosis.sampleFull ? "about " : "";
   const n = diagnosis.seen.players;
+  const tried = attemptsPhrase(diagnosis);
   return (
     <div className="ft-diagnosis">
       <Notice tone={copy.tone}>
@@ -43,6 +44,7 @@ export function DiagnosisSummary({ diagnosis, elapsedS, dungeonCount }: Diagnosi
                 <RoleIcon role={r} /> {diagnosis.seen[KEY[r]]}
               </li>
             ))}
+            {tried && <li>{tried}</li>}
           </ul>
           <Text size="small" muted>
             Rough counts from this computer, not including you.

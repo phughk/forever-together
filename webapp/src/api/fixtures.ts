@@ -1,6 +1,7 @@
 import type {
   AppState,
   CharacterView,
+  AttemptsView,
   DiagnosisView,
   DungeonEntry,
   DungeonsResponse,
@@ -74,6 +75,11 @@ export function idleSearch(): SearchView {
   return { status: "idle", dungeons: [], startedAt: null, stage: 0, stageClockStartedAt: null, searching: null, topics: 0 };
 }
 
+/** Attempt counters for stories; override any field. */
+export function makeAttempts(over: Partial<AttemptsView> = {}): AttemptsView {
+  return { invitesSent: 0, acceptsGot: 0, invitesGot: 0, takenSeen: 0, drops: 0, declines: 0, ...over };
+}
+
 /** A diagnosis for stories and the mock. Counts default to a plausible mix for the situation. */
 export function makeDiagnosis(situation: string, over: Partial<DiagnosisView> = {}): DiagnosisView {
   const seen = (
@@ -85,6 +91,8 @@ export function makeDiagnosis(situation: string, over: Partial<DiagnosisView> = 
       no_healer: { players: 7, tanks: 2, healers: 0, damage: 5 },
       short_on_damage: { players: 4, tanks: 1, healers: 2, damage: 1 },
       healthy: { players: 13, tanks: 2, healers: 2, damage: 9 },
+      others_grouping: { players: 3, tanks: 0, healers: 1, damage: 2 },
+      nobody_answered: { players: 13, tanks: 2, healers: 2, damage: 9 },
     } as Record<string, DiagnosisView["seen"]>
   )[situation] ?? { players: 6, tanks: 1, healers: 1, damage: 4 };
   return {
@@ -94,6 +102,8 @@ export function makeDiagnosis(situation: string, over: Partial<DiagnosisView> = 
     ownRole: "damage",
     sampleFull: false,
     networkPeers: situation === "not_connected" ? 0 : 5,
+    ...(situation === "others_grouping" ? { attempts: makeAttempts({ takenSeen: 10 }) } : {}),
+    ...(situation === "nobody_answered" ? { attempts: makeAttempts({ invitesSent: 6 }) } : {}),
     ...over,
   };
 }

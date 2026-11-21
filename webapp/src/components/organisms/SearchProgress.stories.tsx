@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { DUNGEON_TABLE, NOW, makeDiagnosis, searchingFor } from "../../api/fixtures";
+import { DUNGEON_TABLE, NOW, makeAttempts, makeDiagnosis, searchingFor } from "../../api/fixtures";
 import { SearchProgress } from "./SearchProgress";
 
 const meta = {
@@ -71,3 +71,24 @@ export const EndedNoDiagnosisFromOldServer: Story = {
   args: { search: searchingFor(600, { status: "limit_reached", stage: 4, diagnosis: null }) },
 };
 export const NotSearching: Story = { args: { search: { ...searchingFor(0), status: "idle" } } };
+
+export const OthersGrouping: Story = { args: running("others_grouping") };
+export const OthersGroupingNoAttempts: Story = { args: running("others_grouping", { attempts: undefined }) };
+export const NobodyAnswered: Story = { args: running("nobody_answered") };
+export const NobodyAnsweredNoAttempts: Story = { args: running("nobody_answered", { attempts: undefined }) };
+export const HealthyWithAttempts: Story = { args: running("healthy", { attempts: makeAttempts({ invitesSent: 5, acceptsGot: 2 }) }) };
+export const EndedOthersGrouping: Story = { args: ended("others_grouping", { attempts: makeAttempts({ takenSeen: 25 }) }) };
+export const EndedOthersGroupingNoAttempts: Story = { args: ended("others_grouping", { attempts: undefined }) };
+export const EndedNobodyAnswered: Story = { args: ended("nobody_answered", { attempts: makeAttempts({ invitesSent: 18 }) }) };
+export const EndedNobodyAnsweredNoAttempts: Story = { args: ended("nobody_answered", { attempts: undefined }) };
+export const EndedNobodyAnsweredMultiDungeon: Story = {
+  args: {
+    search: searchingFor(600, {
+      status: "limit_reached",
+      stage: 4,
+      topics: 3,
+      dungeons: ["the-deadmines", "wailing-caverns", "shadowfang-keep"],
+      diagnosis: makeDiagnosis("nobody_answered", { ended: true, attempts: makeAttempts({ invitesSent: 18 }) }),
+    }),
+  },
+};

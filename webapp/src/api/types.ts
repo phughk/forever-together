@@ -63,10 +63,21 @@ export type SearchStatus = "idle" | "searching" | "limit_reached";
 /** Roles a diagnosis can name. */
 export type DiagnosisRole = "tank" | "healer" | "damage";
 
+/** What this computer did and saw of the agreement round trips, as counts. Absent from an older server. */
+export interface AttemptsView {
+  invitesSent: number;
+  acceptsGot: number;
+  invitesGot: number;
+  takenSeen: number;
+  drops: number;
+  declines: number;
+}
+
 /** What this computer can see while searching, as counts. The webapp writes the sentences. */
 export interface DiagnosisView {
   /**
-   * Known codes: "warming_up", "not_connected", "alone", "no_tank", "no_healer", "short_on_damage", "healthy".
+   * Known codes: "warming_up", "not_connected", "alone", "no_tank", "no_healer", "short_on_damage", "healthy",
+   * "others_grouping", "nobody_answered".
    * Any other string must be tolerated.
    */
   situation: string;
@@ -78,6 +89,8 @@ export interface DiagnosisView {
   /** The counts are a slice of a capped sample, so they are "at least" or "about". */
   sampleFull: boolean;
   networkPeers: number;
+  /** Absent from an older server: render without attempt counts. */
+  attempts?: AttemptsView;
 }
 
 export interface SearchView {

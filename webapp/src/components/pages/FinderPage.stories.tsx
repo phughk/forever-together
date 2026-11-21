@@ -6,6 +6,7 @@ import {
   dungeonsFor,
   idleSearch,
   makeCharacter,
+  makeAttempts,
   makeDiagnosis,
   makeMember,
   makeParty,
@@ -131,6 +132,41 @@ export const SearchingNotConnected: Story = {
 
 export const SearchingNoTank: Story = {
   args: { state: makeState({ search: searchingFor(130, { searching: 8, diagnosis: makeDiagnosis("no_tank") }) }) },
+};
+
+export const SearchingOthersGrouping: Story = {
+  args: { state: makeState({ search: searchingFor(100, { searching: 3, diagnosis: makeDiagnosis("others_grouping") }) }) },
+};
+
+export const SearchEndedOthersGrouping: Story = {
+  args: {
+    state: makeState({
+      search: searchingFor(600, {
+        status: "limit_reached",
+        stage: 4,
+        searching: 3,
+        diagnosis: makeDiagnosis("others_grouping", { ended: true, attempts: makeAttempts({ takenSeen: 25 }) }),
+      }),
+    }),
+  },
+};
+
+export const SearchingNobodyAnswered: Story = {
+  args: { state: makeState({ search: searchingFor(130, { diagnosis: makeDiagnosis("nobody_answered") }) }) },
+};
+
+export const SearchEndedNobodyAnsweredSeveralDungeons: Story = {
+  args: {
+    state: makeState({
+      search: searchingFor(600, {
+        status: "limit_reached",
+        stage: 4,
+        topics: 3,
+        dungeons: ["the-deadmines", "wailing-caverns", "shadowfang-keep"],
+        diagnosis: makeDiagnosis("nobody_answered", { ended: true, attempts: makeAttempts({ invitesSent: 18 }) }),
+      }),
+    }),
+  },
 };
 
 export const SearchEndedNoTankSeveralDungeons: Story = {
