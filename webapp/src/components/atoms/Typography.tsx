@@ -29,3 +29,13 @@ export function Text({ size = "normal", muted, mono, as: Tag = "p", className, .
 export function Label({ className, ...rest }: LabelHTMLAttributes<HTMLLabelElement>) {
   return <label className={["ft-label", className].filter(Boolean).join(" ")} {...rest} />;
 }
+
+export interface EntityProps extends HTMLAttributes<HTMLSpanElement> {
+  /** Element to render. Defaults to span. */
+  as?: ElementType;
+}
+
+/** A game entity name (character, dungeon, class, race, realm, zone). Set in the entity font; everything else stays in the UI font. */
+export function Entity({ as: Tag = "span", className, ...rest }: EntityProps) {
+  return <Tag className={["ft-entity", className].filter(Boolean).join(" ")} {...rest} />;
+}

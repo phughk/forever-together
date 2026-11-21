@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Heading, Label, Text } from "./Typography";
+import { Entity, Heading, Label, Text } from "./Typography";
 
 const meta = { title: "Atoms/Typography", component: Heading } satisfies Meta<typeof Heading>;
 export default meta;
@@ -33,6 +33,53 @@ export const LongUnbrokenText: StoryObj = {
   render: () => (
     <div style={{ maxWidth: "16rem" }}>
       <Heading level={2}>Averyveryveryveryveryveryverylongheadingwithoutspaces</Heading>
+    </div>
+  ),
+};
+
+const pairStyle = { display: "grid", gridTemplateColumns: "auto 1fr 1fr", gap: "0.5rem 1.5rem", alignItems: "baseline" } as const;
+
+export const EntityVersusUi: StoryObj = {
+  render: () => (
+    <div style={pairStyle}>
+      <span />
+      <Text muted size="small">Entity font (Lora)</Text>
+      <Text muted size="small">UI font (Overpass)</Text>
+      <Text muted size="small">Character</Text>
+      <Text><Entity>Testa Fakename</Entity></Text>
+      <Text>Testa Fakename</Text>
+      <Text muted size="small">Dungeon</Text>
+      <Text><Entity>Testville Depths</Entity></Text>
+      <Text>Testville Depths</Text>
+      <Text muted size="small">Sentence</Text>
+      <Text>
+        <Entity>Testa Fakename</Entity> joined 3/5 for <Entity>Testville Depths</Entity>, level 24.
+      </Text>
+      <Text>Testa Fakename joined 3/5 for Testville Depths, level 24.</Text>
+    </div>
+  ),
+};
+
+export const EntityLongName: StoryObj = {
+  render: () => (
+    <div style={{ maxWidth: "16rem" }}>
+      <Text>
+        <Entity>Testa Fakenameofthehighlandsandthelongwinding</Entity>
+      </Text>
+      <Text>
+        <Entity as="strong">The Extraordinarily Long Testville Depths of Lower Fakeland</Entity>
+      </Text>
+    </div>
+  ),
+};
+
+export const EntityPhoneWidth: StoryObj = {
+  parameters: { viewport: { defaultViewport: "mobile1" } },
+  render: () => (
+    <div style={{ width: "20rem", maxWidth: "100%" }}>
+      <Text>
+        <Entity>Testa Fakename</Entity> is waiting in <Entity>Testville Depths</Entity> as a healer.
+      </Text>
     </div>
   ),
 };
