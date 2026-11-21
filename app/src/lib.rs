@@ -62,14 +62,18 @@ fn run_window(data_dir: std::path::PathBuf) {
             let running = runtime::start_window(&data_dir, assets).map_err(|e| e.to_string())?;
             // The window is created here, not in tauri.conf.json: it loads the local server and
             // has no IPC capability, so the page can only do what the web API allows.
-            WebviewWindowBuilder::new(
+            let mut window = WebviewWindowBuilder::new(
                 app,
                 "main",
                 WebviewUrl::External(running.window_url.parse()?),
             )
             .title("Forever Together")
-            .inner_size(1000.0, 720.0)
-            .build()?;
+            .inner_size(1000.0, 720.0);
+            // The app icon from tauri.conf.json (macOS takes its Dock icon from the bundle).
+            if let Some(icon) = app.default_window_icon() {
+                window = window.icon(icon.clone())?;
+            }
+            window.build()?;
             app.manage(running);
             Ok(())
         })

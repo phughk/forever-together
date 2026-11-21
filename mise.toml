@@ -61,5 +61,5 @@ description = "Everything CI should run"
 depends = ["typecheck", "lint", "test", "test-addon"]
 
 [tasks.update-icons]
-description = "Regenerate the app and addon icons from assets/icon_1024.png"
+description = "Regenerate the app, web and addon icons from assets/icon_1024.png"
 run = "uv run --project scripts scripts/update_icons.py"

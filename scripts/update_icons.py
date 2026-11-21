@@ -1,6 +1,7 @@
 """Regenerate every icon from the master image (default assets/icon_1024.png).
 
 - Desktop app: the Tauri CLI (from webapp/node_modules) writes all sizes and formats into app/icons/.
+- Web app: webapp/public/favicon.png (64x64) and apple-touch-icon.png (180x180, used by phones).
 - Addon: a 64x64, 32-bit, uncompressed TGA (WoW loads TGA and BLP, not PNG) at addon/ForeverTogether/icon.tga.
 
 Run from anywhere: uv run --project scripts scripts/update_icons.py [master.png]
@@ -16,6 +17,8 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_MASTER = ROOT / "assets" / "icon_1024.png"
 ADDON_ICON = ROOT / "addon" / "ForeverTogether" / "icon.tga"
 ADDON_ICON_SIZE = 64
+WEB_ICONS = {"favicon.png": 64, "apple-touch-icon.png": 180}  # in webapp/public, served at the site root
+WEB_PUBLIC = ROOT / "webapp" / "public"
 MIN_MASTER_SIZE = 1024
 
 
@@ -49,11 +52,20 @@ def addon_icon(img: Image.Image, dst: Path) -> None:
     print(f"wrote {dst.relative_to(ROOT)} ({w}x{ht}, 32-bit, uncompressed)")
 
 
+def web_icons(img: Image.Image) -> None:
+    WEB_PUBLIC.mkdir(parents=True, exist_ok=True)
+    for name, size in WEB_ICONS.items():
+        dst = WEB_PUBLIC / name
+        img.resize((size, size), Image.LANCZOS).save(dst, format="PNG", optimize=True)
+        print(f"wrote {dst.relative_to(ROOT)} ({size}x{size})")
+
+
 def main() -> None:
     master = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else DEFAULT_MASTER
     img = load_master(master)
     tauri_icons(master)
     addon_icon(img, ADDON_ICON)
+    web_icons(img)
     print("done")
 
 
