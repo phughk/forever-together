@@ -6,7 +6,7 @@ import { Button } from "../atoms/Button";
 import { Card } from "../atoms/Card";
 import { Notice } from "../atoms/Notice";
 import { ProgressBar } from "../atoms/ProgressBar";
-import { Heading, Text } from "../atoms/Typography";
+import { Entity, Heading, Text } from "../atoms/Typography";
 import { DiagnosisSummary } from "../molecules/DiagnosisSummary";
 import { SearchingWiderChip } from "../molecules/SearchingWiderChip";
 import "../../styles/search.css";
@@ -30,68 +30,76 @@ export interface SearchProgressProps {
 export function SearchProgress({ search, dungeons, now, onStop, onSearchAgain, onChangeDungeon }: SearchProgressProps) {
   if (search.status === "idle") return null;
 
-  const names = search.dungeons.map((s) => dungeons.find((d) => d.slug === s)?.name ?? s).join(", ");
+  const names = search.dungeons.map((s, i) => (
+    <span key={s}>
+      {i > 0 && ", "}
+      <Entity>{dungeons.find((d) => d.slug === s)?.name ?? s}</Entity>
+    </span>
+  ));
   const elapsedS = search.startedAt ? (now - search.startedAt) / 1000 : 0;
   const diagnosis = search.diagnosis ?? null;
+
+  const seen = diagnosis ? (
+    <Card className="ft-search__seen">
+      <DiagnosisSummary diagnosis={diagnosis} elapsedS={search.status === "limit_reached" ? SEARCH_LIMIT_S : elapsedS} dungeonCount={search.dungeons.length} />
+    </Card>
+  ) : null;
 
   if (search.status === "limit_reached") {
     const hasNext = Boolean(onSearchAgain || onChangeDungeon);
     return (
-      <Card title="Search ended">
-        <Text size="small" muted>
-          {names}
-        </Text>
-        {diagnosis ? (
-          <DiagnosisSummary diagnosis={diagnosis} elapsedS={SEARCH_LIMIT_S} dungeonCount={search.dungeons.length} />
-        ) : (
-          <Notice tone="warn">No party formed.</Notice>
-        )}
-        <div className="ft-actions">
-          {onSearchAgain && (
-            <Button variant="primary" onClick={onSearchAgain}>
-              Search again
-            </Button>
-          )}
-          {onChangeDungeon && <Button onClick={onChangeDungeon}>Change dungeon</Button>}
-          {!hasNext && (
-            <Button variant="primary" onClick={() => void onStop()}>
-              OK
-            </Button>
-          )}
-        </div>
-      </Card>
+      <>
+        <Card title="Search ended">
+          <Text className="ft-search__names">{names}</Text>
+          {!diagnosis && <Notice tone="warn">No party formed.</Notice>}
+          <div className="ft-actions">
+            {onSearchAgain && (
+              <Button variant="primary" onClick={onSearchAgain}>
+                Search again
+              </Button>
+            )}
+            {onChangeDungeon && <Button onClick={onChangeDungeon}>Change dungeon</Button>}
+            {!hasNext && (
+              <Button variant="primary" onClick={() => void onStop()}>
+                OK
+              </Button>
+            )}
+          </div>
+        </Card>
+        {seen}
+      </>
     );
   }
 
   return (
-    <Card>
-      <div className="ft-search__top">
-        <Heading level={2}>Searching</Heading>
-        <Button variant="danger" onClick={() => void onStop()}>
-          Stop search
-        </Button>
-      </div>
-      <Text size="small" muted>
-        {names}
-      </Text>
-      <div>
-        <ProgressBar value={elapsedS / SEARCH_LIMIT_S} label="Time until the search limit" />
-        <div className="ft-search__time">
-          <Text size="small" muted>
-            {formatAge(elapsedS)}
-          </Text>
-          <Text size="small" muted>
-            of {SEARCH_LIMIT_S / 60} min
-          </Text>
+    <>
+      <Card>
+        <div className="ft-search__top">
+          <Heading level={2}>Searching</Heading>
+          <Button variant="danger" onClick={() => void onStop()}>
+            Stop search
+          </Button>
         </div>
-      </div>
-      {search.stage > 0 && <SearchingWiderChip />}
-      {diagnosis ? (
-        <DiagnosisSummary diagnosis={diagnosis} elapsedS={elapsedS} dungeonCount={search.dungeons.length} />
-      ) : (
+        <Text className="ft-search__names">{names}</Text>
+        <div>
+          <ProgressBar value={elapsedS / SEARCH_LIMIT_S} label="Time until the search limit" />
+          <div className="ft-search__time">
+            <Text size="small" muted>
+              {formatAge(elapsedS)}
+            </Text>
+            <Text size="small" muted>
+              of {SEARCH_LIMIT_S / 60} min
+            </Text>
+          </div>
+        </div>
+        {search.stage > 0 && <SearchingWiderChip />}
+      </Card>
+      {seen ?? (
         // An older server sends no diagnosis: only the rough count of players is known.
-        <Badge>{search.searching === null ? "Counting players..." : `~${search.searching} other players seen`}</Badge>
+        <Card>
+          <Badge>{search.searching === null ? "Counting players..." : `~${search.searching} other players seen`}</Badge>
+        </Card>
       )}
-    </Card>
+    </>
   );
 }

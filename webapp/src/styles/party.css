@@ -1,11 +1,11 @@
 /* Party panel, member rows and the app header. Selectors are doubled where they override organisms.css and molecules.css. */
 
 /* Header: one slim row. The gear sits at the right of the finder's top row, Back at the left on Settings. */
-header.ft-header { flex-wrap: nowrap; justify-content: flex-start; gap: var(--space-3); padding: 0; min-height: 40px; }
+header.ft-header { flex-wrap: nowrap; justify-content: flex-start; gap: var(--space-3); padding: 0; min-height: var(--tap); }
 header.ft-header--finder { flex: none; justify-content: flex-end; margin-left: auto; }
 header.ft-header--settings { margin-bottom: var(--space-3); }
 .ft-header .ft-conn { flex: none; }
-.ft-button--icon { width: 40px; padding: 0; }
+.ft-button--icon { width: var(--tap); padding: 0; }
 .ft-button--icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
 .ft-member__tick {

@@ -153,7 +153,7 @@ export function AddonSettings({ info, result, busy, folderError, remote, onInsta
                 )}
               </Locked>
               {(result?.kind === "failed" || (info.folder !== null && info.status !== "folder_invalid")) && (
-                <Button variant="ghost" size="small" disabled={remote || busy} onClick={() => setFolderOpen(true)}>
+                <Button variant="ghost" disabled={remote || busy} onClick={() => setFolderOpen(true)}>
                   Change folder
                 </Button>
               )}
