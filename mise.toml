@@ -38,8 +38,9 @@ description = "Rust unit and integration tests (the multi-instance tests take ab
 run = "cargo test --manifest-path app/Cargo.toml --lib"
 
 [tasks.lint]
-description = "Clippy (deny warnings) + rustfmt check"
+description = "Frontend typecheck + clippy (deny warnings) + rustfmt check"
 run = [
+  "pnpm --dir webapp typecheck",
   "cargo clippy --manifest-path app/Cargo.toml --all-targets -- -D warnings",
   "cargo fmt --manifest-path app/Cargo.toml --check",
 ]
@@ -58,7 +59,14 @@ run = "scripts/install-addon.sh"
 
 [tasks.check]
 description = "Everything CI should run"
-depends = ["typecheck", "lint", "test", "test-addon"]
+depends = ["lint", "test", "test-addon"]
+
+[tasks.clean]
+description = "Remove build outputs: Rust target dirs, webapp/dist, webapp/storybook-static (keeps node_modules)"
+run = [
+  "cargo clean --manifest-path app/Cargo.toml",
+  "rm -rf webapp/dist webapp/storybook-static vendor/wow-forever-addons/wowluavm/target",
+]
 
 [tasks.update-icons]
 description = "Regenerate the app, web and addon icons from assets/icon_1024.png"

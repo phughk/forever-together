@@ -40,7 +40,7 @@ The frontend follows atomic design. Every level must be covered in Storybook.
 
 ## Commands
 
-- `mise run dev` desktop app; `mise run web` frontend only; `mise run storybook`; `mise run test` Rust tests; `mise run lint` clippy + rustfmt; `mise run test-addon` addon tests in the headless Lua VM; `mise run install-addon`; `mise run check` runs typecheck, lint, test and test-addon.
+- `mise run dev` desktop app; `mise run web` frontend only; `mise run storybook`; `mise run test` Rust tests; `mise run lint` frontend typecheck + clippy + rustfmt; `mise run clean` removes build outputs; `mise run test-addon` addon tests in the headless Lua VM; `mise run install-addon`; `mise run check` runs lint (which includes typecheck), test and test-addon.
 - Rust, from `app/`: `cargo test --lib <filter>` (for example `cargo test --lib engine::` or `cargo test --lib code::`; cargo takes one filter), `cargo clippy --all-targets -- -D warnings`, `cargo fmt`.
 - Frontend, from the repo root: `pnpm --dir webapp typecheck`, `pnpm --dir webapp build`, `pnpm --dir webapp build-storybook`.
 - Icons: `mise run update-icons` regenerates `app/icons/` and `addon/ForeverTogether/icon.tga` from `assets/icon_1024.png`. The Python tools are a uv project in `scripts/`; run them with `uv run --project scripts scripts/<name>.py` (`gen-code-vectors.py` also needs `--group vectors`).
