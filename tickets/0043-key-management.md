@@ -1,6 +1,6 @@
 # 0043. Key management: export, import and reset keys from the CLI
 
-* **Status:** open
+* **Status:** done for Part 1 (built 2026-11-21; Part 2 is ticket 0044, Settings and Windows are ticket 0046)
 * **Kind:** feature
 * **Source:** author, 2026-11-21
 * **ADRs:** [0039](../docs/adr/0039-key-management.md)
@@ -22,3 +22,8 @@ Part 1 (this ticket, build first):
 ## Done when
 
 The commands work on macOS and Linux (Windows ticketed); the Rust tests and clippy for the touched modules pass; `ssh-keygen -y -f` accepts an exported key and its public key equals the peer ID.
+
+## Built
+
+`app/src/keys.rs`, `app/src/store/dir_lock.rs`, the `key` subcommands in `app/src/cli.rs`, `runtime::run_key_command`, README "Keys". Step 0 result and manual checks are in `docs/spike-s0.md` ("Key commands"). 313 Rust lib tests pass and clippy is clean. Windows is not supported (ticket 0046). Linux is not run.
+

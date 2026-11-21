@@ -285,3 +285,15 @@ The app holds an exclusive lock file in the data directory while it runs; `key i
 ### A key that never goes to standard output
 
 *   **Rejected by author:** an explicit `--stdout` option is wanted so the key can be piped into other tools. Nothing secret goes to standard output without it.
+
+## Implementation notes (Part 1 built 2026-11-21)
+
+Where the build differs from the plan above; the ADR and the code are authoritative.
+
+*   **Step 0 result:** `varaq` does not refuse a second opener, so decision 9 applies. `app/src/store/dir_lock.rs` holds `DataDirLock` (std `File::try_lock` on `<data dir>/lock`). The app (window and headless) and every `key` command take it, including `show` and `export`, because they may create a key. A backup of a running trusted node therefore needs the node stopped.
+*   **No OpenSSH crate.** The file format is written and read in `app/src/keys.rs` and tested against a real `ssh-keygen` key, so the `ssh-key` crate and its duplicate `ed25519-dalek` question went away.
+*   **`keys.rs` returns data; printing, the reset prompt and the lock live in `runtime::run_key_command`** (generic over the output writers and the confirm closure, so tests drive it). `lib.rs` only wires stdout, stderr and stdin.
+*   **`KeyError`** has `FileExists`, `Io`, `NotOpenSsh`, `Encrypted`, `WrongKeyType`, `BadKeyFile`, `BadStoredKey`, `WouldReplace(Replaced)` and `Store`. `OldKey` is `None`, `Id` or `Unreadable`, so `import --force` and `reset` repair a damaged stored key.
+*   **`--print-public-key`, `Mode::PrintPublicKey` and `runtime::public_key` are removed.** `--data-dir` is global; a subcommand wins over `--headless`.
+*   **Not built here:** Part 2 (scan export encryption, ticket 0044), Settings and Windows (ticket 0046), the `dyn Store` conversion (ticket 0045). Review items about the Risks section and wording in the sections above are not applied to this document.
+

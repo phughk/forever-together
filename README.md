@@ -55,7 +55,10 @@ The QR holds the same text. The app has no camera scanner, so on a phone you sca
 ```sh
 forever-together                              # window mode
 forever-together --headless                   # network only, no window, no web server
-forever-together --print-public-key           # print this install's peer ID and exit
+forever-together key show                     # print this install's peer ID and public key
+forever-together key export ./node.key        # back up the key (new file, owner-only)
+forever-together key import ./node.key        # restore or deploy a key
+forever-together key reset                    # replace the key with a new one
 forever-together --data-dir /some/folder      # keep identity, settings and peers here
 ```
 
@@ -66,7 +69,22 @@ Environment variables:
 
 Two instances on one machine: give each its own `--data-dir`. The web server and the network pick random free ports, so nothing else is needed.
 
-Trusted peers (the last-resort way in for a new install): run an always-on copy with `--headless`, print its key with `--print-public-key`, and either add the key to the built-in list in `app/src/net/trusted.rs` or add it in the settings page of a running app (`trusted_peers`).
+Trusted peers (the last-resort way in for a new install): run an always-on copy with `--headless`, print its key with `forever-together key show` (stop the node first, see below), and either add the key to the built-in list in `app/src/net/trusted.rs` or add it in the settings page of a running app (`trusted_peers`).
+
+### Keys
+
+Every install has one permanent ed25519 key. Its public half is the peer ID. Headless is the same program, so a node creates a key at first start and takes the same `key` commands (ADR 0039).
+
+- `key show` prints the peer ID (hex, the form used in `BUILTIN` and `trusted_peers`) and the OpenSSH public key line. `key show` and `key export` create a key if there is none.
+- `key export <file>` writes the key as an unencrypted OpenSSH ed25519 key file: a new file, owner-only, never overwriting. `key export --stdout` prints it instead (a shell redirect creates the file with your umask, so `chmod 600` it). The file works with `ssh-keygen -y -f <file>` and `age -d -i <file>`.
+- `key import <file>` replaces the stored key. It refuses if a key is already stored, unless you pass `--force`. A key created by an earlier `key show` counts, so import into a fresh data directory before anything else, or use `--force`.
+- `key reset` makes a new key after a confirmation (`--yes` skips it). Other nodes see a new peer ID. A trusted peer's entry in `BUILTIN` then needs a new release.
+- The commands take a lock on the data directory, so they refuse while the app or a headless node is running on it. Stop the node first. Back up before you reset or force an import.
+- Not supported on Windows release builds yet (no console, ticket 0046).
+
+**Trusted-node key backup (the author's process).** Stop the always-on node, run `key export` to a file on an offline disk, and start it again. Keep every historical `BUILTIN[0]` secret: players on older releases keep encrypting scan exports to the key compiled into their build. The private key that decrypts exports is the same file.
+
+A cloud node gets its key by `forever-together key import ./node.key --data-dir <dir>` before its first start. If a start has already created a random key, add `--force`.
 
 ## Mobile
 

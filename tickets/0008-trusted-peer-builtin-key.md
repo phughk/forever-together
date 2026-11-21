@@ -10,7 +10,7 @@
 
 ## What
 
-`net::trusted::BUILTIN` is empty. Run an always-on copy with `--headless`, print its key with `--print-public-key` and add it. The private key is never committed.
+`net::trusted::BUILTIN` is empty. Run an always-on copy with `--headless`, print its key with `forever-together key show` (stop the node first) and add it. Back up the secret with `key export` first (README, "Keys"). The private key is never committed.
 
 ## Done when
 

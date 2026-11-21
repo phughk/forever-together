@@ -6,7 +6,9 @@
 * **ADRs:** none
 * **EGM:** [0043-key-management](../docs/egm/0043-key-management/README.md)
 
-**Also:** check whether `varaq` refuses a second process opening the same data directory. The key commands (ticket 0043, decision 6) rely on that for their running-app guard; if it does not, the design is reopened.
+**Result 2026-11-21:** `varaq` does NOT refuse a second opener (see `docs/spike-s0.md`, "Key commands"), so the app and key commands take a data directory lock. Still open here: file modes on Linux and Windows.
+
+**Also (superseded by the result above):** check whether `varaq` refuses a second process opening the same data directory. The key commands (ticket 0043, decision 6) rely on that for their running-app guard; if it does not, the design is reopened.
 
 **Related:** ticket 0043 adds key export and import, so permission handling matters more.
 

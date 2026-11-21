@@ -13,7 +13,7 @@ use crate::config::Settings;
 use crate::identity::PeerId;
 
 /// Built-in trusted peer keys. Empty until the author runs the always-on peer with
-/// `--print-public-key` and commits its key.
+/// `key show` (ADR 0039) and commits its key. Keep the node's secret backed up with `key export`.
 pub const BUILTIN: &[[u8; 32]] = &[];
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

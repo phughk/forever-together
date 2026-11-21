@@ -1,4 +1,4 @@
-//! Process start-up for the three modes (`--print-public-key`, `--headless`, window).
+//! Process start-up for the three modes (`key` subcommands, `--headless`, window).
 //!
 //! Window mode: open the store, load the identity, start the core and the web server on a
 //! random free port, and hand back the URL the window opens (`http://127.0.0.1:<port>/#token=`).

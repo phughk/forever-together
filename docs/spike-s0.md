@@ -88,3 +88,16 @@ The floor is now measured against what a central greedy build over the whole swa
 | 8 seeds, 3000 peers | 97.4% to 99.8% at 3 rounds, all at least 97.4% |
 
 Every row meets the 70% floor within 30 s under the revised measure, including the small and tank-scarce swarms. At 3 rounds (15 s) the lowest row is the 30%-tanks swarm at 77.6%. The old all-peers figures (for example 49.1% at 8% tanks) are capped by the role mix, not by the mechanism. Direct-message loss of 5% without retries costs about 10 points at 3 rounds; one retry restores it, and iroh direct streams are reliable. This is still a model: no live network, no churn.
+
+## Key commands (ticket 0043, built 2026-11-21)
+
+Checked on macOS with the built binary and `ssh-keygen`/`age`; Windows and Linux are not run.
+
+| Question | Result |
+|---|---|
+| Does `varaq` refuse a second opener on a data directory? | **No.** A second `VaraqStore::open` on the same directory succeeds and can write; the first handle never sees the second's write (test `varaq_does_not_refuse_a_second_opener`). Two processes could corrupt the store. The app and the `key` commands therefore take an exclusive lock file (`DataDirLock`, ADR 0039 decision 9). A live headless node on a directory made `key show` and `key reset` fail with "another forever-together process is using ..." |
+| Does `ssh-keygen -y -f` accept a file written by `key export`, and does it print the same public line as `key show`? | **Yes**, identical line. |
+| Does a key written by `key export` decrypt with `age -d -i <file>` a message encrypted with `age -r <public line>`? | **Yes** (age installed at `/opt/homebrew/bin/age`). The author's workflow for scan exports (ADR 0038) works with the standard tool. Not yet run against an export made by the app's own encryption module (ticket 0044). |
+| Does the app read an unmodified `ssh-keygen` ed25519 key? | **Yes** (a throwaway fixture in `app/src/keys.rs`; its public line is checked against `ssh-keygen -y`). Passphrase keys and ecdsa keys are refused with their own errors. |
+| Mode of exported files and the lock file? | `0600` on macOS (tests). The `varaq` directory is set to `0700` and its files are `0600` on every open (existing test). Linux and Windows not run. |
+
