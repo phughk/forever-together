@@ -2,6 +2,7 @@ import type { ConnectionStatus, Settings } from "../../api/types";
 import { Notice } from "../atoms/Notice";
 import { AppHeader, type View } from "../organisms/AppHeader";
 import { LanSettings, type PairingState } from "../organisms/LanSettings";
+import { HistorySettings } from "../organisms/HistorySettings";
 import { PeerSettings } from "../organisms/PeerSettings";
 import { TokenSettings } from "../organisms/TokenSettings";
 import { SettingsTemplate } from "../templates/SettingsTemplate";
@@ -18,6 +19,7 @@ export interface SettingsPageProps {
   onLanModeChange: (on: boolean) => void | Promise<void>;
   onLanAddressChange?: (address: string) => void;
   onResetToken: () => void | Promise<void>;
+  onClearHistory: () => void | Promise<void>;
   onKnownPeersSizeChange: (size: number) => void | Promise<void>;
   onAddTrusted: (key: string) => void | Promise<void>;
   onRemoveTrusted: (key: string) => void | Promise<void>;
@@ -35,6 +37,7 @@ export function SettingsPage(p: SettingsPageProps) {
         <>
           <LanSettings lanMode={p.settings.lan_mode} onChange={p.onLanModeChange} pairing={p.pairing} remote={p.remote} onAddressChange={p.onLanAddressChange} />
           <TokenSettings onReset={p.onResetToken} remote={p.remote} />
+          <HistorySettings onClear={p.onClearHistory} remote={p.remote} />
           <PeerSettings
             knownPeersSize={p.settings.known_peers_size}
             trustedPeers={p.settings.trusted_peers}

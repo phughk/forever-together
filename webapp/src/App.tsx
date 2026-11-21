@@ -107,6 +107,14 @@ function Container({ api }: { api: Api }) {
             setSettingsError(failureText(e, "The token could not be reset."));
           }
         }}
+        onClearHistory={async () => {
+          try {
+            await api.clearHistory();
+          } catch (e) {
+            if (isLoopbackOnly(e)) setRemote(true);
+            setSettingsError(failureText(e, "The search history could not be cleared."));
+          }
+        }}
         onKnownPeersSizeChange={(n) => changeSettings({ known_peers_size: n })}
         onAddTrusted={(k) =>
           changeSettings({ trusted_peers: [...state.settings.trusted_peers.filter((x) => x !== k), k] })

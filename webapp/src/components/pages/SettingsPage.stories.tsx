@@ -16,6 +16,7 @@ const meta = {
     onNavigate: () => {},
     onLanModeChange: () => {},
     onResetToken: () => {},
+    onClearHistory: () => {},
     onKnownPeersSizeChange: () => {},
     onAddTrusted: () => {},
     onRemoveTrusted: () => {},
