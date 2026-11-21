@@ -10,3 +10,5 @@ Chat in the app once group is formed.
 
 Join as party QR code
 
+I need a way to load a private key (and pub key?) into the instance instead of using a generated one. This is because I will run trusted nodes on cloud instances etc.
+
