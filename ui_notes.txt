@@ -1,0 +1,22 @@
+Unclear how to use the addon, or that the addon is required. The addon could be installed from the app or open a curseforge link.
+
+The addon could use the github api to track releases and updates.
+
+The dungeon picking should be clearer, where a dungeon is clicked and search begins.
+
+There is far too much scrolling; Different screens can be utilised or the components made smaller. Basically, the viewport size should be respected.
+
+For the LAN hosting phone access tickbox, it should be possible to pick an address; By default it should pick an address for you that is actually on the lan. Perhaps the different LAN IPs could be available choices.
+
+When a search fails, it should give info about why, like the amount of players it discovered, the amount of people searching for this dungeon, groups tried to form or whatever.
+
+Codes
+WFT1:$60X50$*0MB0HUQ-FP3$SY50LC0VV6BJBT9E: CZED7J1VKE0/DB$D QE5$C/71$KE*KEN$DGEC%WD
+WFT1:$60E61-C3+N2VOQ-FPL4VY50LC0TV6TIAAWEB$D5U00%E2QD4810/D5$COPCRWE8-O
+WFT1:L60+*0$*0MB00JQ-FP7AVY50LC0.P69Z9H3D.BC$N95LE2CCKT8M-DNZ90LEC3DN7G
+WFT1:Y50%M0V50500EDQ-FPOLVY50LC0Y37NOAAWEXED7%ELO0*3E$ZE5UASVDVKEZQEXEDL*O
+
+We need more info on location I think, like x/y 
+
+
+
