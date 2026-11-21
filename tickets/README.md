@@ -49,3 +49,4 @@ One file per ticket, named `NNNN-slug.md`. Status is `open` unless it says other
 | 0043 | [Key management: export, import and reset keys from the CLI](0043-key-management.md) | feature |
 | 0044 | [Encrypt the scan export to the first trusted peer key](0044-encrypted-scan-export.md) | feature |
 | 0045 | [Replace `dyn Store` with generics or enums](0045-replace-dyn-store-with-generics.md) | chore |
+| 0046 | [Key actions in Settings, and the key commands on Windows](0046-key-actions-in-settings-and-windows.md) | feature |

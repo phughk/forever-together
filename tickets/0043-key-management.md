@@ -12,9 +12,10 @@ Handle keys properly (ADR 0039; working papers in `docs/egm/0043-key-management/
 
 Part 1 (this ticket, build first):
 
-* The `key` subcommand group: `show`, `export [--stdout] [--public] <file>`, `import [--force] <file>`, `reset [--yes]`; `--print-public-key` as an alias for `key show`. No subcommand opens the window.
+* The `key` subcommand group: `show`, `export [--stdout] <file>`, `import [--force] <file>`, `reset [--yes]`. `--print-public-key` is removed (`key show` replaces it); no `--public`. No subcommand opens the window. `show` and `export` create a key on an empty store.
 * `app/src/keys.rs`, generic over the store (no `dyn`); OpenSSH ed25519 key file, unencrypted, owner-only on Unix, refuse to overwrite on export, no permission check on read.
-* Running-app guard by the store's own lock (depends on ticket 0003 verifying `varaq`).
+* **Step 0:** verify whether `varaq` refuses a second opener. Guard by the store's own lock if it does; if it does not, a lock file taken by the app and the key commands (ADR 0039).
+* Key commands are unsupported on Windows (ticket 0046). Run `cargo audit` or `cargo deny` before adding `age` with the `ssh` feature.
 * Tests: round trip gives the same peer ID, every refusal, a headless start after `key import`, a fresh headless start generating a key.
 * Docs: README keys section and backup process, CLAUDE.md, ADR 0039, `docs/spike-s0.md` rows.
 

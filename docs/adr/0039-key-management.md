@@ -10,12 +10,15 @@ The app generates an iroh secret key on first start and stores it (32 bytes unde
 
 ## Decision
 
-* **A `key` subcommand group:** `key show`, `key export`, `key import`, `key reset`. `--print-public-key` stays as an alias for `key show`. Running with no subcommand opens the window. Headless is the same binary and the same command line: it generates a key at first start and takes the same commands. A cloud node gets a chosen key by `key import` before its first start; there is no key path or environment variable read at every start.
+* **A `key` subcommand group:** `key show`, `key export`, `key import`, `key reset`. `--print-public-key` is removed; `key show` replaces it (review round 1). There is no `--public` option. Running with no subcommand opens the window. Headless is the same binary and the same command line: it generates a key at first start and takes the same commands. A cloud node gets a chosen key by `key import` before its first start; there is no key path or environment variable read at every start.
 * **The key file is a plain key.** Export writes what is in the store as an unencrypted OpenSSH ed25519 private key file, so ssh, `age` and similar tools can read it. No passphrase and no encryption layer. Keeping the file safe is the user's job; the app does not treat it as a risk to solve. The app creates exported files owner-only on Unix, refuses to overwrite an existing file, and does not check permissions when it reads one.
 * **`key export --stdout`** prints the key for piping. Without it nothing secret goes to standard output. The key is never reachable from the web app, the API or logs.
 * **`key import`** parses and checks the file fully, then replaces the stored key in one write. It refuses to replace an existing key without `--force`, and rejects an encrypted file or another key type.
 * **`key reset`** discards the key and generates a new one, after confirmation (`--yes` skips it). Both commands print the old and new peer IDs.
-* **Running-app guard:** `key import` and `key reset` rely on the store's own lock and refuse if the store cannot be opened. Whether `varaq` refuses a second opener is unverified (ticket 0003); if it does not, this decision is reopened.
+* **Read commands create a key:** `key show` and `key export` create a key on an empty store, as `--print-public-key` did. A later `key import` onto that key needs `--force`.
+* **Running-app guard:** `key import` and `key reset` first rely on the store's own lock and refuse if the store cannot be opened. Whether `varaq` refuses a second opener is verified at step 0 of the build (ticket 0043); if it does not, the app takes an exclusive lock file in the data directory while it runs, and the key commands refuse if they cannot take it.
+* **Windows and Settings:** the key commands are unsupported on Windows release builds (GUI subsystem, no console) until ticket 0046. Key actions in Settings are deferred (ticket 0046) so no key operation is on the web API.
+* **`BUILTIN` validity:** entries are assumed valid; the scan export panics if `BUILTIN[0]` is not a valid key, and a test checks every entry.
 * **A key change changes the peer ID** ([0016](0016-peers-identified-by-key.md)). Remembered peers stay. A changed trusted-peer key needs a release ([0034](0034-system-overview-goals-and-risks.md)). The command says so.
 * **The scan-log decryption key is the trusted peer's own key** (`BUILTIN[0]`, see [0038](0038-scan-log-and-opt-in-export.md)). The author decrypts with `age -d -i <exported key file>`. The app has no decrypt command and holds no decrypting identity.
 * **Backups:** the trusted key is exported with `key export` and kept offline by the author, as a written process in `README.md`.
@@ -26,4 +29,4 @@ The app generates an iroh secret key on first start and stores it (32 bytes unde
 * A cloud node can be rebuilt with the same identity from a backup.
 * Losing the trusted key without a backup means a new key, a new release, and unreadable old scan files.
 * Anyone who can read the data directory or an exported file has the identity.
-* New dependencies: an OpenSSH key crate, and `age` for the scan export. Not yet in `app/Cargo.toml`.
+* New dependencies: an OpenSSH key crate, and `age` with the `ssh` feature for the scan export. `age`'s `ssh` feature pulls in `rsa` (reported advisory RUSTSEC-2023-0071, unverified): accepted, with `cargo audit` or `cargo deny` run before the dependency is added. Not yet in `app/Cargo.toml`.
