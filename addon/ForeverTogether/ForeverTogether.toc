@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: Forever Together
+## Notes: Shows your character as a text code and a QR code for the Forever Together app. /wowft
+## Author: Hugh Kaznowski
+## Version: 0.1.0
+
+Codec.lua
+Qr.lua
+Core.lua
+Window.lua
+Commands.lua

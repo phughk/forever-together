@@ -38,6 +38,18 @@ run = [
   "cargo fmt --manifest-path src-tauri/Cargo.toml --check",
 ]
 
+[tasks.test-addon]
+description = "Build the headless WoW Lua VM (vendor/wow-forever-addons) and run addon/tests/ in it"
+run = [
+  "git submodule update --init vendor/wow-forever-addons",
+  "cargo build -q --manifest-path vendor/wow-forever-addons/wowluavm/Cargo.toml",
+  "vendor/wow-forever-addons/wowluavm/target/debug/wowluavm addon/tests/setup.json addon/ForeverTogether addon/tests --no-server --api vendor/wow-forever-addons/wow-forever-api.json",
+]
+
+[tasks.install-addon]
+description = "Copy addon/ForeverTogether into $WOW_ADDONS_DIR (must end in AddOns)"
+run = "scripts/install-addon.sh"
+
 [tasks.check]
 description = "Everything CI should run"
-depends = ["typecheck", "lint"]
+depends = ["typecheck", "lint", "test-addon"]

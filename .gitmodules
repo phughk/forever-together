@@ -1,0 +1,3 @@
+[submodule "vendor/wow-forever-addons"]
+	path = vendor/wow-forever-addons
+	url = /Users/hughkaznowski/Projects/gitlloop/wow-forever-addons

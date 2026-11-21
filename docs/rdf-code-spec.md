@@ -1,6 +1,6 @@
 # forever-together code and protocol specification, version 1
 
-Status: draft, awaiting spike S0. Values marked **provisional** may change when S0 reports. This file is the single source for the character code and the wire messages. The addon tests and the Rust tests both read `docs/rdf-code-vectors.json` (to be created in step 1 of the plan). The design is in [`designs/forever-together.md`](designs/forever-together.md) and the build order is in [`designs/forever-together-implementation-plan.md`](designs/forever-together-implementation-plan.md).
+Status: draft, awaiting spike S0. Values marked **provisional** may change when S0 reports. This file is the single source for the character code and the wire messages. The addon tests and the Rust tests both read `docs/rdf-code-vectors.json` (created in step 1; format below). The design is in [`designs/forever-together.md`](designs/forever-together.md) and the build order is in [`designs/forever-together-implementation-plan.md`](designs/forever-together-implementation-plan.md).
 
 Short code: `wowft`. Names in this file: code prefix `WFT1:`, topic prefix `wowft/1/`, peer exchange ALPN `wowft/peers/1`.
 
@@ -40,15 +40,17 @@ A decoder refuses trailing bytes between the zone and the check, and any record 
 
 ### Realm and region
 
-The realm value and the region are opaque values from the client, compared as given. **Provisional:** which calls return them is an S0 output. Rule to keep topic strings equal across clients: the addon sends the realm as a decimal numeric ID (for example the game-mode record ID) when the client gives one, and otherwise the client's text lowercased in ASCII. If S0 finds that the only source is localized text, the spec adds a mapping table to canonical IDs before the code is frozen. Two peers on the same ruleset must produce the same topic string.
+The realm value and the region are opaque values from the client, compared as given. **Provisional:** which calls return them is an S0 output. Rule to keep topic strings equal across clients: the addon sends the realm as a decimal numeric ID (for example the game-mode record ID) when the client gives one, and otherwise the client's text lowercased in ASCII. If S0 finds that the only source is localized text, the spec adds a mapping table to canonical IDs before the code is frozen. Two peers on the same ruleset must produce the same topic string. Provisional implementation (see `spike-s0.md`): `C_GameRules.GetCurrentGameModeRecordID()` as a decimal string, else `GetRealmName()` lowercased in ASCII and cut at 24 bytes.
 
 ### Size
 
-A typical record is about 45 bytes, about 70 characters of text with the prefix. Target: at most 122 characters of text, which is QR version 5 at level M in alphanumeric mode. Test vectors fix the exact capacity table. The encoder picks the smallest version that fits, up to version 10. If the text does not fit version 10, the window shows the text only and says the QR is unavailable.
+A typical record is about 45 bytes, about 70 characters of text with the prefix. Target: at most 122 characters of text, which is QR version 5 at level M in alphanumeric mode. The largest possible record (126 bytes) is 194 characters and fits version 8. Capacity at level M in alphanumeric mode, characters per version 1 to 10: 20, 38, 61, 90, 122, 154, 178, 221, 262, 311 (also in the vectors file). A data stream that ends exactly on a byte boundary after the terminator gets no extra zero byte before the pad bytes `0xEC`, `0x11`. The encoder picks the smallest version that fits, up to version 10. If the text does not fit version 10, the window shows the text only and says the QR is unavailable.
 
 ### Errors
 
 One vocabulary on both sides: `UnknownVersion`, `BadCheck`, `Truncated`, `BadText`, `TrailingBytes`, `InvalidField(name)`. In Lua the same names are the second return value `err`.
+
+Order of checks in a decoder, fixed by the vectors: strip the prefix and decode base45 (`BadText`); no bytes at all gives `Truncated`; a first byte other than `1` gives `UnknownVersion` (whatever follows, so a future layout is always reported as "update"); fewer than 25 bytes gives `Truncated`; a wrong CRC gives `BadCheck`; only then are the fields read, giving `InvalidField(name)` (`flags` for a reserved bit, `level`, `realm`, `firstName`, `surname`, `zone`; a length byte above its maximum or invalid UTF-8 also gives `InvalidField`), `Truncated` when a string runs past the end, and `TrailingBytes` when bytes remain between the zone and the check. So a text cut short but still 25 bytes or more is `BadCheck`, and a text cut shorter is `Truncated`. A decoder reports the item level as 0 when flag bit 5 is clear. Lua error strings are exactly these names, with the field in brackets, for example `InvalidField(level)`.
 
 ### Pasted text
 
@@ -113,3 +115,9 @@ Messages are postcard, length-prefixed with a 4-byte big-endian length, at most 
 ## 6. Change policy
 
 A layout change means a new version byte and a new prefix. Changing the table's contents does not change the wire version, because a topic uses only the slug: a new dungeon is a new topic and moves no existing topic.
+
+## 7. Test vectors
+
+`docs/rdf-code-vectors.json` is generated once and committed; the addon tests read it through `vm.read_json`, and the Rust tests will read it too. Keys: `base45` and `base45_errors`, `crc16`, `records` (`fields`, `hex`, `text`), `decode_errors` (`text`, `error`), `paste` (`pasted`, `text`), `encode_errors` (`fields`, `error`), `counter_wrap`, `limits`, `qr` (`text`, `version`, `size`, `mask`, `rows` as strings of `0` and `1`), `qr_capacity_alnum_m`, `qr_errors`. Record `fields` use `role` and `secondaryRole` 0 to 3, `faction` as `alliance` or `horde`, `itemLevel` 0 for unknown, and the other names as in section 1.
+
+The codec values come from an independent Python writer. The QR matrices come from `segno` 1.6.6 with one patch (segno appends a stray zero byte when the data ends on a byte boundary; the patch removes it), and each matrix was checked equal to `python-qrcode` forced to the same version and mask. The addon's mask choice follows segno's penalty scoring (matrix scored before the format information and the dark module are drawn), so a different penalty reading could pick another valid mask for a near-tie.
