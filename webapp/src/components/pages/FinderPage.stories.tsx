@@ -6,6 +6,7 @@ import {
   dungeonsFor,
   idleSearch,
   makeCharacter,
+  makeDiagnosis,
   makeMember,
   makeParty,
   makeState,
@@ -117,6 +118,38 @@ export const ReadyToSearchSeveralSelected: Story = { args: { selected: ["the-dea
 
 export const SearchingBusyTopic: Story = {
   args: { state: makeState({ search: searchingFor(12, { searching: 312, topics: 3, dungeons: ["the-deadmines", "wailing-caverns", "shadowfang-keep"] }) }) },
+};
+
+export const SearchingNotConnected: Story = {
+  args: {
+    state: makeState({
+      search: searchingFor(40, { searching: 0, diagnosis: makeDiagnosis("not_connected") }),
+      network: { peers: 0, bootstrap: "none" },
+    }),
+  },
+};
+
+export const SearchingNoTank: Story = {
+  args: { state: makeState({ search: searchingFor(130, { searching: 8, diagnosis: makeDiagnosis("no_tank") }) }) },
+};
+
+export const SearchEndedNoTankSeveralDungeons: Story = {
+  args: {
+    state: makeState({
+      search: searchingFor(600, {
+        status: "limit_reached",
+        stage: 4,
+        topics: 3,
+        dungeons: ["the-deadmines", "wailing-caverns", "shadowfang-keep"],
+        diagnosis: makeDiagnosis("no_tank", { ended: true, sampleFull: true, seen: { players: 64, tanks: 0, healers: 12, damage: 52 } }),
+      }),
+    }),
+  },
+};
+
+/** An older server sends no diagnosis: the cards render as they did before. */
+export const SearchEndedOldServer: Story = {
+  args: { state: makeState({ search: searchingFor(600, { status: "limit_reached", stage: 4, diagnosis: null }) }) },
 };
 
 export const SearchEndedAtLimit: Story = {
