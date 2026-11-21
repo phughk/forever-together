@@ -19,11 +19,17 @@ export interface SearchProgressProps {
 }
 
 const BOOTSTRAP_COPY: Record<NetworkView["bootstrap"], string> = {
-  remembered: "found through peers remembered from earlier runs",
-  peer_exchange: "found through other players' peer lists",
-  trusted: "found through a trusted peer, the last resort",
-  none: "no peers found yet",
+  remembered: "found through computers remembered from earlier runs",
+  peer_exchange: "found through other players' lists of computers",
+  trusted: "found through a trusted computer, the last resort",
+  none: "no other computers found yet",
 };
+
+/** "3 other computers connected"; zero reads as not connected yet. */
+function connectedPhrase(n: number): string {
+  if (n <= 0) return "not connected to other computers yet";
+  return `${n} other ${n === 1 ? "computer" : "computers"} connected`;
+}
 
 export function SearchProgress({ search, network, dungeons, now, onStop }: SearchProgressProps) {
   if (search.status === "idle") return null;
@@ -76,7 +82,7 @@ export function SearchProgress({ search, network, dungeons, now, onStop }: Searc
               : `${search.searching} (rough, from this computer)`}
         </Field>
         <Field label="Network">
-          {network.peers} {network.peers === 1 ? "peer" : "peers"}, {BOOTSTRAP_COPY[network.bootstrap]}
+          {connectedPhrase(network.peers)}, {BOOTSTRAP_COPY[network.bootstrap]}
         </Field>
         <Field label="Searching for">{formatAge(elapsedS)}</Field>
       </div>

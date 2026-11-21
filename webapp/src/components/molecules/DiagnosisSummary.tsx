@@ -32,6 +32,11 @@ export function DiagnosisSummary({ diagnosis, elapsedS, dungeonCount }: Diagnosi
         <div>{copy.headline}</div>
         {copy.detail && <div className="ft-diagnosis__detail">{copy.detail}</div>}
       </Notice>
+      {copy.outlook && (
+        <Text size="small" muted>
+          {copy.outlook}
+        </Text>
+      )}
       {showsCounts(diagnosis) && (
         <div>
           <ul className="ft-diagnosis__seen" aria-label="Other players this computer sees">

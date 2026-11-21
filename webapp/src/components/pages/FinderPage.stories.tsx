@@ -227,3 +227,11 @@ export const PhoneParty: Story = {
 export const PhoneLongNames: Story = { ...phone, args: { ...LongFirstNameAndSurname.args } };
 
 export const IdleAfterStop: Story = { args: { state: makeState({ search: idleSearch() }) } };
+
+export const SearchingOthersGroupingSometimesFound: Story = {
+  args: { state: makeState({ search: searchingFor(100, { searching: 3, diagnosis: makeDiagnosis("others_grouping", { outlook: "sometimes_found" }) }) }) },
+};
+
+export const SearchingNoTankRarelyFound: Story = {
+  args: { state: makeState({ search: searchingFor(130, { searching: 8, diagnosis: makeDiagnosis("no_tank", { outlook: "rarely_found" }) }) }) },
+};

@@ -17,6 +17,10 @@ const meta = {
           "Wording rules: claims are about what this computer sees, numbers are rough, nothing promises a group, and nothing reassures when a role is missing or the app is not connected.",
           "Attempt counts (\"invited 6, accepted 0\") join the counts row only when the server sends them and this computer invited someone.",
           "An unknown situation code gets a neutral sentence.",
+          "",
+          "Outlook: while a search runs, a quiet muted line after the detail says how this computer's own earlier searches went (usually, sometimes or rarely found).",
+          "It is history shown as a hedged clause, never as data: no numbers, percentages, counts or dates. It stays within 110 characters and never promises a group.",
+          "`usually_found` next to a live problem (no tank, no healer, short on damage, nobody answered, alone, not connected, warming up) is dropped, and so is an unknown value. It is never shown for an ended search.",
         ].join("\n"),
       },
     },
@@ -119,4 +123,24 @@ export const AttemptsAllZeroHidden: Story = {
 export const NobodyAnsweredPhoneWidth: Story = {
   globals: { viewport: { value: "mobile1", isRotated: false } },
   args: { dungeonCount: 3, diagnosis: makeDiagnosis("nobody_answered", { ended: true }), elapsedS: 600 },
+};
+
+// --- Outlook from this computer's earlier searches ---
+
+export const OutlookUsuallyFoundHealthy: Story = { args: { diagnosis: makeDiagnosis("healthy", { outlook: "usually_found" }) } };
+export const OutlookSometimesFoundHealthy: Story = { args: { diagnosis: makeDiagnosis("healthy", { outlook: "sometimes_found" }) } };
+export const OutlookRarelyFoundHealthy: Story = { args: { diagnosis: makeDiagnosis("healthy", { outlook: "rarely_found" }) } };
+export const OutlookUsuallyFoundOthersGrouping: Story = { args: { diagnosis: makeDiagnosis("others_grouping", { outlook: "usually_found" }), elapsedS: 90 } };
+export const OutlookSometimesFoundOthersGrouping: Story = { args: { diagnosis: makeDiagnosis("others_grouping", { outlook: "sometimes_found" }), elapsedS: 90 } };
+export const OutlookRarelyFoundOthersGrouping: Story = { args: { diagnosis: makeDiagnosis("others_grouping", { outlook: "rarely_found" }), elapsedS: 90 } };
+export const OutlookRarelyFoundNoTank: Story = { args: { diagnosis: makeDiagnosis("no_tank", { outlook: "rarely_found" }), elapsedS: 150 } };
+export const OutlookSometimesFoundNobodyAnswered: Story = { args: { diagnosis: makeDiagnosis("nobody_answered", { outlook: "sometimes_found" }), elapsedS: 150 } };
+/** The server guards this; if it happens anyway the clause is dropped, so this looks the same as no outlook. */
+export const OutlookUsuallyFoundWithProblemDropped: Story = { args: { diagnosis: makeDiagnosis("no_tank", { outlook: "usually_found" }), elapsedS: 150 } };
+/** A value from a newer server is ignored without breaking the card. */
+export const OutlookUnknownValueIgnored: Story = { args: { diagnosis: makeDiagnosis("healthy", { outlook: "always_found" }) } };
+export const OutlookNull: Story = { args: { diagnosis: makeDiagnosis("healthy", { outlook: null }) } };
+export const OutlookPhoneWidth: Story = {
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+  args: { dungeonCount: 3, diagnosis: makeDiagnosis("others_grouping", { outlook: "rarely_found", attempts: makeAttempts({ takenSeen: 40 }) }), elapsedS: 200 },
 };

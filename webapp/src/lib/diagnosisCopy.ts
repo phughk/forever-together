@@ -6,6 +6,8 @@ export type DiagnosisTone = "info" | "warn" | "good";
 export interface DiagnosisCopy {
   headline: string;
   detail?: string;
+  /** A quiet hedged clause about this computer's earlier searches, shown after the detail. Absent when there is none to say. */
+  outlook?: string;
   tone: DiagnosisTone;
 }
 
@@ -16,6 +18,31 @@ export interface DiagnosisCopy {
  */
 export const HEADLINE_MAX_CHARS = 220;
 export const DETAIL_MAX_CHARS = 140;
+
+/** The outlook clause stays within 110 characters (the longest, rarely_found, is about 100). No numbers, never a promise. */
+export const OUTLOOK_MAX_CHARS = 110;
+
+const OUTLOOK_COPY: Record<string, string> = {
+  usually_found: "In your earlier searches like this, a group was usually found.",
+  sometimes_found: "In your earlier searches like this, a group was sometimes found.",
+  rarely_found: "In your earlier searches like this, a group was rarely found, so trying another dungeon may be worth it.",
+};
+
+/** Situations that are not a live problem. Anything else, including an unknown code, counts as one: good news from history must not sit next to it. */
+const NOT_PROBLEMS = new Set(["healthy", "others_grouping"]);
+
+function isLiveProblem(situation: string): boolean {
+  return !NOT_PROBLEMS.has(situation);
+}
+
+/** The outlook clause, or undefined: unknown values, an ended search, and `usually_found` next to a live problem are dropped. */
+function outlookClause(d: DiagnosisView): string | undefined {
+  if (d.ended || !d.outlook) return undefined;
+  const clause = Object.prototype.hasOwnProperty.call(OUTLOOK_COPY, d.outlook) ? OUTLOOK_COPY[d.outlook] : undefined;
+  if (!clause) return undefined;
+  if (d.outlook === "usually_found" && isLiveProblem(d.situation)) return undefined;
+  return clause;
+}
 
 const PARTY_NEED = "A party needs 1 tank, 1 healer and 3 damage players.";
 
@@ -73,6 +100,12 @@ function missing(d: DiagnosisView, role: DiagnosisRole): string {
  * connected. Unknown situation codes get a neutral sentence.
  */
 export function diagnosisCopy(d: DiagnosisView, elapsedS: number, dungeonCount: number): DiagnosisCopy {
+  const copy = situationCopy(d, elapsedS, dungeonCount);
+  const outlook = outlookClause(d);
+  return outlook ? { ...copy, outlook } : copy;
+}
+
+function situationCopy(d: DiagnosisView, elapsedS: number, dungeonCount: number): DiagnosisCopy {
   const where = scope(dungeonCount);
   const over = formatAge(elapsedS);
 

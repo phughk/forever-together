@@ -91,7 +91,15 @@ export interface DiagnosisView {
   networkPeers: number;
   /** Absent from an older server: render without attempt counts. */
   attempts?: AttemptsView;
+  /**
+   * How this computer's own earlier searches went, only while a search runs. Absent from an older server.
+   * Unknown values must be ignored. Never shown as data: no numbers, only a hedged sentence.
+   */
+  outlook?: Outlook | (string & {}) | null;
 }
+
+/** Known outlook codes. Other strings may arrive and are ignored. */
+export type Outlook = "usually_found" | "sometimes_found" | "rarely_found";
 
 export interface SearchView {
   status: SearchStatus;

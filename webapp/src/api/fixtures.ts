@@ -112,7 +112,9 @@ function derived(view: SearchView): DiagnosisView {
   const ended = view.status === "limit_reached";
   if (view.searching === null) return makeDiagnosis("warming_up", { ended });
   if (view.searching <= 1) return makeDiagnosis("alone", { ended });
-  return makeDiagnosis("healthy", { ended, seen: { players: view.searching, tanks: 2, healers: 2, damage: Math.max(0, view.searching - 4) } });
+  // The mock cycles the three outlook values by how busy the topic is, so each can be seen in the mock API.
+  const outlook = view.searching >= 10 ? "usually_found" : view.searching >= 4 ? "sometimes_found" : "rarely_found";
+  return makeDiagnosis("healthy", { ended, outlook: ended ? null : outlook, seen: { players: view.searching, tanks: 2, healers: 2, damage: Math.max(0, view.searching - 4) } });
 }
 
 /** A search that began `elapsedS` seconds ago on the shared 60 s schedule. */

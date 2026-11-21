@@ -24,6 +24,10 @@ export const QuietTopicAtLastStage: Story = {
 
 const running = (situation: string, over = {}, elapsed = 120) =>
   ({ search: searchingFor(elapsed, { searching: 8, diagnosis: makeDiagnosis(situation, over) }) });
+export const OutlookRarelyFoundNoTank: Story = { args: running("no_tank", { outlook: "rarely_found" }) };
+export const OutlookUsuallyFoundHealthy: Story = { args: running("healthy", { outlook: "usually_found" }) };
+export const NoOtherComputersConnected: Story = { args: { network: { peers: 0, bootstrap: "none" } } };
+export const OneOtherComputerConnected: Story = { args: { network: { peers: 1, bootstrap: "remembered" } } };
 export const WarmingUp: Story = { args: { search: searchingFor(4, { searching: null }) } };
 export const NotConnected: Story = {
   args: { search: searchingFor(40, { searching: 0, diagnosis: makeDiagnosis("not_connected") }), network: { peers: 0, bootstrap: "none" } },
@@ -44,7 +48,7 @@ export const BusyTopic: Story = { args: { search: searchingFor(15, { searching: 
 export const ColdStart: Story = {
   args: { search: searchingFor(5, { searching: null }), network: { peers: 0, bootstrap: "none" } },
 };
-export const FoundThroughTrustedPeer: Story = { args: { network: { peers: 1, bootstrap: "trusted" } } };
+export const FoundThroughTrustedComputer: Story = { args: { network: { peers: 1, bootstrap: "trusted" } } };
 export const StageClockRestartedAfterDrop: Story = {
   args: { search: searchingFor(300, { stage: 0, stageClockStartedAt: NOW - 10_000 }) },
 };
