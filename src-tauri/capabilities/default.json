@@ -1,6 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
+  "description": "The window is created in code and loads the local web server. It is granted no IPC permissions: the page talks to the app only through the authenticated web API.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": []
 }
