@@ -133,14 +133,14 @@ How history could be used safely (ideas from round 2, not decisions):
 
 ### Non-Goals
 
-- No claim about the global network and no "a group will form". Estimates are allowed only from this node's own history, and only once that history is dependable (see "Search history and estimates").
+- No claim about the global network and no "a group will form". History may adjust which hedged situation is shown and may add one banded clause (see Resolutions 1 and 8). No numeric chance is ever printed.
 - No new gossip messages, no protocol change.
-- History is never shown to the player. It is an implementation detail behind estimates and conclusions.
-- No peer ids, names or character data in the retained snapshot or in history entries.
+- History records, dates, counts and percentages are never shown to the player. History is an implementation detail behind the wording (Resolution 8).
+- No peer ids, names or zone text in the retained snapshot or in history entries. Entries do hold level, own role, dungeon, realm, faction and UTC times, by design (Resolution 13).
 - No explanation of why an invitation went unanswered beyond what was actually received.
 - No change to the matching or agreement rules (ADR 0025 stays as is).
 
-**Conflict flagged (round 2, findings 25 and 34).** The first and third bullets pull against each other in practice. A "rough chance of finding a group within the limit" is a forecast about whether a group will form, and an estimate that chooses the wording is history showing through. "Never shown" needs a definition (per-search records, dates and counts are never shown; may one clause such as "in your earlier searches here" appear?). The fourth bullet says no character data, but entries hold level, own role, dungeon and start and end times, which is a log of when this player plays. Define "character data" for this rule, or narrow the bullet to "no names, no ids, no zone". These are the author's words and are left unchanged until the author decides.
+**Conflict flagged (round 2, findings 25 and 34).** The first and third bullets pull against each other in practice. A "rough chance of finding a group within the limit" is a forecast about whether a group will form, and an estimate that chooses the wording is history showing through. "Never shown" needs a definition (per-search records, dates and counts are never shown; may one clause such as "in your earlier searches here" appear?). The fourth bullet says no character data, but entries hold level, own role, dungeon and start and end times, which is a log of when this player plays. Define "character data" for this rule, or narrow the bullet to "no names, no ids, no zone". Resolved below, in "Resolutions". The three bullets above now show the resolved wording.
 
 ## Alternatives Weighed
 
@@ -236,7 +236,38 @@ The text above is the author's and is unchanged. These are the gaps the reviewer
 
 ## Key Decisions & Staging for Next Steps
 
-### Decisions the author needs to make
+### Resolutions (auto-resolved at the author's request, 2026-11-21)
+
+The author asked for every open decision and flagged conflict to be resolved without further questions. Each resolution below takes the reviewers' recommendation, kept as close to the author's stated intent as the findings allow. Where it departs from something the author said, the departure is marked **Changed from the author's wording**. All are revisable.
+
+1. **Verdict scope.** Observations plus a few hedged named situations. No plausibility score and no "a group will form".
+2. **Attempt counters** (invitations, accepts, drops by cause, `taken_seen`) come after the first slice.
+3. **Classification** is a pure module in the engine crate. History enters it as a small summary value, never a store read.
+4. **Multi-dungeon.** Report an aggregate with its scope stated ("across 3 dungeons"). A history entry holds the primary dungeon and the topic count.
+5. **Players.** Count compatible peers under the current stage's rules, excluding locally banned peers. The label becomes "Players seen", and the counts are rough. Changing this rule later means entries from before it are ignored (rules version, Resolution 11).
+6. **End snapshot.** Taken before `stop()`, kept until Clear or the next search. A stop by the player ends the search and shows no end card.
+7. **ADR 0026** is written: the app reports search health from this peer's own observations (amends 0011, cites 0003, 0005, 0025).
+8. **What reaches the player from history.** Alternative D's rejection stands: no number is shown. History may (a) choose between the existing situations and (b) add one banded clause with a provenance, for example "In your earlier searches for this dungeon, groups were usually found within a few minutes." No bare 0% or 100%, and never reassuring wording against a live "not connected" or "no tank". "Never shown" now means: records, dates, counts and percentages are never shown. **Changed from the author's wording:** "history is never shown" becomes "history is never shown as data", and "a rough chance" becomes a band.
+9. **Entry definition.**
+   - One entry per search, written once at a terminal event.
+   - Success means all members confirmed (`Mode::Final`). A drop after a commit is recorded as a drop count plus `first_formed_at`, and does not end the entry. A declined party is the player's choice and is not a failure.
+   - Searches ended by character change, restart, sleep or no connection are ignored. A quit loses the in-progress entry. That is accepted.
+   - Entries hold region, realm and faction, since each is a separate network, and the level at start.
+   - **Changed from the author's wording:** a stop by the player is recorded with its duration, but is not counted as a failure. It is incomplete data: the app's own advice causes stops, and counting them would deepen the pessimism. Expired searches count as failures as decided. The one-minute rule survives as a floor: stops shorter than a minute are ignored, and longer ones are kept as incomplete.
+10. **Estimator.** **Changed from the author's wording:** instead of linear regression, use rates by state.
+    - One predictor: the bottleneck role seen at the checkpoint (the role with the fewest seen relative to need), together with the player's own role. Players, tanks, healers and damage are all still recorded.
+    - Output: the share of similar past searches that found a group within the limit, with a confidence interval, and a typical time among successes that treats incomplete searches as "at least this long".
+    - Dependable means: at least 3 successes and 3 failures in the pool, and an interval narrower than a stated width (start at 40 points). Otherwise there is no estimate and the live wording is used.
+    - **Gate reachable:** pool across dungeons on the single predictor, with the dungeon as a secondary split only when it has enough entries. The age limit rises to 180 days. Per-dungeon cap 100, total cap 500, and prune oldest first by age, then per dungeon, then total.
+    - If time of day or day of week are ever tested as predictors, that is a later change. They are stored regardless.
+11. **Store.** One key per entry (`history/<start UTC seconds, zero-padded>`), like `known_peers/`. Each entry carries a schema version and a rules version. Entries with an unknown version, or that fail to decode, are skipped, and decoding never errors a search. Write only at terminal events, and a failed write is logged and never stops a search.
+12. **Who records.** The app layer (`Model`) owns the clock, the store and the lifecycle, so it writes the entry from a plain facts record the engine emits at each terminal event. Timestamps are UTC seconds, and durations come from the engine's own `now` with `saturating_sub`. A UTC offset is stored with each entry so local time of day can be derived later.
+13. **Retention and privacy.** A "Clear search history" action (desktop only), and history is also deleted by `ClearCharacter`. History never appears in logs, exports, pairing or the API. Tests and dev data use invented characters only. **Changed from the author's wording:** the Non-Goal "no character data" is narrowed to "no names, peer ids or zone text", because entries hold level, role, dungeon and play times.
+14. **ADR.** History gets ADR 0027 (extends 0008, separate from 0026) and a new `history` module, which amends the module list in ADR 0013.
+
+**Staging changes.** Item 8 splits. 8a (after the first slice): record entries only, with no estimates and no player-visible change, so data accumulates while the thresholds are still unverified. 8b: add the estimator, only after item 9 (a live capture shows the fields are stable). Item 8's "supersedes no persistence" wording is dropped, because no ADR says that. Acceptance criteria: the first slice changes no store or schema. 8a adds one new key prefix, and the `history/` entries have no API or `SearchView` field until 8b.
+
+### Decisions the author needed to make (all resolved above)
 
 1. Verdict scope: confirm that the app reports observations plus a few hedged situations, not a plausibility judgement (all lenses recommend this). Round 2: re-ask in the light of the history estimate (decision 8).
 2. Whether invitation and party counters are in the first slice or staged after it (zoom-out dissent above).
