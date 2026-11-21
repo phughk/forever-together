@@ -5,6 +5,7 @@
 //! (see `core`) is everything it needs from the app. Turning LAN mode on or off restarts the
 //! listener on the same port (`127.0.0.1` <-> `0.0.0.0`).
 
+pub mod addon_routes;
 pub mod auth;
 pub mod core;
 pub mod events;
@@ -43,6 +44,8 @@ pub struct ServerConfig {
     /// 0 picks a random free port.
     pub port: u16,
     pub lan_ips: Arc<dyn Fn() -> Vec<Ipv4Addr> + Send + Sync>,
+    /// Existing AddOns folders found on this machine (tests inject their own).
+    pub addon_candidates: Arc<dyn Fn() -> Vec<PathBuf> + Send + Sync>,
 }
 
 impl ServerConfig {
@@ -57,6 +60,7 @@ impl ServerConfig {
             lan,
             port: 0,
             lan_ips: Arc::new(pairing::detect_lan_ips),
+            addon_candidates: Arc::new(addon_routes::detect_real_candidates),
         }
     }
 }
@@ -69,6 +73,9 @@ pub struct Shared<C> {
     pub web_dir: Option<PathBuf>,
     pub heartbeat: Duration,
     pub lan_ips: Arc<dyn Fn() -> Vec<Ipv4Addr> + Send + Sync>,
+    pub addon_candidates: Arc<dyn Fn() -> Vec<PathBuf> + Send + Sync>,
+    /// Serialises addon installs.
+    pub addon_lock: Arc<std::sync::Mutex<()>>,
     /// Bumped when the listener restarts, which ends open event streams.
     pub listener_generation: watch::Sender<u64>,
     ctl: mpsc::UnboundedSender<Ctl>,
@@ -173,6 +180,8 @@ impl Server {
             web_dir: cfg.web_dir,
             heartbeat: cfg.heartbeat,
             lan_ips: cfg.lan_ips,
+            addon_candidates: cfg.addon_candidates,
+            addon_lock: Arc::new(std::sync::Mutex::new(())),
             listener_generation: generation,
             ctl: ctl.clone(),
         });

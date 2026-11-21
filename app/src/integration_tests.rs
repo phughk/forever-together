@@ -94,6 +94,7 @@ async fn spawn_instance(
             lan: false,
             port: 0,
             lan_ips: Arc::new(Vec::new),
+            addon_candidates: Arc::new(Vec::new),
         },
     )
     .await

@@ -47,6 +47,7 @@ pub(crate) fn sample_state() -> AppState {
 pub(crate) struct FakeCore {
     pub tx: watch::Sender<AppState>,
     pub calls: Mutex<Vec<String>>,
+    pub addon: Mutex<Option<String>>,
 }
 
 impl FakeCore {
@@ -54,6 +55,7 @@ impl FakeCore {
         Arc::new(Self {
             tx: watch::channel(sample_state()).0,
             calls: Mutex::new(vec![]),
+            addon: Mutex::new(None),
         })
     }
     fn log(&self, s: impl Into<String>) {
@@ -146,6 +148,14 @@ impl AppCore for FakeCore {
         });
         Ok(self.settings())
     }
+    async fn addon_dir(&self) -> Option<String> {
+        self.addon.lock().unwrap().clone()
+    }
+    async fn set_addon_dir(&self, dir: Option<String>) -> Result<(), CoreError> {
+        self.log(format!("addon_dir {dir:?}"));
+        *self.addon.lock().unwrap() = dir;
+        Ok(())
+    }
 }
 
 const PORT: u16 = 4000;
@@ -158,6 +168,10 @@ struct H {
 }
 
 fn harness_with(web_dir: Option<PathBuf>, assets: &[(&str, &str)]) -> H {
+    harness_full(web_dir, assets, Vec::new())
+}
+
+fn harness_full(web_dir: Option<PathBuf>, assets: &[(&str, &str)], cands: Vec<PathBuf>) -> H {
     let core = FakeCore::new();
     let store: Arc<dyn Store> = Arc::new(MemStore::new());
     let guard = Arc::new(Guard::new(TokenManager::load_or_create(store).unwrap()));
@@ -176,6 +190,8 @@ fn harness_with(web_dir: Option<PathBuf>, assets: &[(&str, &str)]) -> H {
         web_dir,
         heartbeat: Duration::from_millis(50),
         lan_ips: Arc::new(|| vec![Ipv4Addr::new(192, 168, 1, 20), Ipv4Addr::new(10, 0, 0, 7)]),
+        addon_candidates: Arc::new(move || cands.clone()),
+        addon_lock: Arc::new(std::sync::Mutex::new(())),
         listener_generation: watch::channel(0).0,
         ctl,
     });
@@ -838,6 +854,7 @@ async fn start_server(lan: bool, heartbeat_ms: u64) -> (Server, Arc<FakeCore>) {
             lan,
             port: 0,
             lan_ips: Arc::new(|| vec![Ipv4Addr::new(192, 168, 1, 20), Ipv4Addr::new(10, 0, 0, 7)]),
+            addon_candidates: Arc::new(Vec::new),
         },
     )
     .await
@@ -1042,4 +1059,402 @@ async fn lan_mode_restarts_the_listener_on_the_same_port() {
     let (s, _) = http(port, "GET", "/api/state", &host, Some(&token), "").await;
     assert_eq!(s, 200);
     server.shutdown().await;
+}
+
+// ---- addon installer routes ------------------------------------------------------------
+
+/// A fake game tree `<tmp>/Interface/AddOns`; returns the AddOns folder (canonical).
+fn fake_addons(name: &str) -> PathBuf {
+    let root = temp_dir(name);
+    let addons = root.join("Interface").join("AddOns");
+    std::fs::create_dir_all(&addons).unwrap();
+    addons.canonicalize().unwrap()
+}
+
+fn json_of(b: &str) -> serde_json::Value {
+    serde_json::from_str(b).unwrap()
+}
+
+async fn put_addon_folder(h: &H, folder: &str) -> (StatusCode, String) {
+    let body = serde_json::json!({ "folder": folder }).to_string();
+    let (s, b, _) = send(
+        h,
+        rq(Method::PUT, "/api/addon/folder")
+            .token(&h.token)
+            .body(body),
+    )
+    .await;
+    (s, b)
+}
+
+async fn addon_get(h: &H) -> serde_json::Value {
+    let (s, b, _) = send(h, rq(Method::GET, "/api/addon").token(&h.token)).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    json_of(&b)
+}
+
+fn files_under(dir: &std::path::Path) -> Vec<String> {
+    fn walk(base: &std::path::Path, d: &std::path::Path, out: &mut Vec<String>) {
+        for e in std::fs::read_dir(d).unwrap() {
+            let p = e.unwrap().path();
+            if p.is_dir() {
+                walk(base, &p, out);
+            } else {
+                out.push(
+                    p.strip_prefix(base)
+                        .unwrap()
+                        .to_string_lossy()
+                        .replace('\\', "/"),
+                );
+            }
+        }
+    }
+    let mut out = vec![];
+    walk(dir, dir, &mut out);
+    out.sort();
+    out
+}
+
+#[tokio::test]
+async fn addon_routes_need_a_token_and_a_loopback_caller() {
+    let h = harness();
+    for (m, path, body) in [
+        (Method::GET, "/api/addon", ""),
+        (Method::PUT, "/api/addon/folder", r#"{"folder":"/x"}"#),
+        (Method::POST, "/api/addon/install", ""),
+    ] {
+        let (s, b, _) = send(&h, rq(m.clone(), path).body(body)).await;
+        assert_eq!(s, StatusCode::UNAUTHORIZED, "{path}");
+        assert_eq!(err_code(&b), "unauthorized");
+        let (s, b, _) = send(&h, rq(m, path).token(&h.token).body(body).peer(REMOTE)).await;
+        assert_eq!(s, StatusCode::FORBIDDEN, "{path}");
+        assert_eq!(err_code(&b), "loopback_only");
+    }
+    assert!(h.core.calls().iter().all(|c| !c.starts_with("addon_dir")));
+}
+
+#[tokio::test]
+async fn put_addon_folder_rejects_bad_json_and_unknown_fields() {
+    let h = harness();
+    for body in ["nope", r#"{"folder":"/x","extra":1}"#, "{}"] {
+        let (s, b, _) = send(
+            &h,
+            rq(Method::PUT, "/api/addon/folder")
+                .token(&h.token)
+                .body(body),
+        )
+        .await;
+        assert_eq!(s, StatusCode::BAD_REQUEST, "{body}");
+        assert_eq!(err_code(&b), "bad_json");
+    }
+}
+
+#[tokio::test]
+async fn get_addon_without_a_folder_is_no_folder_and_reports_the_bundle() {
+    let h = harness();
+    let v = addon_get(&h).await;
+    assert_eq!(v["status"], "no_folder");
+    assert_eq!(v["folder"], serde_json::Value::Null);
+    assert_eq!(v["folder_source"], serde_json::Value::Null);
+    assert_eq!(
+        v["bundled_version"],
+        crate::addon_install::bundled_version()
+    );
+    assert!(v["candidates"].is_array());
+    assert_eq!(v["installed"]["state"], "missing");
+}
+
+#[tokio::test]
+async fn put_folder_saves_it_and_get_then_shows_saved() {
+    let h = harness();
+    let addons = fake_addons("addon-put");
+    let (s, b) = put_addon_folder(&h, addons.to_str().unwrap()).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let v = json_of(&b);
+    assert_eq!(v["folder"], addons.to_str().unwrap());
+    assert_eq!(v["folder_source"], "saved");
+    assert_eq!(v["status"], "not_installed");
+    assert_eq!(
+        h.core.addon.lock().unwrap().as_deref(),
+        addons.to_str(),
+        "saved as the canonical path"
+    );
+    let v = addon_get(&h).await;
+    assert_eq!(v["folder_source"], "saved");
+    assert_eq!(v["status"], "not_installed");
+    assert_eq!(v["installed"]["state"], "missing");
+}
+
+#[tokio::test]
+async fn put_folder_refuses_a_folder_that_is_not_an_addons_folder() {
+    let h = harness();
+    let dir = temp_dir("addon-bad");
+    let (s, b) = put_addon_folder(&h, dir.to_str().unwrap()).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST, "{b}");
+    assert_eq!(err_code(&b), "addon_folder_invalid");
+    let v = json_of(&b);
+    assert!(
+        v["message"]
+            .as_str()
+            .unwrap()
+            .contains(dir.to_str().unwrap())
+    );
+    assert!(v["detail"].is_string());
+    assert_eq!(*h.core.addon.lock().unwrap(), None, "nothing saved");
+}
+
+#[tokio::test]
+async fn install_without_a_saved_folder_is_409_unset() {
+    let h = harness();
+    let (s, b, _) = send(&h, rq(Method::POST, "/api/addon/install").token(&h.token)).await;
+    assert_eq!(s, StatusCode::CONFLICT);
+    assert_eq!(err_code(&b), "addon_folder_unset");
+}
+
+#[tokio::test]
+async fn install_writes_exactly_the_bundle_and_then_the_status_is_up_to_date() {
+    let h = harness();
+    let addons = fake_addons("addon-install");
+    // A neighbour addon is left alone.
+    std::fs::create_dir_all(addons.join("Other")).unwrap();
+    std::fs::write(addons.join("Other").join("Other.toc"), "x").unwrap();
+    put_addon_folder(&h, addons.to_str().unwrap()).await;
+    let (s, b, _) = send(&h, rq(Method::POST, "/api/addon/install").token(&h.token)).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let v = json_of(&b);
+    assert_eq!(v["status"], "up_to_date");
+    assert_eq!(v["folder_source"], "saved");
+    assert_eq!(v["installed"]["state"], "present");
+    assert_eq!(
+        v["installed"]["version"],
+        crate::addon_install::bundled_version()
+    );
+    let mut want: Vec<String> = crate::addon_install::bundle()
+        .iter()
+        .map(|f| f.path.to_owned())
+        .collect();
+    want.sort();
+    assert_eq!(files_under(&addons.join("ForeverTogether")), want);
+    assert!(addons.join("Other").join("Other.toc").exists());
+    assert_eq!(addon_get(&h).await["status"], "up_to_date");
+}
+
+#[tokio::test]
+async fn every_status_is_reachable_through_a_temp_tree() {
+    let h = harness();
+    let addons = fake_addons("addon-status");
+    put_addon_folder(&h, addons.to_str().unwrap()).await;
+    assert_eq!(addon_get(&h).await["status"], "not_installed");
+    let (s, _, _) = send(&h, rq(Method::POST, "/api/addon/install").token(&h.token)).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(addon_get(&h).await["status"], "up_to_date");
+    let toc = addons.join("ForeverTogether").join("ForeverTogether.toc");
+    let text = std::fs::read_to_string(&toc).unwrap();
+    // Same version, different bytes.
+    std::fs::write(&toc, format!("{text}\n## X-Local: edit\n")).unwrap();
+    assert_eq!(addon_get(&h).await["status"], "files_differ");
+    // Older installed version.
+    let older: String = text
+        .lines()
+        .map(|l| {
+            if l.to_ascii_lowercase().starts_with("## version:") {
+                "## Version: 0.0.1".to_owned()
+            } else {
+                l.to_owned()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    std::fs::write(&toc, older).unwrap();
+    let v = addon_get(&h).await;
+    assert_eq!(v["status"], "update_available");
+    assert_eq!(v["installed"]["version"], "0.0.1");
+    // The saved folder disappears.
+    std::fs::remove_dir_all(&addons).unwrap();
+    let v = addon_get(&h).await;
+    assert_eq!(v["status"], "folder_invalid");
+    assert_eq!(v["folder"], addons.to_str().unwrap());
+    assert_eq!(v["folder_source"], "saved");
+}
+
+#[tokio::test]
+async fn a_single_detected_candidate_is_shown_but_never_saved() {
+    let addons = fake_addons("addon-detect");
+    let h = harness_full(None, &[], vec![addons.clone()]);
+    let v = addon_get(&h).await;
+    assert_eq!(v["folder_source"], "detected");
+    assert_eq!(v["folder"], addons.to_str().unwrap());
+    assert_eq!(v["status"], "not_installed");
+    assert_eq!(v["candidates"][0], addons.to_str().unwrap());
+    assert_eq!(*h.core.addon.lock().unwrap(), None);
+    assert!(h.core.calls().iter().all(|c| !c.starts_with("addon_dir")));
+    // Install still needs the folder to be saved.
+    let (s, b, _) = send(&h, rq(Method::POST, "/api/addon/install").token(&h.token)).await;
+    assert_eq!(s, StatusCode::CONFLICT);
+    assert_eq!(err_code(&b), "addon_folder_unset");
+    // Two candidates: no automatic choice.
+    let other = fake_addons("addon-detect2");
+    let h = harness_full(None, &[], vec![addons, other]);
+    let v = addon_get(&h).await;
+    assert_eq!(v["folder_source"], serde_json::Value::Null);
+    assert_eq!(v["status"], "no_folder");
+    assert_eq!(v["candidates"].as_array().unwrap().len(), 2);
+}
+
+#[tokio::test]
+async fn a_saved_folder_wins_over_a_detected_one() {
+    let detected = fake_addons("addon-win-a");
+    let saved = fake_addons("addon-win-b");
+    let h = harness_full(None, &[], vec![detected]);
+    put_addon_folder(&h, saved.to_str().unwrap()).await;
+    let v = addon_get(&h).await;
+    assert_eq!(v["folder_source"], "saved");
+    assert_eq!(v["folder"], saved.to_str().unwrap());
+}
+
+#[tokio::test]
+async fn install_into_a_vanished_folder_names_it_in_the_error() {
+    let h = harness();
+    let addons = fake_addons("addon-gone");
+    put_addon_folder(&h, addons.to_str().unwrap()).await;
+    std::fs::remove_dir_all(&addons).unwrap();
+    let (s, b, _) = send(&h, rq(Method::POST, "/api/addon/install").token(&h.token)).await;
+    assert!(s.is_client_error(), "{s} {b}");
+    let v = json_of(&b);
+    assert!(v["error"].as_str().unwrap().starts_with("addon_"), "{b}");
+    assert!(
+        v["message"]
+            .as_str()
+            .unwrap()
+            .contains(addons.to_str().unwrap())
+    );
+    assert!(v["detail"].is_string());
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn install_into_a_read_only_folder_is_403_and_names_the_folder() {
+    use std::os::unix::fs::PermissionsExt;
+    let h = harness();
+    let addons = fake_addons("addon-ro");
+    put_addon_folder(&h, addons.to_str().unwrap()).await;
+    std::fs::set_permissions(&addons, std::fs::Permissions::from_mode(0o555)).unwrap();
+    let probe = addons.join(".probe");
+    let writable = std::fs::write(&probe, b"").is_ok();
+    let _ = std::fs::remove_file(&probe);
+    let (s, b, _) = send(&h, rq(Method::POST, "/api/addon/install").token(&h.token)).await;
+    std::fs::set_permissions(&addons, std::fs::Permissions::from_mode(0o755)).unwrap();
+    if writable {
+        return; // running as root: permissions do not apply
+    }
+    assert_eq!(s, StatusCode::FORBIDDEN, "{b}");
+    assert_eq!(err_code(&b), "addon_permission_denied");
+    let v = json_of(&b);
+    assert!(
+        v["message"]
+            .as_str()
+            .unwrap()
+            .contains(addons.to_str().unwrap())
+    );
+    assert!(v["detail"].is_string());
+    assert!(!addons.join("ForeverTogether").exists());
+}
+
+#[test]
+fn each_addon_error_maps_to_its_http_status() {
+    use crate::addon_install::AddonError as E;
+    let f = || "/g/Interface/AddOns".to_owned();
+    let d = || "raw".to_owned();
+    let cases = [
+        (E::FolderUnset, 409, "addon_folder_unset"),
+        (
+            E::FolderInvalid {
+                folder: f(),
+                reason: d(),
+            },
+            400,
+            "addon_folder_invalid",
+        ),
+        (
+            E::FolderMissing {
+                folder: f(),
+                detail: d(),
+            },
+            404,
+            "addon_folder_missing",
+        ),
+        (
+            E::PermissionDenied {
+                folder: f(),
+                detail: d(),
+            },
+            403,
+            "addon_permission_denied",
+        ),
+        (
+            E::ReadOnly {
+                folder: f(),
+                detail: d(),
+            },
+            409,
+            "addon_read_only",
+        ),
+        (
+            E::NoSpace {
+                folder: f(),
+                detail: d(),
+            },
+            507,
+            "addon_no_space",
+        ),
+        (
+            E::Locked {
+                folder: f(),
+                detail: d(),
+            },
+            409,
+            "addon_locked",
+        ),
+        (
+            E::InstallFailed {
+                folder: f(),
+                detail: d(),
+            },
+            500,
+            "addon_install_failed",
+        ),
+    ];
+    for (e, status, code) in cases {
+        let ce = super::addon_routes::addon_err(&e);
+        assert_eq!(ce.status.as_u16(), status, "{code}");
+        assert_eq!(ce.code, code);
+        if !matches!(e, E::FolderUnset) {
+            assert!(ce.message.contains("/g/Interface/AddOns"), "{code}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_phone_cannot_change_the_addon_folder_and_settings_have_no_such_field() {
+    let h = harness();
+    let addons = fake_addons("addon-phone");
+    let body = serde_json::json!({ "folder": addons.to_str().unwrap() }).to_string();
+    let (s, _, _) = send(
+        &h,
+        rq(Method::PUT, "/api/addon/folder")
+            .token(&h.token)
+            .body(body)
+            .peer(REMOTE),
+    )
+    .await;
+    assert_eq!(s, StatusCode::FORBIDDEN);
+    assert_eq!(*h.core.addon.lock().unwrap(), None);
+    let (s, b, _) = send(
+        &h,
+        rq(Method::PUT, "/api/settings")
+            .token(&h.token)
+            .body(r#"{"addon_dir":"/x"}"#),
+    )
+    .await;
+    assert_eq!(s, StatusCode::BAD_REQUEST, "{b}");
 }

@@ -1,6 +1,7 @@
 //! The REST routes (plan "Local web API") and the router that wires the checks around them.
 
 use super::Shared;
+use super::addon_routes::{get_addon, post_install, put_folder};
 use super::auth::{
     Guard, caller_is_loopback, error_response, host_origin, require_loopback, require_token,
 };
@@ -14,7 +15,7 @@ use axum::extract::{Request, State};
 use axum::http::{StatusCode, Uri, header};
 use axum::middleware::{from_fn, from_fn_with_state};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{delete, get, post};
+use axum::routing::{delete, get, post, put};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use std::net::Ipv4Addr;
@@ -26,15 +27,22 @@ pub const MAX_BODY: usize = 8 * 1024;
 
 type S<C> = State<Arc<Shared<C>>>;
 
-fn core_err(e: CoreError) -> Response {
-    error_response(e.status, &e.code, &e.message)
+pub(super) fn core_err(e: CoreError) -> Response {
+    let Some(detail) = e.detail else {
+        return error_response(e.status, &e.code, &e.message);
+    };
+    let body = serde_json::json!({ "error": e.code, "message": e.message, "detail": detail });
+    let mut r = (e.status, axum::Json(body)).into_response();
+    r.headers_mut()
+        .insert(header::CACHE_CONTROL, "no-store".parse().unwrap());
+    r
 }
 
 fn no_content() -> Response {
     StatusCode::NO_CONTENT.into_response()
 }
 
-fn json<T: serde::Serialize>(v: &T) -> Response {
+pub(super) fn json<T: serde::Serialize>(v: &T) -> Response {
     let mut r = axum::Json(v).into_response();
     r.headers_mut()
         .insert(header::CACHE_CONTROL, "no-store".parse().unwrap());
@@ -43,7 +51,7 @@ fn json<T: serde::Serialize>(v: &T) -> Response {
 
 // The error is a ready-made response, returned straight to the caller.
 #[allow(clippy::result_large_err)]
-async fn read_json<T: DeserializeOwned>(body: Body) -> Result<T, Response> {
+pub(super) async fn read_json<T: DeserializeOwned>(body: Body) -> Result<T, Response> {
     let bytes = to_bytes(body, MAX_BODY).await.map_err(|_| {
         error_response(
             StatusCode::PAYLOAD_TOO_LARGE,
@@ -261,6 +269,18 @@ pub fn build_router<C: AppCore>(shared: Arc<Shared<C>>) -> Router {
         .route("/party/confirm", post(post_confirm::<C>))
         .route("/party/decline", post(post_decline::<C>))
         .route("/settings", get(get_settings::<C>).put(put_settings::<C>))
+        .route(
+            "/addon",
+            get(get_addon::<C>).route_layer(from_fn(require_loopback)),
+        )
+        .route(
+            "/addon/folder",
+            put(put_folder::<C>).route_layer(from_fn(require_loopback)),
+        )
+        .route(
+            "/addon/install",
+            post(post_install::<C>).route_layer(from_fn(require_loopback)),
+        )
         .route(
             "/pairing",
             get(get_pairing::<C>).route_layer(from_fn(require_loopback)),
