@@ -20,6 +20,12 @@ pub const WARM_UP: Duration = Duration::from_secs(30);
 /// pattern. A guess, unverified until a live run.
 pub const MIN_ATTEMPTS: u32 = 6;
 
+/// Rounds (epochs) in which this node must have sent invitations before `nobody_answered` is
+/// said. An invitee answers about 2 s into the epoch, so after the first round's invitations and
+/// before the first accept every search looks unanswered; the second round starts 5 s later, by
+/// when the first round's accepts have arrived. Guess, unverified until a live run.
+pub const MIN_INVITE_EPOCHS: u32 = 2;
+
 /// A sample with fewer compatible others than this cannot fill a party by itself (a party is
 /// `PARTY_SIZE` players, one of them this player), so a taken notice can explain it.
 pub const TINY_SAMPLE: u32 = PARTY_SIZE as u32 - 1;
@@ -78,10 +84,58 @@ pub struct Input {
     pub attempts: Attempts,
 }
 
+/// The role this search is shortest of, relative to what a party needs. History pools searches
+/// by this (ADR 0027), so it uses the same need constants and counting convention as `diagnose`
+/// (this player counts in their own role).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Bottleneck {
+    Tank,
+    Healer,
+    Damage,
+    /// Every role has at least what a party needs.
+    None,
+}
+
+/// The role with the lowest seen-to-need ratio, ties going to tank, then healer, then damage;
+/// `None` when no role is short.
+pub fn bottleneck(seen: &RoleCounts, own_role: Option<Role>) -> Bottleneck {
+    let own = |r: Role| u32::from(own_role == Some(r));
+    let roles = [
+        (
+            Bottleneck::Tank,
+            seen.tanks + own(Role::Tank),
+            u32::from(TANKS_PER_PARTY),
+        ),
+        (
+            Bottleneck::Healer,
+            seen.healers + own(Role::Healer),
+            u32::from(HEALERS_PER_PARTY),
+        ),
+        (
+            Bottleneck::Damage,
+            seen.damage + own(Role::Damage),
+            u32::from(DAMAGE_PER_PARTY),
+        ),
+    ];
+    let mut best = roles[0];
+    for r in &roles[1..] {
+        // have_r / need_r < have_best / need_best, without division.
+        if r.1 * best.2 < best.1 * r.2 {
+            best = *r;
+        }
+    }
+    if best.1 >= best.2 {
+        Bottleneck::None
+    } else {
+        best.0
+    }
+}
+
 /// First match wins, in this order: warming up (live only), not connected, others grouping
 /// (taken notices seen and a tiny sample), alone, then the role gaps counting this player in
 /// their own role against the party mix of 1 tank, 1 healer and 3 damage, then nobody answered
-/// (at least `MIN_ATTEMPTS` invitations sent, no accept), otherwise healthy.
+/// (at least `MIN_ATTEMPTS` invitations sent over at least `MIN_INVITE_EPOCHS` rounds, no
+/// accept), otherwise healthy.
 pub fn diagnose(i: &Input) -> Situation {
     if !i.ended && i.elapsed < WARM_UP {
         return Situation::WarmingUp;
@@ -102,7 +156,10 @@ pub fn diagnose(i: &Input) -> Situation {
         Situation::NoHealer
     } else if i.seen.damage + own(Role::Damage) < u32::from(DAMAGE_PER_PARTY) {
         Situation::ShortOnDamage
-    } else if i.attempts.invites_sent >= MIN_ATTEMPTS && i.attempts.accepts_got == 0 {
+    } else if i.attempts.invites_sent >= MIN_ATTEMPTS
+        && i.attempts.invite_epochs >= MIN_INVITE_EPOCHS
+        && i.attempts.accepts_got == 0
+    {
         Situation::NobodyAnswered
     } else {
         Situation::Healthy
@@ -165,6 +222,8 @@ mod tests {
     fn att(sent: u32, got: u32, taken: u32) -> Attempts {
         Attempts {
             invites_sent: sent,
+            // The table cases model a search that has been inviting for a while.
+            invite_epochs: if sent == 0 { 0 } else { 3 },
             accepts_got: got,
             taken_seen: taken,
             ..Attempts::default()
@@ -211,6 +270,16 @@ mod tests {
             (with(60, 3, full, Tank, att(6, 0, 0)), NobodyAnswered),
             (with(60, 3, full, Tank, att(5, 0, 0)), Healthy),
             (with(60, 3, full, Tank, att(40, 1, 0)), Healthy),
+            // many invitations, but all in one round: not yet a pattern (the 2 s before the first
+            // accept comes back)
+            (
+                {
+                    let mut a = att(11, 0, 0);
+                    a.invite_epochs = 1;
+                    with(60, 3, full, Tank, a)
+                },
+                Healthy,
+            ),
             // a missing role is reported before unanswered invitations
             (with(60, 3, counts(0, 1, 3), Healer, att(9, 0, 0)), NoTank),
             // a big sample with taken notices is not "others grouping"
@@ -270,6 +339,55 @@ mod tests {
                         att(MIN_ATTEMPTS, 0, 0),
                     );
                     assert_ne!(got, Situation::Healthy, "{t} {h} {d}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn bottleneck_table() {
+        use Role::*;
+        type B = Bottleneck;
+        let cases = [
+            (counts(0, 1, 3), Some(Healer), B::Tank),
+            (counts(1, 0, 3), Some(Damage), B::Healer),
+            (counts(1, 1, 1), Some(Tank), B::Damage),
+            // own role counts: this player fills the tank slot
+            (counts(0, 1, 3), Some(Tank), B::None),
+            (counts(1, 1, 2), Some(Damage), B::None),
+            (counts(5, 5, 5), Option::<Role>::None, B::None),
+            // lowest ratio wins: 0/1 tank beats 2/3 damage
+            (counts(0, 1, 2), Some(Healer), B::Tank),
+            // 1/3 damage is low, but a missing healer (0/1) is lower still
+            (counts(1, 0, 1), Some(Tank), B::Healer),
+            // empty sample, unknown role: ties go to tank
+            (counts(0, 0, 0), Option::<Role>::None, B::Tank),
+        ];
+        for (seen, own, want) in cases {
+            assert_eq!(bottleneck(&seen, own), want, "{seen:?} {own:?}");
+        }
+    }
+
+    #[test]
+    fn bottleneck_agrees_with_the_role_gap_situations() {
+        for own in [None, Some(Role::Tank), Some(Role::Healer), Some(Role::Damage)] {
+            for t in 0..3 {
+                for h in 0..3 {
+                    for d in 0..5 {
+                        let seen = counts(t, h, d);
+                        let gap = matches!(
+                            diagnose(&input(120, 1, seen, own)),
+                            Situation::NoTank | Situation::NoHealer | Situation::ShortOnDamage
+                        );
+                        // `diagnose` also returns Alone for an empty sample, which is not a gap.
+                        if seen.players > 0 {
+                            assert_eq!(
+                                bottleneck(&seen, own) != Bottleneck::None,
+                                gap,
+                                "{t} {h} {d} {own:?}"
+                            );
+                        }
+                    }
                 }
             }
         }
