@@ -100,9 +100,10 @@ Convergent position (design, structural, implementation-readiness, codebase-deta
 
 ### Non-Goals
 
-- No claim about the global network, no probability, no "a group will form".
-- No new gossip messages, no protocol change, no persistence to the store.
-- No peer ids, names or character data in the retained snapshot.
+- No claim about the global network and no "a group will form". Estimates are allowed only from this node's own history, and only once that history is dependable (see "Search history and estimates").
+- No new gossip messages, no protocol change.
+- History is never shown to the player. It is an implementation detail behind estimates and conclusions.
+- No peer ids, names or character data in the retained snapshot or in history entries.
 - No explanation of why an invitation went unanswered beyond what was actually received.
 - No change to the matching or agreement rules (ADR 0025 stays as is).
 
@@ -127,6 +128,42 @@ Ideas from the inventive-catalyst lens worth keeping for later stages:
 - **Differential display** ("last minute") for trend.
 - **Ghost ratio:** invitations sent versus accepts received as a reliability signal for the sample. Tanks only; others use invitations received and lost-to-rank.
 
+## Search history and estimates (author decisions, added after the Goldfish review)
+
+The first review assumed no persistence. The author reopened that: this node keeps its own history of searches, and uses it only internally to decide what to say and to give estimates. It is not displayed.
+
+**Entries, not buckets.** One entry per search, scanned and pruned as needed. A rolled-up table by dungeon, day and hour was rejected: it would say "low numbers on Thursday 12:00" where the real cause is often a role shortage that can happen at any time.
+
+Each entry holds:
+
+- Start datetime and end datetime, stored separately. Day of week, time of day and duration are derived from these two.
+- Dungeon, the player's level and own role.
+- Players seen, tanks seen, healers seen and damage seen. All four are tracked, because a shortage can be damage as well as tanks (unlucky matching). Recorded at checkpoints (proposed: about 1 and 2 minutes in) and at the peak, so a running search can be compared with past ones at the same point.
+- Outcome: formed a party, expired at the limit, stopped by the player, or party dropped after forming.
+
+**Outcome rules.**
+
+- Expired counts as a failure sample.
+- Stopped by the player counts as a failure sample only if the search lasted more than one minute. A shorter stop is ignored.
+- Time to find and time to expire are both kept. Expired and stopped searches are incomplete timing data (a group might have come later), so the estimate must not be built from successful searches alone, or it will say "usually 4 minutes" while ignoring the searches that never found anyone.
+
+**Estimates.**
+
+- Linear regression over the entries. Predictors are the role counts seen at the checkpoints. Time of day and day of week are recorded but may end up unused; the author accepts that.
+- Output is a rough chance of finding a group within the limit and a typical time among successes, always stated together. The chance is clamped to 0-100%.
+- Estimates appear only when there are enough entries for the dungeon and the fit looks dependable. Below that threshold the app uses the live-only wording. Proposed starting threshold: about 20-30 entries per dungeon. This is unverified and needs checking against real data.
+
+**Bounds.** Prune on append: a cap on total entries (proposed about 500), a cap per dungeon so one popular dungeon does not push out the rest, and an age limit (proposed about 90 days).
+
+**Implementation shape.** A pure module (record, prune, estimate) over the key-value store, with no new dependency. Regression on a handful of predictors is a few dozen lines. It stays outside the engine's state machine, which stays pure and free of I/O.
+
+**Risks to record.**
+
+- Thin data. A player makes a few searches per week, so the threshold above will take weeks to reach for any one dungeon.
+- Bias. Entries exist only when this player searches, so they reflect this player's times and role, not the server.
+- Linear regression on a yes/no outcome is a rough model. It is acceptable here because the author wants rough descriptions, and the output is clamped.
+- Clock changes (time zone, daylight saving) shift derived day and hour slightly. Accepted.
+
 ## Key Decisions & Staging for Next Steps
 
 ### Decisions the author needs to make
@@ -139,6 +176,15 @@ Ideas from the inventive-catalyst lens worth keeping for later stages:
 6. Lifecycle of the end snapshot: kept until Clear or the next search. What `UserStop` does with it. Manual stop currently maps to Idle and shows nothing.
 7. Whether to add ADR 0026 (proposed title: the app reports search health from this peer's own observations; amends 0011, cites 0003, 0005, 0025). Structural and implementation-readiness lenses both say yes.
 
+### Decided by the author after the review
+
+- Keep history as per-search entries with start and end datetimes, role counts at checkpoints and the outcome (section above).
+- All four counts (players, tanks, healers, damage) are tracked.
+- History is internal and never shown.
+- Expired searches, and searches the player stopped after more than one minute, count as failure samples.
+- Estimates only when the history is large enough and dependable.
+- Time of day and day of week are recorded but need not be used by the estimate.
+
 ### Proposed staging
 
 1. **ADR 0026 and a short design-doc note.** Record the observation-only rule, the hedging, in-memory retention and the engine/UI split. Update the implementation plan's API table and file list.
@@ -148,7 +194,8 @@ Ideas from the inventive-catalyst lens worth keeping for later stages:
 5. **Webapp.** A `DiagnosisSummary` molecule built from `Notice`, `Field` and `RoleIcon` (no new atom unless `Notice` lacks an info tone). Integrate in `SearchProgress` for both the running and ended cards, and remove the inline `lowCount` Notice so there is one source of truth. Story variations: warming up, not connected, alone, no tank, no healer, full sample versus partial, multi-dungeon, long dungeon list, ended per situation, one versus two sentences. Add the character-length limits to the molecule's story docs. Use invented data only ("Testa Fakename", "Testville").
 3. (later) **Counters for attempts.** `invites_sent`, `accepts_got`, `invites_got`, drops by cause, `taken_seen`; role-aware copy; the "nobody answered" situation gated on a minimum attempt count.
 4. (later) Hysteresis, doubt level, feasibility sentence, counterfactual hints.
-5. **Live check.** Mark all thresholds unverified until run against a live network, in line with the S0 status.
+5. (later) **History and estimates.** The entry type, the store key, prune-on-append, a pure estimator with a minimum-entries gate, and tests with invented data. Build after the observation slice, so the checkpoint counts it records already exist. Needs its own ADR (supersedes the "no persistence" assumption above).
+6. **Live check.** Mark all thresholds unverified until run against a live network, in line with the S0 status.
 
 ### Acceptance criteria
 
@@ -157,7 +204,7 @@ Ideas from the inventive-catalyst lens worth keeping for later stages:
 - No message asserts more than was observed ("none seen", never "none exist"), and none names a person.
 - The advice agrees with the stage reached.
 - An old web bundle against the new server renders the previous copy.
-- No store or schema change.
+- The first slice makes no store or schema change. The history stage adds one new store key and nothing else.
 - Every new component has stories at its level; `mise run lint`, `cargo test --lib engine::`, `pnpm --dir webapp typecheck` and `build-storybook` pass.
 
 ## Deduplicated findings
