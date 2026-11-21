@@ -27,6 +27,7 @@ mise run dev        # desktop app (Tauri + Vite)
 | `mise run lint` | clippy with warnings denied, and a rustfmt check |
 | `mise run test-addon` | build the headless WoW Lua VM and run the addon tests in it. The submodule URL is a local path, so git may refuse to clone it ("transport 'file' not allowed"); run `git -c protocol.file.allow=always submodule update --init vendor/wow-forever-addons` once in your own shell |
 | `mise run install-addon` | copy the addon into `$WOW_ADDONS_DIR` (must end in `AddOns`) |
+| `mise run update-icons` | regenerate the app icons (`app/icons/`) and the addon icon (`addon/ForeverTogether/icon.tga`) from `assets/icon_1024.png` |
 | `mise run check` | typecheck, lint, test and test-addon: everything CI should run |
 | `mise run build` | bundle the app for this platform |
 
@@ -46,7 +47,7 @@ The QR holds the same text. The app has no camera scanner, so on a phone you sca
 - `app/`: the Rust and Tauri app (`app/src/`). Modules: `code` (decode the character code), `engine` (the pure matching state machine), `net` (iroh network, bootstrap, peer exchange, an in-memory fake), `store` (identity, settings, known peers), `server` (the local web server and API), `app` (`LiveCore`, joins engine, network and server), `runtime` (start-up for the three modes), `cli`, `config`, `dungeons`, `identity`.
 - `webapp/`: the React and TypeScript web app (`webapp/src/`), shown in the app window and on phones. Atomic design, with stories next to each component.
 - `docs/`: the design, the implementation plan, the code format spec (`rdf-code-spec.md`), spike results (`spike-s0.md`) and review reports. `docs/adr/`: one decision record per file. `docs/notes/`: loose notes.
-- `assets/`: the icon master and its project file. `scripts/`: Python and shell helpers (icons, code vectors, addon install).
+- `assets/`: the icon master (`icon_1024.png`) and its project file. The Lora font and its license are in `webapp/src/assets/fonts/`. `scripts/`: Python and shell helpers (icons, code vectors, addon install).
 - `vendor/wow-forever-addons`: git submodule with the headless Lua test VM.
 
 ## Running the app
