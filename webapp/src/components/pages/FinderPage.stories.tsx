@@ -43,6 +43,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const phone = { globals: { viewport: { value: "mobile1", isRotated: false } } } as const;
+const tablet = { globals: { viewport: { value: "tablet", isRotated: false } } } as const;
 
 // ---------------------------------------------------------------- first run
 
@@ -62,7 +63,7 @@ export const FirstRunOnPhone: Story = { ...phone, args: { ...FirstRun.args } };
 
 // --------------------------------------------------------------------- idle
 
-/** One character line, then the dungeon list. Tapping a row starts the search. */
+/** One slim top row (character line, gear), then the dungeon cards in a grid. Tapping a card starts the search. */
 export const Idle: Story = {};
 export const IdleOneDungeon: Story = { args: { dungeons: { dungeons: rec.dungeons.slice(0, 1), recommended: rec.dungeons.slice(0, 1).map((d) => d.slug) } } };
 export const IdleThirtyDungeons: Story = { args: { dungeons: manyDungeons(30) } };
@@ -70,6 +71,9 @@ export const IdleAfterStop: Story = { args: { state: makeState({ search: idleSea
 export const IdleOnPhone: Story = { ...phone, args: {} };
 export const StaleCodeOnPhone: Story = { ...phone, args: { state: makeState({ character: makeCharacter({ createdAt: NOW - 95 * MIN }) }) } };
 export const IdleThirtyDungeonsOnPhone: Story = { ...phone, args: { dungeons: manyDungeons(30) } };
+
+/** Tablet width: two columns of dungeon cards. On a wide desktop window the same list shows two or three columns. */
+export const IdleOnTablet: Story = { ...tablet, args: { dungeons: manyDungeons(30) } };
 
 /** A code made 95 minutes ago. */
 export const StaleCode: Story = { args: { state: makeState({ character: makeCharacter({ createdAt: NOW - 95 * MIN }) }) } };
@@ -128,6 +132,7 @@ export const SearchingOldServer: Story = { args: { state: makeState({ search: se
 export const SearchingOldServerCounting: Story = { args: { state: makeState({ search: searchingFor(5, { searching: null, diagnosis: null }) }) } };
 export const SearchingOnPhone: Story = { ...phone, args: { state: makeState({ search: searchingFor(130, { searching: 28 }) }) } };
 export const SearchingNoTankOnPhone: Story = { ...phone, args: { ...SearchingNoTank.args } };
+export const SearchingOnTablet: Story = { ...tablet, args: { state: makeState({ search: searchingFor(130, { searching: 28 }) }) } };
 export const ConnectionLost: Story = { args: { status: "reconnecting", state: makeState({ search: searchingFor(50) }) } };
 
 // -------------------------------------------------------------------- ended
@@ -196,6 +201,7 @@ export const PartyFoundFourAcceptedOneWaiting: Story = {
     }),
   },
 };
+export const PartyFoundOnTablet: Story = { ...tablet, args: { ...found(2).args } };
 export const PartyFoundOnPhone: Story = { ...phone, args: { ...found(0).args } };
 export const PartyFoundOnPhoneTwoAccepted: Story = { ...phone, args: { ...found(2).args } };
 

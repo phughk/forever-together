@@ -68,6 +68,9 @@ export const AdvancedOpenWithContacts: Story = {
 export const ManyContactsLargeCache: Story = {
   args: { advancedOpen: true, settings: makeSettings({ known_peers_size: 1000, trusted_peers: [1, 2, 3, 4, 5, 6, 7, 8, 9].map(key) }) },
 };
+/** Narrow: one column of cards. At desktop widths the cards sit in two columns. */
+export const OnPhoneDesktopSettings: Story = { globals: { viewport: { value: "mobile1", isRotated: false } } };
+export const OnTablet: Story = { globals: { viewport: { value: "tablet", isRotated: false } }, args: { advancedOpen: true } };
 /** Opened on a phone: one banner, locks on desktop-only controls, Advanced read-only. */
 export const ViewedOnPhone: Story = {
   globals: { viewport: { value: "mobile1", isRotated: false } },

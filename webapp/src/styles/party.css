@@ -1,10 +1,10 @@
 /* Party panel, member rows and the app header. Selectors are doubled where they override organisms.css and molecules.css. */
 
-.ft-header.ft-header--one-row { flex-wrap: nowrap; gap: var(--space-3); }
-.ft-header__brand.ft-header__brand--row { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
-.ft-header__brand--row h1 { margin: 0; font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.ft-header__brand--row .ft-conn { flex: none; }
-.ft-header.ft-header--one-row .ft-header__nav { flex: none; align-items: center; }
+/* Header: one slim row. The gear sits at the right of the finder's top row, Back at the left on Settings. */
+header.ft-header { flex-wrap: nowrap; justify-content: flex-start; gap: var(--space-3); padding: 0; min-height: 40px; }
+header.ft-header--finder { flex: none; justify-content: flex-end; margin-left: auto; }
+header.ft-header--settings { margin-bottom: var(--space-3); }
+.ft-header .ft-conn { flex: none; }
 .ft-button--icon { width: 40px; padding: 0; }
 .ft-button--icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -21,7 +21,6 @@
 .ft-party__actions .ft-button { flex: 1; }
 
 @media (max-width: 640px) {
-  .ft-header__brand--row h1 { font-size: 1rem; }
   .ft-party--confirming { padding-bottom: 72px; }
   .ft-party__actions {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;

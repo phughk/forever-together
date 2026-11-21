@@ -17,7 +17,7 @@ export interface AdvancedSettingsProps
 export function AdvancedSettings(p: AdvancedSettingsProps) {
   const contacts = p.trustedPeers.length;
   return (
-    <Card>
+    <Card className="ft-advanced">
       <Details
         defaultOpen={p.defaultOpen}
         summary={
