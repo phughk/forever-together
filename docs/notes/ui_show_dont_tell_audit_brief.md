@@ -140,6 +140,20 @@ Severity: High means a first-run or core-flow player is blocked or misled. Mediu
 - D8. Settings: Advanced section first. Tabs only if Settings still needs scrolling at 1280x720 afterwards.
 - D9. Out of scope, confirm: per-phone count, auto-off timer, installer, issue form.
 
+### Resolutions (auto-resolved at the author's request, 2026-11-21)
+
+The author asked for every open decision to be handled and the work driven to completion. Each decision takes the brief's own recommendation. All are revisable.
+
+- **D1.** Click-to-search for one dungeon, with multi-select behind a "Combine dungeons" toggle. The choice is frozen while searching; Stop stays one tap.
+- **D2.** The first run shows "Paste your code" and never claims to know whether the addon is installed. No addon link URL was supplied, so the link lives in one constant (`ADDON_URL`) that is empty for now. While it is empty, step 1 renders as plain text without a link. Supply the URL there.
+- **D3.** On a phone, Advanced is shown read-only, with a lock icon on each control that only the desktop may change.
+- **D4.** "Backup contacts" for trusted peers, "Phone link" for the LAN feature. Rename table below stands.
+- **D5.** InfoTip text is a string, capped at about 160 characters. If removing an info tap would not change what the player does, the content should have been a visual or a label.
+- **D6.** Approved: the hedge moves to the label "Seen from here" and `~`. ADR 0026 gets a dated note.
+- **D7.** One "Searching wider" chip, the rules in an info tap, no countdown to the next step.
+- **D8.** Advanced section first. Tabs only if Settings still scrolls at 1280x720 afterwards.
+- **D9.** Confirmed out of scope: per-phone count, auto-off timer, installer, issue form.
+
 ### Rename table (proposal for D4 and #16)
 
 | Now | Proposed |
