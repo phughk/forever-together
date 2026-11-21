@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** chore
+* **Priority:** P3
 * **Source:** author, 2026-11-21 (egm 0043)
 * **ADRs:** none
 * **EGM:** [0043-key-management](../docs/egm/0043-key-management/README.md)

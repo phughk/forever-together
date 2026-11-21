@@ -2,6 +2,8 @@
 
 * **Status:** open
 * **Kind:** feature
+* **Priority:** P3
+* **Blocked by:** tickets 5, 29
 * **Source:** ADR 0027; docs/design-process/archive brief (search diagnosis)
 * **ADRs:** none
 * **EGM:** none

@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** feature
+* **Priority:** P2
 * **Source:** ADR 0038
 * **ADRs:** [0038](../docs/adr/0038-scan-log-and-opt-in-export.md)
 * **EGM:** none

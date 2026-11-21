@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** bug
+* **Priority:** P2
 * **Source:** the tickets in `tickets/`
 * **ADRs:** none
 * **EGM:** none

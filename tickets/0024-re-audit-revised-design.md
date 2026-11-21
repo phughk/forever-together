@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** review
+* **Priority:** P2
 * **Source:** CLAUDE.md
 * **ADRs:** none
 * **EGM:** none

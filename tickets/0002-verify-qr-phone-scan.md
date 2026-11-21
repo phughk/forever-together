@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** verification
+* **Priority:** P1
 * **Source:** docs/spike-s0.md; ADR 0014
 * **ADRs:** none
 * **EGM:** none

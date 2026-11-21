@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** bug
+* **Priority:** P2
 * **Source:** ADR 0032
 * **ADRs:** none
 * **EGM:** none

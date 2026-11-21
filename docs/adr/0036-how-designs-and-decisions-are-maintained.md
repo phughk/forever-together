@@ -27,7 +27,7 @@ Four kinds of document, each with one home and one job.
 4. **Decisions leave the iteration as ADRs.** When the author resolves a question, the same change writes or amends an ADR that links the iteration folder as its source. The ADR states the decision; the folder keeps the debate. If they disagree, the ADR wins.
 5. **Closing.** An iteration is closed when its ADRs exist and its leftover work is ticketed. The folder stays where it is (history, not moved to an archive), its README says `closed`, and the ticket links ADRs and folder.
 6. **One commit per step, labelled.** `egm(NNNN): brief`, `egm(NNNN): review round N`, `egm(NNNN): resolutions`, `adr(MMMM): <title>`, `ticket(NNNN): <status>`. Never mix an EGM step with code.
-7. **Ticket fields.** Each ticket has `Status` (open, in progress, blocked, done, dropped), `Kind`, `Source`, `ADRs` and `EGM` (links or "none"). A ticket is done when its work is merged and its ADRs exist.
+7. **Ticket fields.** Each ticket has `Status` (open, in progress, blocked, done, dropped), `Priority` (P0 to P3, scale in `tickets/README.md`; added 2026-11-21), `Kind`, `Source`, `ADRs` and `EGM` (links or "none"), and `Blocked by` when it waits on another ticket. A ticket is done when its work is merged and its ADRs exist.
 8. **Existing material.** `docs/design-process/archive/` is legacy and frozen: the old briefs and reports from before this rule. New iterations never go there.
 
 ```mermaid

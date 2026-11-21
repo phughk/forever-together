@@ -2,6 +2,8 @@
 
 * **Status:** open
 * **Kind:** verification
+* **Priority:** P0
+* **Blocked by:** tickets 8
 * **Source:** ADR 0008, 0009, 0019; docs/spike-s0.md
 * **ADRs:** none
 * **EGM:** none

@@ -2,6 +2,8 @@
 
 * **Status:** open
 * **Kind:** feature
+* **Priority:** P2
+* **Blocked by:** tickets 8, 39, 40
 * **Source:** author, 2026-11-21
 * **ADRs:** [0038](../docs/adr/0038-scan-log-and-opt-in-export.md)
 * **EGM:** [0043-key-management](../docs/egm/0043-key-management/README.md)

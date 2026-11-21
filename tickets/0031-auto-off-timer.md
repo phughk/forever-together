@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** feature
+* **Priority:** P3
 * **Source:** ADR 0032; ui audit D9
 * **ADRs:** none
 * **EGM:** none

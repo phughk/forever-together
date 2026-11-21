@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** feature
+* **Priority:** P3
 * **Source:** design doc Open Questions; Alternative G2
 * **ADRs:** none
 * **EGM:** none

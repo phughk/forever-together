@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** feature
+* **Priority:** P2
 * **Source:** ADR 0012; design doc Future Improvements
 * **ADRs:** none
 * **EGM:** none

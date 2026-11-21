@@ -2,6 +2,8 @@
 
 * **Status:** open
 * **Kind:** feature
+* **Priority:** P2
+* **Blocked by:** tickets 40
 * **Source:** ADR 0038, ADR 0029
 * **ADRs:** [0038](../docs/adr/0038-scan-log-and-opt-in-export.md)
 * **EGM:** none

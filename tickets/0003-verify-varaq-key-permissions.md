@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** verification
+* **Priority:** P1
 * **Source:** ADR 0008; docs/spike-s0.md
 * **ADRs:** none
 * **EGM:** [0043-key-management](../docs/egm/0043-key-management/README.md)

@@ -2,6 +2,8 @@
 
 * **Status:** open
 * **Kind:** idea
+* **Priority:** P3
+* **Blocked by:** tickets 4, 5
 * **Source:** ADR 0005; design doc Future Improvements
 * **ADRs:** none
 * **EGM:** none

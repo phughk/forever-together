@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** bug
+* **Priority:** P2
 * **Source:** ADR 0029; ui audit follow-up
 * **ADRs:** none
 * **EGM:** none

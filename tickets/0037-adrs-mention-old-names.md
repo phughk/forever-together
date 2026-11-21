@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** chore
+* **Priority:** P3
 * **Source:** ADR 0029
 * **ADRs:** none
 * **EGM:** none

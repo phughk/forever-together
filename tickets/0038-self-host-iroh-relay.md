@@ -2,6 +2,8 @@
 
 * **Status:** open
 * **Kind:** decision
+* **Priority:** P1
+* **Blocked by:** tickets 4
 * **Source:** ADR 0034 (risks)
 * **ADRs:** none
 * **EGM:** none

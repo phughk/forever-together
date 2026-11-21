@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** feature
+* **Priority:** P2
 * **Source:** ADR 0027
 * **ADRs:** none
 * **EGM:** none

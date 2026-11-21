@@ -2,6 +2,8 @@
 
 * **Status:** open
 * **Kind:** verification
+* **Priority:** P0
+* **Blocked by:** tickets 8
 * **Source:** CLAUDE.md; ADR 0028
 * **ADRs:** none
 * **EGM:** none

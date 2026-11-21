@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** idea
+* **Priority:** P3
 * **Source:** ADR 0007
 * **ADRs:** none
 * **EGM:** none

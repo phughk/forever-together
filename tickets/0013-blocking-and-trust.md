@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** idea
+* **Priority:** P3
 * **Source:** the tickets in `tickets/`; design doc Future Improvements
 * **ADRs:** none
 * **EGM:** none

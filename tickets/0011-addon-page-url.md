@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** prerequisite
+* **Priority:** P1
 * **Source:** ADR 0031; ui audit
 * **ADRs:** none
 * **EGM:** none

@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** idea
+* **Priority:** P3
 * **Source:** design doc Future Improvements
 * **ADRs:** none
 * **EGM:** none

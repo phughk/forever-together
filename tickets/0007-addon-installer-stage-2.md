@@ -2,6 +2,8 @@
 
 * **Status:** open
 * **Kind:** feature
+* **Priority:** P2
+* **Blocked by:** tickets 6
 * **Source:** ADR 0028
 * **ADRs:** none
 * **EGM:** none

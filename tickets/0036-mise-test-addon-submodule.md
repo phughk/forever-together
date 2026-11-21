@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** chore
+* **Priority:** P1
 * **Source:** CLAUDE.md
 * **ADRs:** none
 * **EGM:** none

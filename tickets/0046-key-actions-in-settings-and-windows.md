@@ -2,6 +2,8 @@
 
 * **Status:** open
 * **Kind:** feature
+* **Priority:** P2
+* **Blocked by:** tickets 43
 * **Source:** author, egm 0043 round 1 (A6)
 * **ADRs:** [0039](../docs/adr/0039-key-management.md)
 * **EGM:** [0043-key-management](../docs/egm/0043-key-management/README.md)

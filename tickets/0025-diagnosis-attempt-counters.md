@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** feature
+* **Priority:** P2
 * **Source:** ADR 0026; docs/design-process/archive brief (search diagnosis), staging 6
 * **ADRs:** none
 * **EGM:** none

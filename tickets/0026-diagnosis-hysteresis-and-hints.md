@@ -2,6 +2,8 @@
 
 * **Status:** open
 * **Kind:** idea
+* **Priority:** P3
+* **Blocked by:** tickets 25
 * **Source:** docs/design-process/archive brief (search diagnosis), staging 7
 * **ADRs:** none
 * **EGM:** none

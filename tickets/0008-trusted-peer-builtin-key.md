@@ -2,6 +2,7 @@
 
 * **Status:** open
 * **Kind:** prerequisite
+* **Priority:** P0
 * **Source:** CLAUDE.md; ADR 0023
 * **ADRs:** none
 * **EGM:** [0043-key-management](../docs/egm/0043-key-management/README.md)

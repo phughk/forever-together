@@ -2,6 +2,8 @@
 
 * **Status:** open
 * **Kind:** verification
+* **Priority:** P2
+* **Blocked by:** tickets 42
 * **Source:** docs/spike-s0.md
 * **ADRs:** none
 * **EGM:** none

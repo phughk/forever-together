@@ -2,6 +2,8 @@
 
 * **Status:** open
 * **Kind:** decision
+* **Priority:** P2
+* **Blocked by:** tickets 8
 * **Source:** design doc Open Questions
 * **ADRs:** none
 * **EGM:** none
