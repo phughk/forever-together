@@ -50,7 +50,7 @@ Owner: the author. Output file: `docs/spike-s0.md`. For each row, record the res
 | iroh's default hosted components (relays, DNS) are named, and whether they can be self-hosted or switched off | record as a dependency in the risks table |
 | The seeded simulation (D1) reports the commit rate for converging announcements and for the proposer model at 3,000 peers and a sample of 100, with modelled sample divergence | **Done in the engine, result in `docs/spike-s0.md`: neither reached the floor, so the design was reopened and leader invitations ([ADR 0025](../../adr/0025-leader-invitations.md)) were adopted; they reach it within 30 s in the model.** A live run can still change this: if direct messages are lost, add a retry. |
 
-Floor: at least 70% of peers that have a compatible five in their sample commit within 3 epochs of 10 s, which is 30 s. This is a starting guess. With the 5 s epoch of ADR 0025 that is 6 rounds. The floor is unchanged, but note that the role mix caps what any mechanism can reach (see the S0 results).
+Floor (revised 2026-11-21, author decision): at least 70% of the peers that a central greedy build over every peer in the swarm could place in a party commit within 30 s (6 rounds of the 5 s epoch of ADR 0025). Peers that no mechanism could place, such as surplus non-tank peers when tanks are scarce, are outside the measure. This replaces the original wording, which counted all peers with a compatible five in their sample and could not be met by any mechanism in tank-scarce or small swarms.
 
 ## Shared definitions
 

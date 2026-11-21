@@ -1,6 +1,6 @@
 # 0025. Peers agree on a party by leader invitations: a tank invites from its own sample, invitees follow the best-ranked leader
 
-* **Status:** Accepted, implemented in `engine`. Supersedes [0010](0010-converging-announcements.md) and the proposer model that 0010 left open. Amends [0024](0024-liveness-and-decline.md). The author's review of this change is pending.
+* **Status:** Accepted, implemented in `engine`. Supersedes [0010](0010-converging-announcements.md) and the proposer model that 0010 left open. Amends [0024](0024-liveness-and-decline.md). The author accepted it on 2026-11-21 and redefined the commit floor against the central-build capacity (see the implementation plan).
 * **Date:** 2026-11-21
 * **Deciders:** Hugh Kaznowski (decision proposed from the spike S0 simulation work)
 
