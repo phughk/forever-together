@@ -13,9 +13,15 @@ fn peer(i: u8) -> PeerId {
 /// A core whose clock the test moves. The core's own one-second ticker still runs in real time,
 /// so after moving the clock a test waits a little over a second for a tick to see it.
 fn core_with_clock(store: Arc<dyn Store>) -> (LiveCore, Arc<AtomicU64>, MemNetHandle) {
+    core_with_peers(store, 0)
+}
+
+/// As `core_with_clock`, with `peers` connected peers reported (so a situation other than
+/// `not_connected` can be diagnosed).
+fn core_with_peers(store: Arc<dyn Store>, peers: u32) -> (LiveCore, Arc<AtomicU64>, MemNetHandle) {
     let (net, handle) = MemNetwork::new();
     let (_tx, rx) = watch::channel(NetworkView {
-        peers: 0,
+        peers,
         bootstrap: BootstrapSource::None,
     });
     let offset = Arc::new(AtomicU64::new(0));
@@ -145,4 +151,107 @@ async fn a_failing_history_store_never_stops_a_search() {
     tick().await;
     core.stop_search().await.unwrap();
     assert_eq!(core.state().search.status, SearchStatus::Idle);
+}
+
+// ---- the outlook (ADR 0027, stage 8b) ---------------------------------------------------
+
+/// Earlier searches by the sample character (a tank) that saw nobody at 55 s (the healer bin):
+/// `formed` found a group, `expired` did not. Invented data.
+fn seed_history(store: &MemStore, formed: u32, expired: u32) {
+    let mut start = 1_799_000_000u64;
+    for outcome in std::iter::repeat_n(history::Outcome::Formed, formed as usize).chain(
+        std::iter::repeat_n(history::Outcome::Expired, expired as usize),
+    ) {
+        let mut e = history::tests::entry(start, "the-deadmines");
+        e.checkpoint_1 = Some(history::CheckpointEntry {
+            counts: history::Counts {
+                players: 0,
+                tanks: 0,
+                healers: 0,
+                damage: 0,
+            },
+            stage: 0,
+            sample_full: false,
+        });
+        e.outcome = outcome;
+        store
+            .put(&e.key(), &serde_json::to_vec(&e).unwrap())
+            .unwrap();
+        start += 1_000;
+    }
+}
+
+fn outlook(core: &LiveCore) -> Option<String> {
+    core.state().search.diagnosis.unwrap().outlook
+}
+
+#[tokio::test]
+async fn the_outlook_appears_at_the_checkpoint_only_with_dependable_history() {
+    let store = Arc::new(MemStore::new());
+    seed_history(&store, 3, 37);
+    let (core, clock, _net) = core_with_peers(store.clone(), 3);
+    set_character(&core).await;
+    start_deadmines(&core).await;
+    // Before the 55 s checkpoint: a diagnosis, but no outlook.
+    advance(&clock, 40);
+    tick().await;
+    let d = core.state().search.diagnosis.unwrap();
+    assert_eq!(d.situation, "alone");
+    assert_eq!(d.outlook, None);
+    // After it, still unformed: a hedged band, and the situation is unchanged.
+    advance(&clock, 20);
+    tick().await;
+    let d = core.state().search.diagnosis.unwrap();
+    assert_eq!((d.situation.as_str(), d.ended), ("alone", false));
+    assert_eq!(d.outlook.as_deref(), Some("rarely_found"));
+    // Clearing the history clears the cache with it.
+    core.clear_history().await.unwrap();
+    tick().await;
+    assert_eq!(outlook(&core), None);
+}
+
+#[tokio::test]
+async fn too_little_history_gives_no_outlook() {
+    let store = Arc::new(MemStore::new());
+    seed_history(&store, 2, 2);
+    let (core, clock, _net) = core_with_peers(store.clone(), 3);
+    set_character(&core).await;
+    start_deadmines(&core).await;
+    advance(&clock, 60);
+    tick().await;
+    assert_eq!(outlook(&core), None);
+}
+
+#[tokio::test]
+async fn the_outlook_is_never_shown_once_the_search_ended() {
+    let store = Arc::new(MemStore::new());
+    seed_history(&store, 3, 37);
+    let (core, clock, _net) = core_with_peers(store.clone(), 3);
+    set_character(&core).await;
+    start_deadmines(&core).await;
+    advance(&clock, 60);
+    tick().await;
+    assert!(outlook(&core).is_some());
+    advance(&clock, 550);
+    tick().await;
+    assert_eq!(core.state().search.status, SearchStatus::LimitReached);
+    assert_eq!(outlook(&core), None);
+}
+
+#[tokio::test]
+async fn a_recorded_search_joins_the_history_the_estimator_reads() {
+    let store = Arc::new(MemStore::new());
+    seed_history(&store, 3, 36);
+    let (core, clock, _net) = core_with_peers(store.clone(), 3);
+    set_character(&core).await;
+    // 39 entries are 3 successes and 36 failures; one more expired search is recorded and the
+    // cache is refreshed. The recorded entry joins the same pool as the seeded ones.
+    start_deadmines(&core).await;
+    advance(&clock, 605);
+    tick().await;
+    assert_eq!(history::load(store.as_ref()).unwrap().len(), 40);
+    start_deadmines(&core).await;
+    advance(&clock, 60);
+    tick().await;
+    assert_eq!(outlook(&core).as_deref(), Some("rarely_found"));
 }
