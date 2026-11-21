@@ -123,3 +123,65 @@ The app sets owner-only on files it creates (Unix). It does not verify permissio
 *   0044 depends on 0008 (a `BUILTIN` key) and on the export module in 0040.
 *   0003 becomes a documentation and verification ticket.
 *   New small tickets: Windows check, running-app guard.
+
+## Alternatives Considered
+
+Each is something the author declined on 2026-11-21 or I considered and left out. "Rejected by author" gives the author's reason where they gave one; the costs listed under it are the trade-offs I put to them.
+
+### Encrypting the scan export to a separate intake key
+
+A second keypair, secret kept offline, public half compiled in beside `BUILTIN`.
+
+*   **Rejected by author:** the author owns `BUILTIN[0]`, holds its secret, and can decrypt with it, so a second key adds nothing they need. Players still expose no characters or codes.
+*   **Cost accepted:** the decrypting secret is also the live trusted node's identity key. If that server is compromised, the attacker can read every export and impersonate the trusted peer. Resetting the key makes old exports unreadable unless the old secret is kept. The same key now does signing and, through the Ed25519 to X25519 conversion that `age` performs, encryption. The conversion is standard and `age` supports it, but it is two uses of one key.
+
+### Sealing each export to two keys
+
+Each file carries two sealed copies of one random file key, so either secret opens it.
+
+*   **Rejected by author:** not needed once the first alternative was declined.
+*   **Why it is weaker for this case:** compromising either key exposes every file, and the file format grows. Its one benefit, surviving the loss of one key, is covered by the offline backup of the single key.
+
+### Plain export of the scan log
+
+Players post the unencrypted JSON.
+
+*   **Rejected by author:** players would expose their characters and codes in a public issue.
+
+### Passphrase-protected or keychain-stored keys
+
+An encrypted key file, a passphrase prompt, or the operating system keychain for the stored secret.
+
+*   **Rejected by author:** a key is a key. Export writes what is in the store, in a format other software can read, and the user secures the file. The author does not treat this as a risk for the app to solve.
+*   **Cost accepted:** anyone who can read the data directory or an exported file has the identity. The keychain stays the fallback in ADR 0008 only if `varaq` proves unfit (ticket 0003).
+
+### Top-level flags instead of a `key` subcommand group
+
+`--export-key`, `--import-key`, `--reset-key`, `--decrypt-scans` beside `--print-public-key`.
+
+*   **Rejected by author:** chose the subcommand group.
+*   **Why it is weaker:** flags can be combined with each other and with `--headless`, so more invalid combinations need rejecting, and each new operation adds another top-level flag.
+
+### A key file path or environment variable on every start
+
+`--key-file` or `WOWFT_KEY_FILE`, read each time the app starts, with or without the store as the primary.
+
+*   **Rejected by author:** headless is the same binary and CLI as the desktop app. It generates a key at start and takes `key import` and `key export`, so a deploy step covers cloud nodes.
+*   **Cost accepted:** a container with an ephemeral data volume that skips the import step starts with a new random key and a new peer ID. The deployer has to run the import.
+
+### A decrypt command in the CLI
+
+`key decrypt <file> --key <keyfile>`.
+
+*   **Rejected by author:** `age -d -i <exported key>` already decrypts the files, so the app needs no decrypt code.
+*   **Cost accepted:** the author needs the `age` or `rage` tool installed. The round-trip test in the plan is what proves it works with a `key export` file.
+
+### A custom envelope and header for the scan export
+
+A project-specific file header carrying a version and recipient key id, around a sealed box.
+
+*   **Left out:** `age` has an established format, a key tag in its header, and tools to read it. A custom envelope would be new cryptographic code to write, review and keep.
+
+### Using the key as a raw hex or other project-specific file
+
+*   **Left out:** the author wants a key other software can read. Raw hex works only with this app.
