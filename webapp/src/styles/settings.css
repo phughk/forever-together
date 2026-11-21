@@ -1,0 +1,25 @@
+/* Settings screens: lock icon, remote banner, phone link, advanced section, numbered steps. */
+.ft-icon { display: inline-block; flex: none; vertical-align: middle; }
+.ft-locked { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--text-muted); max-width: 100%; }
+.ft-locked--block { display: flex; }
+.ft-locked--block > :first-child { flex: 1; min-width: 0; }
+.ft-remote-banner { display: flex; align-items: center; gap: var(--space-2); }
+.ft-phonelink__state { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.ft-phonelink__risk { margin: 0; color: var(--warn); font-weight: 600; font-size: 0.9rem; }
+.ft-phonelink__reveal { display: grid; gap: var(--space-3); justify-items: start; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); }
+.ft-phonelink__reveal .ft-setting { width: 100%; }
+.ft-phonelink__value { margin: 0; font-size: 0.9rem; color: var(--text-muted); }
+.ft-advanced__summary { display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.ft-advanced__title { font-weight: 600; color: var(--text); }
+.ft-advanced-section { display: grid; gap: var(--space-2); padding-bottom: var(--space-3); border-bottom: 1px solid var(--border); }
+.ft-advanced-section:last-child { border-bottom: 0; padding-bottom: 0; }
+.ft-advanced-section__head { display: flex; align-items: center; gap: var(--space-2); }
+.ft-advanced-section__head .ft-section-label { margin: 0; }
+.ft-contact { display: flex; align-items: center; gap: var(--space-2); justify-content: space-between; padding: var(--space-1) 0; }
+.ft-contact__id { font-family: var(--mono); font-size: 0.9rem; }
+.ft-contact__actions { display: flex; gap: var(--space-1); }
+.ft-steps { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.ft-step { display: flex; align-items: center; gap: var(--space-3); }
+.ft-step__num { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--accent-bg); color: var(--accent); font-weight: 700; flex: none; }
+.ft-step__icon { color: var(--text-muted); display: inline-flex; }
+.ft-step__label { font-size: 1.05rem; }
