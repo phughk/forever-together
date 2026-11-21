@@ -6,8 +6,12 @@
 
 use crate::app::memnet::MemNetwork;
 use crate::app::{CoreDeps, LiveCore, system_clock};
+use crate::config::Settings;
+use crate::dungeons::TopicId;
+use crate::engine::{Event, Message};
 use crate::engine::{NetError, Network};
 use crate::identity::{Identity, PeerId, Signer};
+use crate::net::{IrohConfig, IrohNet, KnownPeers, TrustedPeers, live::LiveNet, trusted};
 use crate::server::core::{BootstrapSource, NetworkView};
 use crate::server::static_files::Assets;
 use crate::server::{Server, ServerConfig};
@@ -28,17 +32,90 @@ pub struct NetContext {
     pub store: Arc<dyn Store>,
     /// A headless peer keeps a large known-peers cache and has no search of its own.
     pub headless: bool,
+    /// Where the network publishes peer count and bootstrap source.
+    pub status: watch::Sender<NetworkView>,
 }
 
-/// SEAM: the `net` module plugs in here. Replace the body with the iroh-backed network
-/// (`net::IrohNetwork::start(ctx).await`) and change the return type; nothing else in the app
-/// names the concrete type. Until then the app runs on the in-memory network, which accepts
-/// every join and broadcast and hears nobody. Requirements: `next_event` must be cancel-safe,
-/// and the network publishes `NetworkView` (peer count, bootstrap source) on the `watch`
-/// sender that `start_window` creates (hand it to the network through `NetContext`).
-pub async fn build_network(_ctx: NetContext) -> Result<MemNetwork, NetError> {
-    let (net, _handle) = MemNetwork::new();
-    Ok(net)
+/// Known-peers cache size for a headless peer (it is a relay, so it remembers many).
+pub const HEADLESS_KNOWN_PEERS: usize = 5000;
+
+/// The network the app runs on: the real iroh network, or the in-memory one that hears nobody
+/// (tests, and `WOWFT_NET=memory` for running the UI without a network).
+pub enum AnyNet {
+    Live(Box<LiveNet<IrohNet>>),
+    Mem(MemNetwork),
+}
+
+macro_rules! each {
+    ($s:expr, $n:ident => $e:expr) => {
+        match $s {
+            AnyNet::Live($n) => $e,
+            AnyNet::Mem($n) => $e,
+        }
+    };
+}
+
+impl Network for AnyNet {
+    async fn join(&mut self, t: TopicId) -> Result<(), NetError> {
+        each!(self, n => n.join(t).await)
+    }
+    async fn leave(&mut self, t: TopicId) -> Result<(), NetError> {
+        each!(self, n => n.leave(t).await)
+    }
+    async fn broadcast(&mut self, t: TopicId, m: Message) -> Result<(), NetError> {
+        each!(self, n => n.broadcast(t, m).await)
+    }
+    async fn send_direct(&mut self, p: PeerId, t: TopicId, m: Message) -> Result<(), NetError> {
+        each!(self, n => n.send_direct(p, t, m).await)
+    }
+    /// Cancel-safe in both variants.
+    async fn next_event(&mut self) -> Result<Event, NetError> {
+        each!(self, n => n.next_event().await)
+    }
+    async fn dial(&mut self, p: PeerId) -> Result<(), NetError> {
+        match self {
+            AnyNet::Live(n) => Network::dial(&mut **n, p).await,
+            AnyNet::Mem(n) => Network::dial(n, p).await,
+        }
+    }
+}
+
+/// `WOWFT_NET=memory` selects the in-memory network.
+fn use_memory_net() -> bool {
+    std::env::var("WOWFT_NET").is_ok_and(|v| v == "memory")
+}
+
+/// Build the network: iroh with bootstrap (remembered peers, peer exchange, then the trusted
+/// peers from the built-in list and settings), publishing `NetworkView` on `ctx.status`.
+/// `next_event` is cancel-safe, as `LiveCore` requires.
+pub async fn build_network(ctx: NetContext) -> Result<AnyNet, NetError> {
+    if use_memory_net() {
+        let (net, _handle) = MemNetwork::new();
+        return Ok(AnyNet::Mem(net));
+    }
+    let settings = Settings::load(ctx.store.as_ref()).unwrap_or_default();
+    let cap = if ctx.headless {
+        HEADLESS_KNOWN_PEERS
+    } else {
+        settings.known_peers_cache
+    };
+    let known =
+        KnownPeers::load(cap, ctx.store.clone()).map_err(|e| NetError::Io(e.to_string()))?;
+    let (trusted, bad) = TrustedPeers::from_settings(trusted::BUILTIN, &settings);
+    for b in bad {
+        tracing::warn!("ignoring trusted peer entry that is not a key: {b}");
+    }
+    let identity = Arc::new(
+        Identity::load_or_create(ctx.store.as_ref()).map_err(|e| NetError::Io(e.to_string()))?,
+    );
+    let iroh = IrohNet::start(identity, known, IrohConfig::Default).await?;
+    Ok(AnyNet::Live(Box::new(LiveNet::new(
+        iroh,
+        ctx.me,
+        trusted,
+        ctx.headless,
+        ctx.status,
+    ))))
 }
 
 pub fn open_store(data_dir: &Path) -> Result<Arc<dyn Store>, AnyError> {
@@ -58,7 +135,6 @@ pub struct Running {
     pub server: Server,
     pub core: Arc<LiveCore>,
     pub window_url: String,
-    _net_status: watch::Sender<NetworkView>,
 }
 
 pub fn start_window(data_dir: &Path, assets: Arc<dyn Assets>) -> Result<Running, AnyError> {
@@ -77,6 +153,7 @@ pub fn start_window(data_dir: &Path, assets: Arc<dyn Assets>) -> Result<Running,
         me,
         store: store.clone(),
         headless: false,
+        status: status_tx,
     };
     let core = Arc::new(LiveCore::spawn(
         CoreDeps {
@@ -107,7 +184,6 @@ pub fn start_window(data_dir: &Path, assets: Arc<dyn Assets>) -> Result<Running,
         server,
         core,
         window_url,
-        _net_status: status_tx,
     })
 }
 
@@ -119,10 +195,15 @@ pub fn run_headless(data_dir: &Path) -> Result<(), AnyError> {
         .enable_all()
         .build()?;
     rt.block_on(async move {
+        let (status, _rx) = watch::channel(NetworkView {
+            peers: 0,
+            bootstrap: BootstrapSource::None,
+        });
         let mut net = build_network(NetContext {
             me,
             store,
             headless: true,
+            status,
         })
         .await?;
         tracing::info!("headless peer {me} running; Ctrl-C to stop");

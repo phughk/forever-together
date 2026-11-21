@@ -8,6 +8,7 @@
 //! * `bootstrap`: remembered peers, then peer exchange, then trusted peers with backoff.
 //! * `trusted`: the trusted peer keys.
 //! * `iroh_net`: the real `Network` on iroh and iroh-gossip.
+//! * `live`: wraps a transport, runs bootstrap and publishes the network status.
 //! * `fake`: an in-memory `Network` for tests.
 
 pub mod bootstrap;
@@ -16,6 +17,7 @@ pub mod fake;
 pub mod gossip;
 pub mod iroh_net;
 pub mod known_peers;
+pub mod live;
 pub mod trusted;
 
 pub use fake::{FakeHub, FakeNet};

@@ -226,6 +226,14 @@ impl IrohNet {
         Ok(())
     }
 
+    /// Hand `peer` to every joined swarm as a bootstrap peer (used after bootstrap reached it).
+    pub async fn join_peer(&self, peer: PeerId) {
+        let Ok(id) = endpoint_id(peer) else { return };
+        for h in self.topics.values() {
+            let _ = h.sender.join_peers(vec![id]).await;
+        }
+    }
+
     pub async fn shutdown(self) {
         let _ = self.router.shutdown().await;
         let _ = self.gossip.shutdown().await;
