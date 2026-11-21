@@ -48,20 +48,25 @@ Five tickets describe parts of this (0003, 0008, 0009, 0043, 0044). They overlap
 
 ## Open Questions
 
-*   **Does `varaq` refuse a second opener on a data directory?** The running-app guard (decision 6) relies on it. Not verified; checked first, in ticket 0003. If `varaq` allows two openers, the design must come back here: the author chose the store's lock over a lock file, so the fallback is a new decision, not a silent switch.
+*   **Does `varaq` refuse a second opener on a data directory?** The running-app guard (decision 6) relies on it. Not verified; checked first, in ticket 0003. If `varaq` allows two openers, decision 9 applies: the app and the key commands take a lock file.
 *   **Which crate reads and writes the OpenSSH key file**: `ssh-key` (RustCrypto) or the parser inside `age`. Neither is in `app/Cargo.toml` today (only `ed25519-dalek` is).
 *   **Is the `age` crate good enough?** It is marked beta, and its `ssh` feature pulls in `rsa` and other ciphers the app does not need.
-*   **Does `key export` also write a `.pub` file** (an OpenSSH public key line) next to the private file? `key show` already prints the public line.
-*   **Windows**: no permission step; the file gets the directory's default access rules. To be confirmed with a test on Windows (ticket).
+*   **Windows**: the key commands are unsupported on Windows until a Windows ticket lands (decision 11). Not an open design question for this pass.
 
 ## Decisions by the author (2026-11-21)
 
 1.  **The key file is a plain key.** Export writes what is in the store as a standard, unencrypted key file that ssh and similar tools can read. No passphrase, no encryption layer. The user decides how to protect the file. The app does not treat this as a security risk to solve.
 2.  **The scan-log export is encrypted to the public half of `BUILTIN[0]`.** The author owns that trusted peer, holds its secret, and decrypts. Players expose no characters or codes. Rejected: a separate decryption key, or sealing to two keys.
-3.  **The command line gets a `key` subcommand group** (`key export`, `key import`, `key reset`, `key show`). `--print-public-key` stays as an alias for `key show`. Running with no subcommand still opens the window. Rejected: top-level flags.
+3.  **The command line gets a `key` subcommand group** (`key export`, `key import`, `key reset`, `key show`). `--print-public-key` is removed; `key show` replaces it (decision 7). Running with no subcommand still opens the window. Rejected: top-level flags.
 4.  **Headless is the same binary and the same command line.** It generates a key at first start and takes the same `key` commands. A cloud node gets its key by `key import` before its first start. Rejected: a key file path or environment variable read at every start.
 5.  **`key export` has an explicit stdout option.** `key export --stdout` prints the key for piping into other tools, in addition to writing a file. Without it, nothing secret goes to standard output. (Resolved from ADR 0039.)
-6.  **The running-app guard is the store's own lock.** `key import` and `key reset` open the store and refuse, with a clear message, if it cannot be opened because another process holds it. No lock file, no warning-only mode. (Resolved from ADR 0039.)
+6.  **The running-app guard starts as the store's own lock, with a lock-file fallback.** `key import` and `key reset` open the store and refuse, with a clear message, if another process holds it. Step 0 of the build verifies whether `varaq` refuses a second opener; if it does not, decision 9 replaces this one.
+7.  **No alias, no `--public`.** `--print-public-key` is removed; `key show` replaces it, and README, `CLAUDE.md` and the `trusted.rs` comment are updated. There is no `.pub` file option; `key show` prints the OpenSSH public line. `key import`, `key export` and `key reset` all stay. (Resolved 2026-11-21 in review round 1.)
+8.  **Read commands create a key, as `--print-public-key` does today.** `key show` and `key export` on a store with no key create one. A later `key import` onto that auto-created key needs `--force`; deploy instructions say to import into a fresh volume first, or use `--force`.
+9.  **Lock-file fallback.** If the step-0 check shows `varaq` does not refuse a second opener, the app takes an exclusive lock file in the data directory while it runs, and `key import` and `key reset` refuse if they cannot take it. This supersedes decision 6 and also stops a second app on one data directory.
+10. **`BUILTIN` entries are assumed valid.** The scan export builds its recipient from `BUILTIN[0]` and panics if the entry is not a valid key. A cheap test checks every `BUILTIN` entry so a bad constant fails in CI before release. There is no encrypt-and-decrypt release gate beyond the round-trip test.
+11. **Windows and Settings are deferred.** The key commands are unsupported on Windows release builds (the GUI subsystem has no console) until a Windows ticket lands. Key actions in Settings are dropped for now (ticket 0046), because they would put key operations on the web API, against the goal that the secret key is never reachable from the web app.
+12. **`age` with the `ssh` feature is accepted, with a gate.** `age` pulls in `rsa` through the `ssh` feature (a reported advisory, RUSTSEC-2023-0071, unverified). Before adding it, run `cargo audit` or `cargo deny`; the accepted cost goes in the risks section. A separate offline intake key was rejected again.
 
 ## Technical Plan
 
@@ -90,12 +95,12 @@ flowchart TD
 
 ### Commands
 
-*   **`key show`**: prints the peer ID (hex, the form used in `trusted_peers` and `BUILTIN`) and the OpenSSH public key line. Same output as today's `--print-public-key`, which stays as an alias.
-*   **`key export <file>`**: writes the stored secret as an OpenSSH ed25519 private key file, unencrypted. Created owner-only on Unix. Refuses to overwrite an existing file. Prints the peer ID so the operator can note which key it is. `--public` also writes `<file>.pub` (open question). **`key export --stdout`** prints the key to standard output instead of a file; the peer ID goes to standard error so a pipe carries only the key.
+*   **`key show`**: prints the peer ID (hex, the form used in `trusted_peers` and `BUILTIN`) and the OpenSSH public key line. Today's `--print-public-key` printed the hex only; the flag is removed (decision 7). Creates a key if none exists (decision 8).
+*   **`key export <file>`**: writes the stored secret as an OpenSSH ed25519 private key file, unencrypted. Created owner-only on Unix. Refuses to overwrite an existing file. Prints the peer ID so the operator can note which key it is. **`key export --stdout`** prints the key to standard output instead of a file; the peer ID goes to standard error so a pipe carries only the key.
 *   **`key import <file>`**: reads an unencrypted OpenSSH ed25519 private key. Parses and checks it fully before touching the store, then replaces the stored secret in one write. Refuses to replace an existing key unless `--force`. Rejects an encrypted file or another key type with a plain message. Prints the old and new peer IDs.
 *   **`key reset`**: discards the stored secret and generates a new one. Asks for confirmation unless `--yes`. Prints old and new peer IDs and one warning: other nodes see a new peer, and a changed trusted-peer key needs a release.
 *   **Where they live**: a `Key` subcommand in `app/src/cli.rs`; `Mode` gains a variant that carries it; `runtime` dispatches before any network or window start-up, and exits without starting the app.
-*   **Running app (decision 6)**: `key import` and `key reset` open the store directly and fail with a clear message if another process holds it. They do not take a separate lock. Whether `varaq` refuses a second opener is unverified (open question, ticket 0003), so until it is verified the commands also print a one-line notice to stop the app first. `key show` and `key export` only read, and are not guarded.
+*   **Running app (decisions 6 and 9)**: `key import` and `key reset` open the store directly and fail with a clear message if another process holds it. If step 0 shows `varaq` does not lock, they take the lock file instead. Whether `varaq` refuses a second opener is unverified (open question, ticket 0003), so until it is verified the commands also print a one-line notice to stop the app first. `key show` and `key export` only read, and are not guarded.
 
 ### Key file format
 
@@ -124,7 +129,7 @@ The app sets owner-only on files it creates (Unix). It does not verify permissio
 *   0009 is closed into 0043 (delivery is `key import`).
 *   0044 depends on 0008 (a `BUILTIN` key) and on the export module in 0040.
 *   0003 becomes a documentation and verification ticket.
-*   New small tickets: Windows check, running-app guard.
+*   New tickets: 0046 (key actions in Settings, and Windows), the `varaq` lock check as step 0 of ticket 0043.
 
 ## Alternatives Considered
 
@@ -159,7 +164,7 @@ An encrypted key file, a passphrase prompt, or the operating system keychain for
 
 ### Top-level flags instead of a `key` subcommand group
 
-`--export-key`, `--import-key`, `--reset-key`, `--decrypt-scans` beside `--print-public-key`.
+`--export-key`, `--import-key`, `--reset-key`, `--decrypt-scans` as top-level flags (`--print-public-key` is removed).
 
 *   **Rejected by author:** chose the subcommand group.
 *   **Why it is weaker:** flags can be combined with each other and with `--headless`, so more invalid combinations need rejecting, and each new operation adds another top-level flag.
@@ -199,17 +204,17 @@ Paths are from the repository root. No file is deleted. The webapp is not touche
 | `app/Cargo.toml` | Add the OpenSSH key crate (`ssh-key` with the `ed25519` feature, to be confirmed against the open question). | Read and write the standard key file. Only `ed25519-dalek` is a dependency today. |
 | `app/src/keys.rs` (new) | The key operations, generic over the store (`S: Store`, static dispatch, no `dyn`) and taking file paths: `show`, `export_to_file`, `import_from_file`, `reset`. Pure of the CLI: they take a store and a path and return a result or a typed error (an enum) (`KeyError`: file exists, not an ed25519 OpenSSH key, key is encrypted, would replace an existing key without force, store failure). OpenSSH encode and decode live here. | One home for the logic, testable with `MemStore` and a temp directory, no network or window. |
 | `app/src/identity.rs` | Add a function to replace the stored secret in one write, and one to regenerate (reset), both generic over `S: Store + ?Sized`. Change `Identity::load_or_create` from `&dyn Store` to `S: Store + ?Sized` so existing callers, which pass `&dyn Store`, still compile and new callers get static dispatch. Keep the stored format: 32 bytes under `KEY_IDENTITY_SECRET`. | The stored key must not change shape; import and reset need atomic replace semantics (parse first, write once). |
-| `app/src/cli.rs` | Add an optional `key` subcommand with `show`, `export <file>`, `import <file> [--force]`, `reset [--yes]`. Keep `--print-public-key` as an alias for `key show`, and keep `--headless` and `--data-dir` as they are. `Mode` gains a `Key(KeyCommand)` variant. Update the tests for flag and subcommand parsing, including that no subcommand still gives `Window`, `--headless` still gives `Headless`, and `--print-public-key` still wins. | The decided command shape. |
+| `app/src/cli.rs` | Add an optional `key` subcommand with `show`, `export <file>`, `import <file> [--force]`, `reset [--yes]`. Remove `--print-public-key` and `Mode::PrintPublicKey` (decision 7); `export` also takes `--stdout`; `--data-dir` becomes global. `Mode` gains a `Key(KeyCommand)` variant. Update the tests for flag and subcommand parsing, including that no subcommand still gives `Window`, `--headless` still gives `Headless`, and `--print-public-key` still wins. | The decided command shape. |
 | `app/src/lib.rs` | Declare `mod keys`; in `run`, dispatch `Mode::Key` before any window, runtime or network start-up. The key commands open the concrete `VaraqStore` for the data directory (not `runtime::open_store`, which returns `Arc<dyn Store>`) and pass it to the generic `keys` functions. Exit with a failure status and a message on error. | Key commands must never start the app. |
 | `app/src/runtime.rs` | `public_key` is reused by `key show`; no behaviour change. Add a short comment that headless and window modes both create a key on first start through `Identity::load_or_create`. | Records decision 4 where the start-up code is. |
 | `app/src/runtime_tests.rs` | Add a test: `key import` a known key into a fresh data directory, start headless, and check the peer ID equals the imported key's. Add a test that a fresh directory with no import auto-generates a key at start. | Proves the deploy path from the plan. |
-| `app/src/net/trusted.rs` | Update the comment on `BUILTIN` to say the entry comes from `key show` on the trusted node and that its secret is backed up with `key export`. The value itself is ticket 0008, not this change. | The comment currently names `--print-public-key`. |
+| `app/src/net/trusted.rs` | Update the comments on `BUILTIN` and in the module doc to say the entry comes from `key show` on the trusted node and that its secret is backed up with `key export`. The value itself is ticket 0008, not this change. | The comment currently names `--print-public-key`. |
 | `README.md` | Add a "Keys" section: the commands, the backup process for the trusted key (export to offline storage), and the effect of a reset. Update the run-a-trusted-peer instructions. | The backup is a written process, not code. |
 | `CLAUDE.md` | Update the "Adding a trusted peer" line and the commands list to use `key show`, and mention the `key` group. | Keeps project guidance current. |
 | `docs/adr/0039-key-management.md` | Replace the open details with the final names, the OpenSSH format, and the decisions in this design (plain key, no passphrase, no permission check on read, headless same CLI, no decrypt command). Link `docs/egm/0043-key-management/`. | ADR 0036: decisions leave the iteration as ADRs. |
 | `docs/spike-s0.md` | Add rows: whether `varaq` refuses a second process on a live data directory; the store file's mode on each OS; that a key written by `key export` is accepted by `ssh-keygen -y -f`. | They are unverified facts, in line with how the project tracks them. |
 | `tickets/0043-key-management.md`, `0009-load-private-key-into-instance.md`, `0003-verify-varaq-key-permissions.md`, `0008-trusted-peer-builtin-key.md` | Update status, ADR and EGM links; close 0009 into 0043; reshape 0003 as a verification-only ticket. | Ticket fields in ADR 0036. |
-| `tickets/README.md` and new tickets | Add small tickets for the Windows check and the running-app guard. | They are the leftover work from this pass. |
+| `tickets/README.md` and new tickets | Ticket 0046 (Settings and Windows) is added. | They are the leftover work from this pass. |
 | `docs/egm/0043-key-management/README.md`, `docs/egm/README.md` | Status, rounds and links. | Iteration bookkeeping (ADR 0036). |
 
 Pseudocode of the three file operations (no code is written in this draft):
