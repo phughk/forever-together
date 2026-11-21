@@ -6,6 +6,8 @@
 * **ADRs:** none
 * **EGM:** none
 
+**Also:** check whether `varaq` refuses a second process opening the same data directory. The key commands (ticket 0043, decision 6) rely on that for their running-app guard; if it does not, the design is reopened.
+
 **Related:** ticket 0043 adds key export and import, so permission handling matters more.
 
 ## What

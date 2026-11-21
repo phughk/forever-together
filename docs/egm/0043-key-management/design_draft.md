@@ -48,10 +48,10 @@ Five tickets describe parts of this (0003, 0008, 0009, 0043, 0044). They overlap
 
 ## Open Questions
 
-*   **Does a second process get refused while the app runs?** The commands change the stored key, so they must not run against a data directory a running app has open. Whether `varaq` refuses a second opener is not verified.
+*   **Does `varaq` refuse a second opener on a data directory?** The running-app guard (decision 6) relies on it. Not verified; checked first, in ticket 0003. If `varaq` allows two openers, the design must come back here: the author chose the store's lock over a lock file, so the fallback is a new decision, not a silent switch.
 *   **Which crate reads and writes the OpenSSH key file**: `ssh-key` (RustCrypto) or the parser inside `age`. Neither is in `app/Cargo.toml` today (only `ed25519-dalek` is).
 *   **Is the `age` crate good enough?** It is marked beta, and its `ssh` feature pulls in `rsa` and other ciphers the app does not need.
-*   **Does `key export` also write a `.pub` file** (an OpenSSH public key line) next to the private file?
+*   **Does `key export` also write a `.pub` file** (an OpenSSH public key line) next to the private file? `key show` already prints the public line.
 *   **Windows**: no permission step; the file gets the directory's default access rules. To be confirmed with a test on Windows (ticket).
 
 ## Decisions by the author (2026-11-21)
@@ -60,6 +60,8 @@ Five tickets describe parts of this (0003, 0008, 0009, 0043, 0044). They overlap
 2.  **The scan-log export is encrypted to the public half of `BUILTIN[0]`.** The author owns that trusted peer, holds its secret, and decrypts. Players expose no characters or codes. Rejected: a separate decryption key, or sealing to two keys.
 3.  **The command line gets a `key` subcommand group** (`key export`, `key import`, `key reset`, `key show`). `--print-public-key` stays as an alias for `key show`. Running with no subcommand still opens the window. Rejected: top-level flags.
 4.  **Headless is the same binary and the same command line.** It generates a key at first start and takes the same `key` commands. A cloud node gets its key by `key import` before its first start. Rejected: a key file path or environment variable read at every start.
+5.  **`key export` has an explicit stdout option.** `key export --stdout` prints the key for piping into other tools, in addition to writing a file. Without it, nothing secret goes to standard output. (Resolved from ADR 0039.)
+6.  **The running-app guard is the store's own lock.** `key import` and `key reset` open the store and refuse, with a clear message, if it cannot be opened because another process holds it. No lock file, no warning-only mode. (Resolved from ADR 0039.)
 
 ## Technical Plan
 
@@ -89,11 +91,11 @@ flowchart TD
 ### Commands
 
 *   **`key show`**: prints the peer ID (hex, the form used in `trusted_peers` and `BUILTIN`) and the OpenSSH public key line. Same output as today's `--print-public-key`, which stays as an alias.
-*   **`key export <file>`**: writes the stored secret as an OpenSSH ed25519 private key file, unencrypted. Created owner-only on Unix. Refuses to overwrite an existing file. Prints the peer ID so the operator can note which key it is. `--public` also writes `<file>.pub` (open question).
+*   **`key export <file>`**: writes the stored secret as an OpenSSH ed25519 private key file, unencrypted. Created owner-only on Unix. Refuses to overwrite an existing file. Prints the peer ID so the operator can note which key it is. `--public` also writes `<file>.pub` (open question). **`key export --stdout`** prints the key to standard output instead of a file; the peer ID goes to standard error so a pipe carries only the key.
 *   **`key import <file>`**: reads an unencrypted OpenSSH ed25519 private key. Parses and checks it fully before touching the store, then replaces the stored secret in one write. Refuses to replace an existing key unless `--force`. Rejects an encrypted file or another key type with a plain message. Prints the old and new peer IDs.
 *   **`key reset`**: discards the stored secret and generates a new one. Asks for confirmation unless `--yes`. Prints old and new peer IDs and one warning: other nodes see a new peer, and a changed trusted-peer key needs a release.
 *   **Where they live**: a `Key` subcommand in `app/src/cli.rs`; `Mode` gains a variant that carries it; `runtime` dispatches before any network or window start-up, and exits without starting the app.
-*   **Running app**: the commands open the store directly. If another process holds it they must fail with a clear message. Whether `varaq` guarantees that is unverified (open question); until verified the commands print a warning not to run against a live data directory.
+*   **Running app (decision 6)**: `key import` and `key reset` open the store directly and fail with a clear message if another process holds it. They do not take a separate lock. Whether `varaq` refuses a second opener is unverified (open question, ticket 0003), so until it is verified the commands also print a one-line notice to stop the app first. `key show` and `key export` only read, and are not guarded.
 
 ### Key file format
 
@@ -213,11 +215,12 @@ Paths are from the repository root. No file is deleted. The webapp is not touche
 Pseudocode of the three file operations (no code is written in this draft):
 
 ```
-export(store, path):
+export(store, path_or_stdout):
     secret = store.get(identity/secret)  // 32 bytes, create if missing
-    if exists(path): error FileExists
-    write path with mode 0600 (Unix) containing OpenSSH-encode(secret)   // unencrypted ed25519
-    print peer_id
+    if path: if exists(path): error FileExists
+             write path with mode 0600 (Unix) containing OpenSSH-encode(secret)   // unencrypted ed25519
+             print peer_id to stdout
+    else (--stdout): print OpenSSH-encode(secret) to stdout, peer_id to stderr
 
 import(store, path, force):
     key = OpenSSH-decode(read(path))   // error if encrypted, wrong type, or malformed
@@ -261,3 +264,19 @@ reset(store, yes):
 *   Manual: `key export`, then `ssh-keygen -y -f <file>` prints a public key whose bytes equal the peer ID; `key import` the file into a second data directory and `key show` prints the same peer ID.
 *   Manual on the trusted node after 0008: backup export taken and stored offline.
 *   Part 2 round trip as above, plus the author decrypts a real export with `age -d -i`.
+
+### A lock file taken by the app and the key commands
+
+The app holds an exclusive lock file in the data directory while it runs; `key import` and `key reset` refuse if they cannot take it.
+
+*   **Rejected by author:** chose the store's own lock.
+*   **Why it would be stronger:** the refusal does not depend on what `varaq` does. **Cost accepted by rejecting it:** if `varaq` allows two openers, `key import` succeeds while the app runs and the app keeps the old identity in memory until it restarts. The design then has to be reopened (see the open question).
+
+### A warning only, with no guard
+
+*   **Rejected by author:** chose the store's own lock, which refuses at least when `varaq` locks.
+*   **Why it is weaker:** a user can import a key into a running node and get no error while the node keeps its old identity.
+
+### A key that never goes to standard output
+
+*   **Rejected by author:** an explicit `--stdout` option is wanted so the key can be piped into other tools. Nothing secret goes to standard output without it.
