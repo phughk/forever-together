@@ -1,7 +1,9 @@
-import type { ConnectionStatus, Settings } from "../../api/types";
+import type { AddonResult } from "../../api/addonFlow";
+import type { AddonInfo, ConnectionStatus, Settings } from "../../api/types";
 import { Notice } from "../atoms/Notice";
 import { RemoteBanner } from "../molecules/RemoteBanner";
 import { ReportProblemLink } from "../molecules/ReportProblemLink";
+import { AddonSettings } from "../organisms/AddonSettings";
 import { AdvancedSettings } from "../organisms/AdvancedSettings";
 import { AppHeader, type View } from "../organisms/AppHeader";
 import { LanSettings, type PairingState } from "../organisms/LanSettings";
@@ -23,11 +25,18 @@ export interface SettingsPageProps {
   onKnownPeersSizeChange: (size: number) => void | Promise<void>;
   onAddTrusted: (key: string) => void | Promise<void>;
   onRemoveTrusted: (key: string) => void | Promise<void>;
+  /** The addon card: null while loading or when this device may not see it. */
+  addon?: AddonInfo | null;
+  addonResult?: AddonResult | null;
+  addonBusy?: boolean;
+  addonFolderError?: string | null;
+  onInstallAddon?: () => void | Promise<void>;
+  onSaveAddonFolder?: (folder: string) => void | boolean | Promise<void | boolean>;
   /** Open the Advanced section at first render (stories). */
   advancedOpen?: boolean;
 }
 
-/** The settings screen: the phone link, then one collapsed Advanced section. */
+/** The settings screen: the phone link, the addon, then one collapsed Advanced section. */
 export function SettingsPage(p: SettingsPageProps) {
   const notices =
     p.remote || p.error ? (
@@ -49,6 +58,15 @@ export function SettingsPage(p: SettingsPageProps) {
             remote={p.remote}
             onAddressChange={p.onLanAddressChange}
             onResetToken={p.onResetToken}
+          />
+          <AddonSettings
+            info={p.addon ?? null}
+            result={p.addonResult}
+            busy={p.addonBusy}
+            folderError={p.addonFolderError}
+            remote={p.remote}
+            onInstall={p.onInstallAddon ?? (() => undefined)}
+            onSaveFolder={p.onSaveAddonFolder ?? (() => undefined)}
           />
           <AdvancedSettings
             defaultOpen={p.advancedOpen}

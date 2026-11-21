@@ -1,6 +1,6 @@
 import { ApiError } from "./errors";
-import { dungeonsFor, idleSearch, makeCharacter, makeDiagnosis, makeState } from "./fixtures";
-import type { Api, AppState, ConnectionStatus, Settings } from "./types";
+import { dungeonsFor, idleSearch, makeAddon, makeCharacter, makeDiagnosis, makeState } from "./fixtures";
+import type { AddonInfo, AddonStatus, Api, AppState, ConnectionStatus, Settings } from "./types";
 
 export interface MockApiOptions {
   initial?: AppState;
@@ -10,15 +10,33 @@ export interface MockApiOptions {
   remote?: boolean;
   /** Start the stream in a given status. Default "live". */
   status?: ConnectionStatus;
+  /** The addon state the stories start from. Default: a saved folder with nothing installed. */
+  addon?: AddonInfo;
+  /** Make every install fail with this server error (code and plain message). */
+  addonInstallError?: { status: number; code: string; message: string };
 }
 
 export interface MockApi extends Api {
+  /** Addon calls in order, e.g. `["folder:/path", "install"]`, so a story can check the order. */
+  addonLog: string[];
   /** Push a new state to subscribers, as the server's event stream would. */
   emit(state: AppState): void;
   current(): AppState;
 }
 
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/** Status after a folder change: a plain version compare (the mock has no file bytes, so `files_differ` is only kept). */
+function statusOf(installed: AddonInfo["installed"], bundled: string, previous: AddonStatus): AddonStatus {
+  if (installed.state === "missing") return "not_installed";
+  if (installed.state === "unreadable" || installed.version === null) return "unknown_version";
+  const a = installed.version.split(".").map(Number);
+  const b = bundled.split(".").map(Number);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) > (b[i] ?? 0) ? "installed_newer" : "update_available";
+  }
+  return previous === "files_differ" ? "files_differ" : "up_to_date";
+}
 
 /** In-memory Api for stories and tests. Codes: `WFT1:...` parses, `WFT2:` is an unknown version, `WFT1:BAD` fails the check. */
 export function createMockApi(opts: MockApiOptions = {}): MockApi {
@@ -29,11 +47,14 @@ export function createMockApi(opts: MockApiOptions = {}): MockApi {
     state = next;
     listeners.forEach((l) => l(state));
   };
+  let addon = opts.addon ?? makeAddon();
+  const addonLog: string[] = [];
   const loopbackOnly = () => {
     if (opts.remote) throw new ApiError(403, "forbidden", "This can only be changed on the desktop.");
   };
 
   return {
+    addonLog,
     emit: push,
     current: () => state,
     async getState() {
@@ -106,6 +127,38 @@ export function createMockApi(opts: MockApiOptions = {}): MockApi {
         address,
         addresses,
       };
+    },
+    async getAddon() {
+      await delay();
+      loopbackOnly();
+      return addon;
+    },
+    async setAddonFolder(folder) {
+      await delay();
+      loopbackOnly();
+      addonLog.push(`folder:${folder}`);
+      const path = folder.trim();
+      if (!/[\\/]interface[\\/]addons$/i.test(path)) {
+        throw new ApiError(400, "addon_folder_invalid", `${path} is not a World of Warcraft AddOns folder. It should end in Interface/AddOns.`);
+      }
+      const known = addon.status !== "no_folder" && addon.status !== "folder_invalid";
+      const installed = known ? addon.installed : { state: "missing" as const, version: null };
+      addon = { ...addon, folder: path, folder_source: "saved", installed, status: statusOf(installed, addon.bundled_version, addon.status) };
+      return addon;
+    },
+    async installAddon() {
+      await delay();
+      loopbackOnly();
+      addonLog.push("install");
+      if (addon.folder === null || addon.folder_source !== "saved") {
+        throw new ApiError(409, "addon_folder_unset", "No AddOns folder is saved yet.");
+      }
+      if (opts.addonInstallError) {
+        const e = opts.addonInstallError;
+        throw new ApiError(e.status, e.code, e.message);
+      }
+      addon = { ...addon, installed: { state: "present", version: addon.bundled_version }, status: "up_to_date" };
+      return addon;
     },
     async clearHistory() {
       await delay();

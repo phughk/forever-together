@@ -1,7 +1,7 @@
 import { ApiError } from "./errors";
 import { openEventStream } from "./eventStream";
 import type { TokenStore } from "./token";
-import type { Api, AppState, CharacterView, DungeonsResponse, PairingInfo, Settings } from "./types";
+import type { AddonInfo, Api, AppState, CharacterView, DungeonsResponse, PairingInfo, Settings } from "./types";
 
 export interface HttpApiOptions {
   tokens: TokenStore;
@@ -69,6 +69,9 @@ export function createHttpApi({ tokens, baseUrl = "", fetchImpl }: HttpApiOption
     getSettings: () => request<Settings>("GET", "/api/settings"),
     putSettings: (patch) => request<Settings>("PUT", "/api/settings", patch),
     getPairing: (ip) => request<PairingInfo>("GET", ip ? `/api/pairing?ip=${encodeURIComponent(ip)}` : "/api/pairing"),
+    getAddon: () => request<AddonInfo>("GET", "/api/addon"),
+    setAddonFolder: (folder) => request<AddonInfo>("PUT", "/api/addon/folder", { folder }),
+    installAddon: () => request<AddonInfo>("POST", "/api/addon/install"),
     clearHistory: () => request<void>("DELETE", "/api/history"),
     async resetToken() {
       // The desktop window receives the new token in the response and keeps working.

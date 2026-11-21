@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useMemo } from "react";
 import { App } from "../../App";
-import { NOW, makeDiagnosis, makeParty, makeState, searchingFor } from "../../api/fixtures";
+import { expect, userEvent, within } from "storybook/test";
+import { MAC_ADDONS, NOW, makeAddon, makeDiagnosis, makeParty, makeState, searchingFor } from "../../api/fixtures";
 import { createMockApi, type MockApiOptions } from "../../api/mockApi";
 import { NotPairedPage } from "./NotPairedPage";
 
@@ -48,6 +49,76 @@ export const InteractiveOnPhone: Story = {
   args: {
     initial: makeState({ search: searchingFor(30), settings: { lan_mode: true, lan_address: null, known_peers_size: 100, trusted_peers: [] } }),
     remote: true,
+  },
+};
+
+const openSettings = async (canvasElement: HTMLElement) => {
+  const c = within(canvasElement);
+  await userEvent.click(await c.findByRole("button", { name: "Settings" }));
+  return c;
+};
+
+/** Settings, addon update: one click installs and shows the /reload line. */
+export const InteractiveAddonUpdate: Story = {
+  args: { initial: makeState(), addon: makeAddon("update_available"), latencyMs: 100 },
+  play: async ({ canvasElement }) => {
+    const c = await openSettings(canvasElement);
+    await userEvent.click(await c.findByRole("button", { name: "Update addon" }));
+    await expect(await c.findByText("Installed")).toBeVisible();
+    await expect(c.getByRole("button", { name: /\/reload/ })).toBeVisible();
+  },
+};
+
+/** A detected folder is saved by the same click that installs. */
+export const InteractiveAddonDetectedFolder: Story = {
+  args: { initial: makeState(), addon: makeAddon("not_installed", { folder_source: "detected" }), latencyMs: 100 },
+  play: async ({ canvasElement }) => {
+    const c = await openSettings(canvasElement);
+    await expect(await c.findByText(/Use this folder\?/)).toBeVisible();
+    await userEvent.click(c.getByRole("button", { name: "Install addon" }));
+    await expect(await c.findByText("Installed")).toBeVisible();
+  },
+};
+
+/** The server refuses to write: the message names the folder, "Try again" and "Change folder" follow. */
+export const InteractiveAddonInstallFails: Story = {
+  args: {
+    initial: makeState(),
+    addon: makeAddon("not_installed"),
+    addonInstallError: { status: 403, code: "addon_permission_denied", message: `This app is not allowed to write to ${MAC_ADDONS}. Close the game and try again, or pick another folder.` },
+  },
+  play: async ({ canvasElement }) => {
+    const c = await openSettings(canvasElement);
+    await userEvent.click(await c.findByRole("button", { name: "Install addon" }));
+    await expect(await c.findByText("Could not install")).toBeVisible();
+    await expect(c.getByRole("button", { name: "Try again" })).toBeVisible();
+  },
+};
+
+/** No folder found: paste one the server accepts, then install. */
+export const InteractiveAddonNoFolder: Story = {
+  args: { initial: makeState(), addon: makeAddon("no_folder"), latencyMs: 100 },
+  play: async ({ canvasElement }) => {
+    const c = await openSettings(canvasElement);
+    await userEvent.click(await c.findByRole("button", { name: "Use a folder" }));
+    await userEvent.type(c.getByLabelText("AddOns folder"), "/wrong/place");
+    await userEvent.click(c.getByRole("button", { name: "Use folder" }));
+    await expect(await c.findByText(/not a World of Warcraft AddOns folder/)).toBeVisible();
+    await userEvent.clear(c.getByLabelText("AddOns folder"));
+    await userEvent.type(c.getByLabelText("AddOns folder"), MAC_ADDONS);
+    await userEvent.click(c.getByRole("button", { name: "Use folder" }));
+    await userEvent.click(await c.findByRole("button", { name: "Install addon" }));
+    await expect(await c.findByText("Installed")).toBeVisible();
+  },
+};
+
+/** On a phone the addon call is refused with 403: the card is locked. */
+export const InteractiveAddonOnPhone: Story = {
+  ...phone,
+  args: { initial: makeState(), remote: true },
+  play: async ({ canvasElement }) => {
+    const c = await openSettings(canvasElement);
+    await expect(await c.findByRole("button", { name: "Install addon" })).toBeDisabled();
   },
 };
 

@@ -1,4 +1,6 @@
 import type {
+  AddonInfo,
+  AddonStatus,
   AppState,
   CharacterView,
   AttemptsView,
@@ -78,6 +80,40 @@ export function makeCharacter(over: Partial<CharacterView> = {}): CharacterView 
 
 export function makeSettings(over: Partial<Settings> = {}): Settings {
   return { lan_mode: false, lan_address: null, known_peers_size: 100, trusted_peers: [], ...over };
+}
+
+/** Placeholder AddOns folders for stories. Never a real user path. */
+export const MAC_ADDONS = "/Applications/World of Warcraft/_forever_/Interface/AddOns";
+export const WIN_ADDONS = "C:\\Program Files (x86)\\World of Warcraft\\_forever_\\Interface\\AddOns";
+
+/** The addon state for a status, with the versions the brief's table uses (this app 0.2.0 unless overridden). */
+export function makeAddon(status: AddonStatus = "not_installed", over: Partial<AddonInfo> = {}): AddonInfo {
+  const bundled_version = over.bundled_version ?? "0.2.0";
+  const base: AddonInfo = {
+    bundled_version,
+    folder: MAC_ADDONS,
+    folder_source: "saved",
+    candidates: [MAC_ADDONS],
+    installed: { state: "missing", version: null },
+    status,
+  };
+  switch (status) {
+    case "no_folder":
+      return { ...base, folder: null, folder_source: null, candidates: [], ...over };
+    case "folder_invalid":
+      return { ...base, folder: "/Applications/World of Warcraft/_classic_/Interface", candidates: [], ...over };
+    case "not_installed":
+      return { ...base, ...over };
+    case "up_to_date":
+    case "files_differ":
+      return { ...base, installed: { state: "present", version: bundled_version }, ...over };
+    case "update_available":
+      return { ...base, installed: { state: "present", version: "0.1.0" }, ...over };
+    case "installed_newer":
+      return { ...base, installed: { state: "present", version: "0.3.0" }, ...over };
+    case "unknown_version":
+      return { ...base, installed: { state: "unreadable", version: null }, ...over };
+  }
 }
 
 export function idleSearch(): SearchView {
