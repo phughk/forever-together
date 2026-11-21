@@ -31,6 +31,10 @@ run = "pnpm tauri build"
 description = "Typecheck the frontend"
 run = "pnpm typecheck"
 
+[tasks.test]
+description = "Rust unit and integration tests (the multi-instance tests take about 40 s)"
+run = "cargo test --manifest-path src-tauri/Cargo.toml --lib"
+
 [tasks.lint]
 description = "Clippy (deny warnings) + rustfmt check"
 run = [
@@ -52,4 +56,4 @@ run = "scripts/install-addon.sh"
 
 [tasks.check]
 description = "Everything CI should run"
-depends = ["typecheck", "lint", "test-addon"]
+depends = ["typecheck", "lint", "test", "test-addon"]

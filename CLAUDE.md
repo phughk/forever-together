@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Always commit, preferably use multiple agents where possible.
 
-Tauri 2 app template: Rust backend (`src-tauri`), React/TS frontend (`src`), Storybook. Tooling is pinned in `mise.toml`; see `README.md` for tasks and layout. The template came from `template-rust-app` at commit `9048274` (copied into this repo on 2026-11-21). Its files are still unmodified: package name, Tauri identifier and icon are the template's, and `src-tauri/src` holds only the template's `lib.rs` and `main.rs`.
+Tauri 2 app: Rust backend (`src-tauri`), React/TS frontend (`src`), Storybook, a WoW addon (`addon/`). Tooling is pinned in `mise.toml`; see `README.md` for tasks and layout. The repo started from `template-rust-app` at commit `9048274` (2026-11-21).
 
 ## Working rules
 
@@ -39,10 +39,11 @@ The frontend follows atomic design. Every level must be covered in Storybook.
 
 ## Commands
 
-- `mise run dev` desktop app; `mise run web` frontend only; `mise run storybook`; `mise run check` typecheck + clippy + rustfmt.
+- `mise run dev` desktop app; `mise run web` frontend only; `mise run storybook`; `mise run test` Rust tests; `mise run lint` clippy + rustfmt; `mise run test-addon` addon tests in the headless Lua VM; `mise run install-addon`; `mise run check` runs typecheck, lint, test and test-addon.
 - Rust, from `src-tauri/`: `cargo test <filter>`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt`.
 - Frontend: `pnpm typecheck`, `pnpm build`.
-- Not yet present, but planned in the design: `mise run test-addon` and `mise run install-addon` (the addon is not written yet). Verify a task exists in `mise.toml` before relying on it.
+- Verify a task exists in `mise.toml` before relying on it. If mise shims fail in a worktree, set `MISE_TRUSTED_CONFIG_PATHS=<repo root>`; if `cd` into `src-tauri` is refused, use `cargo ... --manifest-path src-tauri/Cargo.toml`.
+- The Rust suite includes multi-instance integration tests (`src-tauri/src/integration_tests.rs`, about 16 s each, they run a clock faster than real time or at real speed) and a loopback iroh test (no internet needed). `cargo test --release --lib -- --ignored --nocapture engine::sim::tests::report` runs the seeded simulation.
 
 ## This project: forever-together (short code `wowft`)
 
@@ -50,7 +51,14 @@ A peer-to-peer random dungeon finder for World of Warcraft Forever. Forever has 
 
 ### Current state
 
-The repo is **a design plus an untouched template**. There is no project code: the Rust and React files are the template's, and there is no addon, no `docs/rdf-code-spec.md` and no tests for the project. The design is **not ready for implementation**. A five-stage review (reports in `docs/design-process/reviews/`) found 8 blockers and 24 majors. On 2026-11-21 the proposed fixes were applied (the design was split into design, spec and plan, and ADRs were amended). Build step 0, **spike S0**, has not been done, and the plan says steps 1 to 7 are blocked until it reports. Do not start building before then. A re-audit of the revised documents has not been run.
+The code exists and passes its tests: the addon (`addon/ForeverTogether/`, tested in the headless Lua VM), the Rust app (`code`, `engine`, `net`, `store`, `server`, `app`, `runtime`) and the web app. The app runs on the real iroh network (`net::live::LiveNet` over `IrohNet`: bootstrap by remembered peers, then peer exchange, then trusted peers; status is published to the UI) unless `WOWFT_NET=memory` selects the in-memory network. The host loop sends heartbeats during a committed party and drops a member that stays silent for 4 s (local 60 s ban, never gossiped).
+
+What is **not** verified (details and the full table in `docs/spike-s0.md`; treat all of it as unconfirmed):
+
+- **Spike S0 is still unverified against a live client and a live network.** Realm and region calls, `UnitName` returning first name and surname, `GetAverageItemLevel`, a phone scanning the QR, `varaq` key-file permissions, and iroh address lookup through n0's hosted DNS/relays have not been run live. Only loopback iroh and the Lua VM were exercised.
+- **The simulation result is bad.** `docs/spike-s0.md` reports that neither converging announcements nor the proposer model reaches the 70% commit floor in the model (converging: 56% at perfect delivery and about 2% at 0.95; proposer: 9 to 25% in 3 to 4 cycles). The plan says to reopen the design or revisit the model assumptions; that has not been decided. The app ships the converging-announcements baseline.
+- No real window, phone, or live game has been tried. The integration tests drive the HTTP API of several in-process instances on an in-memory network.
+- `net::trusted::BUILTIN` is empty until the author supplies a key. A re-audit of the revised design has not been run.
 
 ### Where the truth lives
 
@@ -59,15 +67,17 @@ The repo is **a design plus an untouched template**. There is no project code: t
 - `docs/design-process/reviews/`: the review reports. `consolidated_review_report.md` is the summary, `author_decisions.md` records the author's answers to the open questions D1-D9 and the new timing rules, and `goldfish_review_report.md` is the annotated fix list (applied).
 - When a decision changes, add an ADR or revise the existing one and say what it supersedes.
 
-### Architecture (planned)
+### Architecture
 
 Three parts in one repo (ADR 0020):
 
 1. **Standalone WoW addon** `addon/ForeverTogether/` (Lua, own TOC and window, no saved variables). It only shows the character as a copyable text code (base45, versioned binary record) and the same data as a QR. No networking, pairing or tokens (0002, 0018).
-2. **Desktop app**: Tauri 2, one Rust crate `src-tauri` with modules `code`, `engine`, `net`, `store`, `server` (not `core`, which clashes with Rust's `core`) (0013). `engine` does no I/O and `net` is a trait with an in-memory fake, so the state machine is tested directly. Networking is iroh + iroh-gossip with one gossip swarm per topic. Storage uses `varaq`.
+2. **Desktop app**: Tauri 2, one Rust crate `src-tauri` (0013). Modules: `code` (decoder), `engine` (pure state machine, no I/O, not named `core`), `net` (`iroh_net` real transport, `live` wrapper that runs bootstrap and publishes status, `bootstrap`, `known_peers`, `exchange`, `trusted`, `gossip` signed envelope, `fake` in-memory hub for tests), `store` (`varaq` store and a memory store), `server` (axum API, auth, pairing, static files), `app` (`LiveCore`: owns the engine, network and character on its own thread; also `memnet`), `runtime` (start-up for window, headless and print-key modes; `build_network` is the one place that picks the network), plus `cli`, `config`, `dungeons`, `identity`. Networking is iroh + iroh-gossip with one gossip swarm per topic. Flags: `--headless`, `--print-public-key`, `--data-dir`. Environment: `WOWFT_WEB_DIR` (web file override), `WOWFT_NET=memory` (in-memory network).
 3. **One React/TypeScript web app** (the template's `src/`), embedded in the binary and served over HTTP by the desktop app to its own window and to phones, over one REST + event-stream API. Phones are approved by a per-install token in a pairing QR. An environment variable can point at a folder that overrides embedded files (0012).
 
-The headless WoW Lua test VM stays in the `wow-forever-addons` repo, now at `/Users/hughkaznowski/Projects/gitlloop/wow-forever-addons`, and is planned as a git submodule at `vendor/wow-forever-addons` (0021). The code spec and test vectors will live once under `docs/` and be read by both the Lua and Rust tests.
+The headless WoW Lua test VM lives in the `wow-forever-addons` repo (`/Users/hughkaznowski/Projects/gitlloop/wow-forever-addons`) and is a git submodule at `vendor/wow-forever-addons` (0021). The code spec and test vectors live once under `docs/` (`rdf-code-spec.md`, `rdf-code-vectors.json`) and are read by both the Lua and Rust tests.
+
+**Running two instances on one machine:** give each its own `--data-dir`; ports are random. **Adding a trusted peer:** run an always-on copy with `--headless`, print its key with `--print-public-key`, then add it to `net::trusted::BUILTIN` (ships with the app) or to `trusted_peers` in settings (loopback only).
 
 ### Domain rules that shape the design
 

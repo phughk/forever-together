@@ -1,6 +1,10 @@
-# template-rust-app
+# forever-together
 
-Template for a Tauri 2 desktop/mobile app: mise, Rust (with mr-boxington build caching), pnpm, TypeScript (strict), React, Storybook.
+A peer-to-peer random dungeon finder for World of Warcraft Forever (short code `wowft`). Forever has no random dungeon finder, so this app finds a group of five for you without a hosted matchmaking service.
+
+How it works, in short: a small in-game addon shows your character as a text code (and a QR). You paste the code into the desktop app (or open the app's page on your phone), pick dungeons, and the app finds other players over a peer-to-peer network. When five compatible players are found, everyone confirms, and then the names are shown so you can invite each other in game.
+
+Status: the code is built and tested without a live game. The unverified assumptions (client calls, the hosted iroh components, the simulation result) are listed in [`docs/spike-s0.md`](docs/spike-s0.md). Read that file before trusting the matching rate.
 
 ## Getting started
 
@@ -8,22 +12,50 @@ Template for a Tauri 2 desktop/mobile app: mise, Rust (with mr-boxington build c
 mise install        # node, pnpm, rust, mr-boxington
 mise run setup      # pnpm install
 mise run dev        # desktop app (Tauri + Vite)
-mise run web        # frontend only, in the browser
-mise run storybook  # component workshop on :6006
-mise run check      # typecheck + clippy + rustfmt
-mise run build      # bundle for the host platform
 ```
+
+## Tasks
+
+| Task | What it does |
+|------|--------------|
+| `mise run setup` | `pnpm install` |
+| `mise run dev` | the desktop app (Tauri + Vite) |
+| `mise run web` | the web app alone in the browser (no backend, so no API) |
+| `mise run storybook` | the component workshop on port 6006 |
+| `mise run typecheck` | typecheck the web app |
+| `mise run test` | Rust unit and integration tests (about 40 s, the multi-instance tests are slow on purpose) |
+| `mise run lint` | clippy with warnings denied, and a rustfmt check |
+| `mise run test-addon` | build the headless WoW Lua VM and run the addon tests in it |
+| `mise run install-addon` | copy the addon into `$WOW_ADDONS_DIR` (must end in `AddOns`) |
+| `mise run check` | typecheck, lint, test and test-addon: everything CI should run |
+| `mise run build` | bundle the app for this platform |
 
 ## Layout
 
-- `src/` – React + TS frontend (`components/` hold `*.stories.tsx` next to the component)
-- `src-tauri/` – Rust backend; `lib.rs` has the shared entry point used by desktop and mobile
-- `.storybook/` – Storybook config
+- `addon/ForeverTogether/`: the WoW addon (Lua). It shows the character code and has no networking. Tests are in `addon/tests/`.
+- `src-tauri/src/`: the Rust app. Modules: `code` (decode the character code), `engine` (the pure matching state machine), `net` (iroh network, bootstrap, peer exchange, an in-memory fake), `store` (identity, settings, known peers), `server` (the local web server and API), `app` (`LiveCore`, joins engine, network and server), `runtime` (start-up for the three modes), `cli`, `config`, `dungeons`, `identity`.
+- `src/`: the React and TypeScript web app, shown in the app window and on phones. Atomic design, with stories next to each component.
+- `docs/`: the design, the implementation plan, the code format spec (`rdf-code-spec.md`), spike results (`spike-s0.md`) and review reports. `adr/`: one decision record per file.
+- `vendor/wow-forever-addons`: git submodule with the headless Lua test VM.
+
+## Running the app
+
+```sh
+forever-together                              # window mode
+forever-together --headless                   # network only, no window, no web server
+forever-together --print-public-key           # print this install's peer ID and exit
+forever-together --data-dir /some/folder      # keep identity, settings and peers here
+```
+
+Environment variables:
+
+- `WOWFT_WEB_DIR`: a folder whose files override the embedded web app (path-safe, `/api` is never overridden). Useful for changing the page without rebuilding.
+- `WOWFT_NET=memory`: use the in-memory network that hears nobody, so the UI can be tried with no network.
+
+Two instances on one machine: give each its own `--data-dir`. The web server and the network pick random free ports, so nothing else is needed.
+
+Trusted peers (the last-resort way in for a new install): run an always-on copy with `--headless`, print its key with `--print-public-key`, and either add the key to the built-in list in `src-tauri/src/net/trusted.rs` or add it in the settings page of a running app (`trusted_peers`).
 
 ## Mobile
 
-`src-tauri/src/lib.rs` is already mobile-ready. In a new project run `pnpm tauri android init` / `pnpm tauri ios init`, then `pnpm tauri android dev` / `ios dev`.
-
-## After copying the template
-
-Change the name/identifier in `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json` (`identifier`), and replace `app-icon.png` then run `pnpm tauri icon app-icon.png`.
+`src-tauri/src/lib.rs` is mobile-ready, but phones in this project use the web app over the local network, not a native build.
