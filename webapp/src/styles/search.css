@@ -1,0 +1,21 @@
+/* Search card: top row, need row, diagnosis, chips. Owned by the search components. */
+
+.ft-search__top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.ft-search__top .ft-heading { margin: 0; }
+.ft-search__meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.ft-search__time { display: flex; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-1); }
+
+.ft-wider { display: inline-flex; align-items: center; gap: var(--space-1); }
+
+.ft-need { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.ft-need__label { font-size: 0.85rem; color: var(--text-muted); }
+.ft-need__roles { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
+.ft-need__role { display: inline-flex; align-items: center; gap: var(--space-2); font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+/* Grey, never red: not seen from here is not "none exist". */
+.ft-need__role--none, .ft-need__role--some { color: var(--text-muted); }
+.ft-need__role--none .ft-role, .ft-need__role--some .ft-role { color: var(--text-muted); border-color: var(--border); }
+.ft-need__role--none .ft-role { background: transparent; border-style: dashed; }
+.ft-need__role--met { color: var(--text); font-weight: 600; }
+
+.ft-diagnosis__headline { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
+.ft-diagnosis__chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }

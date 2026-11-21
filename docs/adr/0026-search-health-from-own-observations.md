@@ -65,3 +65,12 @@ Staging item 6 of the brief. It changes the first slice only by adding to it.
   * `sometimes_found` and `rarely_found` may accompany any other situation.
   * No number, date or count from history is ever sent. The web app owns the wording and should give a provenance ("in your earlier searches").
 
+
+## Amendment 2026-11-21 (show, don't tell): where the hedge moved
+
+* **The logic is unchanged.** Situation codes, thresholds, `attempts`, `outlook` and the rule that `usually_found` is dropped next to a live problem are the same. Only the wording and its placement in the web app changed (author decision D6 of the "show, don't tell" audit).
+* **The hedge now lives in structure, not in every sentence.** The role row carries the label "Seen from here" and a `~` before rough counts (it replaces "about"). The full sentence ("Not a promise that a group will form", with the note that counts are rough) sits in one info tip beside the headline. The label and the `~` stay visible, because a hedge behind a tap may go unread.
+* **Role row.** Three roles against what a party needs (1 tank, 1 healer, 3 damage), the player's own role pre-filled. Grey, never red, for "not seen", so none seen does not read as none exist. The row is not shown while warming up or not connected.
+* **Headline** is one sentence stating the consequence ("No tank seen, so a party can't form yet."). Detail and outlook sentences are inside Details. Short chips replace the attempts row: "Asked 6 players to join, none replied" and "Others are forming groups".
+* **Dropped** sentences that explained a missing field or defended the app, and the words peer, computer and invited/accepted. Still true: nothing reassures while a role is missing or the app is offline, counts are rough, no numbers or percentages come from history.
+* **Search card.** The stage list, the network field, the countdown to the next widening and the duplicate "Players seen" field are gone; a "Searching wider" chip with the rule in an info tip replaces them. An ended search offers "Search again" and "Change dungeon".

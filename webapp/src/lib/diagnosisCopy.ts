@@ -4,23 +4,34 @@ import { formatAge } from "./format";
 export type DiagnosisTone = "info" | "warn" | "good";
 
 export interface DiagnosisCopy {
+  /** One sentence: the consequence for the player. The hedge is not in it; it lives in `HEDGE_TIP`. */
   headline: string;
+  /** Shown inside Details. */
   detail?: string;
-  /** A quiet hedged clause about this computer's earlier searches, shown after the detail. Absent when there is none to say. */
+  /** A quiet hedged clause about the player's earlier searches, shown inside Details after the detail. Absent when there is none to say. */
   outlook?: string;
+  /** Short chips for what the role row cannot show, e.g. "Asked 6 players to join, none replied". */
+  chips: string[];
   tone: DiagnosisTone;
 }
 
 /**
  * Length limits for the player-facing sentences, for the story docs and for layout:
- * a headline stays within 220 characters and a detail within 140 (the longest are the ended "nobody_answered" detail and the healthy detail with attempt counts, both about 110), with up to 3 dungeons named in the scope
- * (the scope is a count, "across 3 dungeons", so the dungeon list never lengthens the sentence).
+ * a headline stays within 90 characters (the longest is the ended no-tank line with a duration and a scope, about 70),
+ * a detail within 110 (the longest, the ended no-tank detail, is about 80),
+ * with the scope a count ("in 3 dungeons"), so the dungeon list never lengthens the sentence.
  */
-export const HEADLINE_MAX_CHARS = 220;
-export const DETAIL_MAX_CHARS = 140;
+export const HEADLINE_MAX_CHARS = 90;
+export const DETAIL_MAX_CHARS = 110;
 
 /** The outlook clause stays within 110 characters (the longest, rarely_found, is about 100). No numbers, never a promise. */
 export const OUTLOOK_MAX_CHARS = 110;
+
+/**
+ * The hedge, said once, in the info tip beside the headline. It must stay within the info tip cap (160).
+ * The label "Seen from here" and the `~` on rough counts stay visible beside it.
+ */
+export const HEDGE_TIP = "Counts are rough and only what this device sees from here. Not a promise that a group will form.";
 
 const OUTLOOK_COPY: Record<string, string> = {
   usually_found: "In your earlier searches like this, a group was usually found.",
@@ -44,103 +55,80 @@ function outlookClause(d: DiagnosisView): string | undefined {
   return clause;
 }
 
-const PARTY_NEED = "A party needs 1 tank, 1 healer and 3 damage players.";
-
-const ROLE_NOUN: Record<DiagnosisRole, [string, string]> = {
-  tank: ["tank", "tanks"],
-  healer: ["healer", "healers"],
-  damage: ["damage player", "damage players"],
-};
-
-function noun(n: number, role: DiagnosisRole): string {
-  return ROLE_NOUN[role][n === 1 ? 0 : 1];
-}
-
-/** "about 8 other players"; "no other players" for zero. A full sample is a slice, so counts are rough. */
-function playersPhrase(d: DiagnosisView): string {
-  const n = d.seen.players;
-  if (n === 0) return "no other players";
-  return `${d.sampleFull ? "about " : ""}${n} other ${n === 1 ? "player" : "players"}`;
-}
-
-/** "0 tanks, 2 healers, 6 damage players". Counts are of other players, so the sentence around it says so. */
-function mixPhrase(d: DiagnosisView): string {
-  const p = (n: number) => (d.sampleFull && n > 0 ? "about " : "");
-  const part = (n: number, r: DiagnosisRole) => `${p(n)}${n} ${noun(n, r)}`;
-  return `${part(d.seen.tanks, "tank")}, ${part(d.seen.healers, "healer")}, ${part(d.seen.damage, "damage")}`;
-}
-
-/** "about 10 players", for the others this computer saw being taken into groups. Zero or unknown is just "other players". */
-function takenPhrase(d: DiagnosisView): string {
-  const n = d.attempts?.takenSeen ?? 0;
-  return n > 0 ? `about ${n} ${n === 1 ? "player" : "players"}` : "other players";
-}
-
-/** "invited 6, accepted 0" when this computer sent any invitations, else null. Says "invited", never "invitation". */
+/** "Asked 6 players to join, none replied" when the player's app asked anyone, else null. */
 export function attemptsPhrase(d: DiagnosisView): string | null {
   const a = d.attempts;
   if (!a || a.invitesSent <= 0) return null;
-  return `invited ${a.invitesSent}, accepted ${a.acceptsGot}`;
+  const asked = `Asked ${a.invitesSent} ${a.invitesSent === 1 ? "player" : "players"} to join`;
+  return a.acceptsGot > 0 ? `${asked}, ${a.acceptsGot} replied` : `${asked}, none replied`;
 }
 
-function scope(dungeonCount: number): string {
-  return dungeonCount > 1 ? ` across ${dungeonCount} dungeons` : "";
+/** The chips for a diagnosis: "Others are forming groups" for that situation, and the attempts. */
+function chipsFor(d: DiagnosisView): string[] {
+  const chips: string[] = [];
+  if (d.situation === "others_grouping") chips.push("Others are forming groups");
+  const tried = attemptsPhrase(d);
+  if (tried) chips.push(tried);
+  return chips;
 }
 
-/** "no tank", or "no other tank besides you" when the missing role is the player's own. */
-function missing(d: DiagnosisView, role: DiagnosisRole): string {
-  return d.ownRole === role ? `no other ${ROLE_NOUN[role][0]} besides you` : `no ${ROLE_NOUN[role][0]}`;
+/** " in 3 dungeons" for a combined search, else nothing. */
+function inScope(dungeonCount: number): string {
+  return dungeonCount > 1 ? ` in ${dungeonCount} dungeons` : "";
 }
 
 /**
  * Turns a diagnosis into the sentences shown to the player. Pure, no React.
  *
- * Wording rules: every claim is about what this computer sees ("none seen", never "none exist"), numbers are
- * rough, nothing promises a group will form, and nothing reassures while a role is missing or the app is not
- * connected. Unknown situation codes get a neutral sentence.
+ * Wording rules: the headline is the consequence in one sentence; every claim is about what is seen from here
+ * ("none seen", never "none exist"); numbers are rough; nothing promises a group will form; nothing reassures
+ * while a role is missing or the app is not connected. Unknown situation codes get a neutral sentence.
  */
 export function diagnosisCopy(d: DiagnosisView, elapsedS: number, dungeonCount: number): DiagnosisCopy {
   const copy = situationCopy(d, elapsedS, dungeonCount);
   const outlook = outlookClause(d);
-  return outlook ? { ...copy, outlook } : copy;
+  const withChips = { ...copy, chips: chipsFor(d) };
+  return outlook ? { ...withChips, outlook } : withChips;
 }
 
-function situationCopy(d: DiagnosisView, elapsedS: number, dungeonCount: number): DiagnosisCopy {
-  const where = scope(dungeonCount);
+type Base = Omit<DiagnosisCopy, "chips" | "outlook">;
+
+function situationCopy(d: DiagnosisView, elapsedS: number, dungeonCount: number): Base {
+  const where = inScope(dungeonCount);
   const over = formatAge(elapsedS);
 
   switch (d.situation) {
     case "warming_up":
       return d.ended
         ? {
-            headline: `The search ended before this computer finished looking around${where}.`,
+            headline: "The search ended before it finished looking around.",
             detail: "Search again, and check your connection if this repeats.",
             tone: "warn",
           }
-        : { headline: "Still looking around for other players. What this computer can see will show up here shortly.", tone: "info" };
+        : { headline: "Looking around for other players.", tone: "info" };
 
     case "not_connected":
       return d.ended
         ? {
-            headline: `In ${over} this app did not reach any other players, so it could not see who is searching${where}.`,
+            headline: `Not connected to other players, so nobody could be seen${where}.`,
             detail: "Check your internet connection, firewall or VPN, then search again.",
             tone: "warn",
           }
         : {
-            headline: "This app is not reaching other players yet.",
-            detail: "Check your internet connection, firewall or VPN. The search keeps trying in the meantime.",
+            headline: "Not connected to other players yet.",
+            detail: "Check your internet connection, firewall or VPN. The search keeps trying.",
             tone: "warn",
           };
 
     case "alone":
       return d.ended
         ? {
-            headline: `In ${over} this computer saw no other compatible players searching${where}.`,
-            detail: "Try another dungeon, or search again later. Others may be searching where this computer cannot see.",
+            headline: `No other players seen searching${where} in ${over}.`,
+            detail: "Try another dungeon, or search again later.",
             tone: "warn",
           }
         : {
-            headline: `Connected, but this computer sees no other compatible players searching${where} so far.`,
+            headline: `No other players seen searching${where} yet.`,
             detail: "Another dungeon may have more players. You can also keep waiting.",
             tone: "warn",
           };
@@ -148,81 +136,70 @@ function situationCopy(d: DiagnosisView, elapsedS: number, dungeonCount: number)
     case "no_tank":
     case "no_healer": {
       const role: DiagnosisRole = d.situation === "no_tank" ? "tank" : "healer";
-      const gap = missing(d, role);
+      if (d.ownRole === role) {
+        // The player is the role: a missing other one does not stop a party, so no consequence is claimed.
+        return {
+          headline: `No other ${role} seen${where}${d.ended ? ` in ${over}` : ""}.`,
+          detail: d.ended ? "Try another dungeon, or search again later." : "Another dungeon may have more players. You can also keep waiting.",
+          tone: "warn",
+        };
+      }
       return d.ended
         ? {
-            headline: `Over ${over} this computer saw ${playersPhrase(d)}${where}: ${mixPhrase(d)}. It saw ${gap}.`,
-            detail: `${PARTY_NEED} Try another dungeon, a different role if you have one, or search again later.`,
+            headline: `No ${role} seen${where} in ${over}, so no party could form.`,
+            detail: "Try another dungeon, a different role if you have one, or search again later.",
             tone: "warn",
           }
-        : {
-            headline: `This computer sees ${playersPhrase(d)}${where}, but ${gap} so far.`,
-            detail: PARTY_NEED,
-            tone: "warn",
-          };
+        : { headline: `No ${role} seen${where}, so a party can't form yet.`, tone: "warn" };
     }
 
     case "short_on_damage":
       return d.ended
         ? {
-            headline: `Over ${over} this computer saw ${playersPhrase(d)}${where}: ${mixPhrase(d)}. That is short on damage players.`,
-            detail: `${PARTY_NEED} Try another dungeon, or search again later.`,
+            headline: `Too few damage players seen${where} in ${over}, so no party could form.`,
+            detail: "Try another dungeon, or search again later.",
             tone: "warn",
           }
-        : {
-            headline: `This computer sees a tank and a healer${where}, but fewer than 3 other damage players so far.`,
-            detail: PARTY_NEED,
-            tone: "warn",
-          };
+        : { headline: `Too few damage players seen${where}, so a party can't form yet.`, tone: "warn" };
 
     case "others_grouping":
       return d.ended
         ? {
-            headline: `In ${over} this computer saw ${takenPhrase(d)} taken into groups${where}, which is why few players were left in the list.`,
-            detail: "Others nearby were forming groups. Wait and search again, or try another dungeon.",
+            headline: `Few players were left${where}, as others were forming groups.`,
+            detail: "Wait and search again, or try another dungeon.",
             tone: "info",
           }
         : {
-            headline: `This computer sees ${takenPhrase(d)} being taken into groups${where}, so the list of players looks thin.`,
-            detail: "The app is working: others nearby are forming groups. Keep waiting.",
+            headline: `Few players are left to group with${where} right now.`,
+            detail: "Keep waiting, or try another dungeon.",
             tone: "info",
           };
 
-    case "nobody_answered": {
-      const sent = d.attempts?.invitesSent ?? 0;
-      const who = sent > 0 ? `${sent} ${sent === 1 ? "player" : "players"}` : "players";
+    case "nobody_answered":
       return d.ended
         ? {
-            headline: `In ${over} this computer invited ${who}${where} and none accepted, although the party mix looked possible.`,
-            detail: "Their apps may not have replied or may not be reaching this computer. Search again, or try another dungeon.",
+            headline: `Nobody replied when asked to join${where}, so no party formed.`,
+            detail: "They may be offline. Search again, or try another dungeon.",
             tone: "warn",
           }
         : {
-            headline: `This computer invited ${who}${where}, but none accepted so far.`,
-            detail: "Other players' apps may not have replied, or may not be reaching this computer.",
+            headline: `Nobody has replied when asked to join${where} yet.`,
+            detail: "They may be offline or not reaching you.",
             tone: "warn",
           };
-    }
 
-    case "healthy": {
-      const tried = attemptsPhrase(d);
-      const lead = tried ? `${tried.charAt(0).toUpperCase()}${tried.slice(1)}. ` : "";
+    case "healthy":
       return d.ended
         ? {
-            headline: `Over ${over} this computer saw ${playersPhrase(d)}${where}: ${mixPhrase(d)}. That looked like enough, but no party was completed.`,
-            detail: `${lead}Search again, or try another dungeon.`,
+            headline: `Enough players looked to be around${where}, but no party completed.`,
+            detail: "Search again, or try another dungeon.",
             tone: "info",
           }
-        : {
-            headline: `From what this computer sees${where}, a group looks possible: ${playersPhrase(d)}, ${mixPhrase(d)}.`,
-            detail: `${lead}This is only what is visible from here, not a promise that a group will form.`,
-            tone: "good",
-          };
-    }
+        : { headline: `A party looks possible${where}.`, tone: "good" };
 
     default:
       return d.ended
-        ? { headline: `The search ended without forming a party${where}.`, detail: "Try another dungeon, or search again.", tone: "warn" }
-        : { headline: `Searching${where}. This computer cannot say more about what it sees yet.`, tone: "info" };
+        ? { headline: `The search ended without a party${where}.`, detail: "Try another dungeon, or search again.", tone: "warn" }
+        : { headline: `Searching${where}. Nothing more to report yet.`, tone: "info" };
   }
 }
