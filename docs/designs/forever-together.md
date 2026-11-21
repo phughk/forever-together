@@ -422,4 +422,4 @@ The decisions are recorded in [`adr/`](../adr/README.md).
 *   **Client entrance data** (`GetDungeonEntrancesForMap`) to tell dungeons in a shared zone apart.
 *   **Encrypted LAN link** for the phone.
 *   **Cross-faction groups**, if Forever allows them later.
-*   **Reputation or blocking** between peers (see `docs/notes/todo.md` for ideas).
+*   **Reputation or blocking** between peers (see `the tickets in `tickets/`` for ideas).

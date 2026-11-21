@@ -2,7 +2,7 @@
 
 * **Status:** Accepted (first slice). Amends [0002](0002-addon-shows-data-only.md) (the addon stays data only; the app writes its files and never reads saved variables), [0013](0013-single-rust-crate.md) (the module list gains `addon_install`) and [0020](0020-one-new-repository-standalone-addon.md) (the addon is also embedded in the binary). [0012](0012-one-web-app-for-phone-and-desktop.md) is unchanged: no Tauri IPC is used, and the picker is a later server-side dialog. Several facts below are unverified until a live run on a real install (see the last section).
 * **Date:** 2026-11-21
-* **Deciders:** Hugh Kaznowski (decisions 1 to 7 and the open questions in `docs/notes/addon_installer_concepts_brief.md`, resolved 2026-11-21)
+* **Deciders:** Hugh Kaznowski (decisions 1 to 7 and the open questions in `docs/design-process/archive/addon_installer_concepts_brief.md`, resolved 2026-11-21)
 
 ## Context
 

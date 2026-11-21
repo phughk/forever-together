@@ -2,7 +2,7 @@
 
 * **Status:** Accepted for the first slice. Amends [0011](0011-search-widening.md) (what a search shows while it widens and when it ends). Cites [0003](0003-self-reported-data.md), [0005](0005-topic-without-level.md) and [0025](0025-leader-invitations.md). Every threshold is unverified until a live run (see `docs/spike-s0.md`).
 * **Date:** 2026-11-21
-* **Deciders:** Hugh Kaznowski (resolutions in `docs/notes/search_diagnosis_concepts_brief.md`)
+* **Deciders:** Hugh Kaznowski (resolutions in `docs/design-process/archive/search_diagnosis_concepts_brief.md`)
 
 ## Context
 

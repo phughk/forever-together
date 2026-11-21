@@ -1,3 +1,5 @@
+> **Archived 2026-11-21.** Its decisions are recorded in ADRs 0026 and 0027; open work is in tickets 0025 to 0029. Kept as history; the ADRs win.
+
 # Concepts Brief: Search diagnosis
 
 Author: Hugh Kaznowski. Date: 2026-11-21. Mode: BRAINSTORM.

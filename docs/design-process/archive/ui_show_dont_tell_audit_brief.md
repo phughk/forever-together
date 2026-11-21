@@ -1,3 +1,5 @@
+> **Archived 2026-11-21.** Its decisions are recorded in ADRs 0029 to 0032; open work is in tickets 0030 to 0034. Kept as history; the ADRs win.
+
 # "Show, don't tell" UI audit of the webapp: concepts brief
 
 Author: Hugh Kaznowski. Date: 2026-11-21. Mode: brainstorm. The author judges the result.

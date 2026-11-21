@@ -1,3 +1,5 @@
+> **Archived 2026-11-21.** Its decisions are recorded in ADR 0028; open work is in tickets 0006 and 0007. Kept as history; the ADRs win.
+
 # Concepts brief: addon installer in the desktop app
 
 Author: Hugh Kaznowski. Date: 2026-11-21. Mode: BRAINSTORM. Status: proposal, nothing built.
@@ -53,7 +55,7 @@ After a successful install the row tells the player to type `/reload` in the gam
 5. **Version is a weak signal.** During development the version stays `0.1.0` while files change. A byte comparison against the bundle catches this.
 6. **Detection can mislead.** A stale `_classic_` folder or an old install would take an install quietly. A confirm step on the first use of a detected folder removes that.
 7. **Wording.** Gamers know "AddOns folder" and `/reload`, but not `.toc`, "bundled" or OS error text. Error text must be plain and the raw OS error goes under Details.
-8. **Existing documents.** `docs/notes/ui_show_dont_tell_audit_brief.md` says the app cannot know whether the addon is installed and lists an installer as out of scope. That stops being true. ADR 0002, 0012, 0013 and 0020 need small amendments.
+8. **Existing documents.** `docs/design-process/archive/ui_show_dont_tell_audit_brief.md` says the app cannot know whether the addon is installed and lists an installer as out of scope. That stops being true. ADR 0002, 0012, 0013 and 0020 need small amendments.
 
 ## Goals vs. Non-Goals
 
@@ -293,7 +295,7 @@ Stays unverified until then: the Forever folder layout beyond the author's macOS
 ### ADR and document changes
 
 - ADR 0028, "The desktop app installs the bundled addon". Amends 0002 (addon stays data only; the app writes its files, never reads saved variables), 0013 (module list gains `addon_install`), 0020 (addon also embedded in the binary). Amends 0012 only if a Tauri picker is chosen. Update `docs/adr/README.md` and the "0001-0027" range in CLAUDE.md.
-- Annotate `docs/notes/ui_show_dont_tell_audit_brief.md` (lines on "cannot know whether the addon is installed", D2, and the installer exclusion) as outdated; do not rewrite its history. Update `docs/notes/ui_notes.txt` if it lists this item.
+- Annotate `docs/design-process/archive/ui_show_dont_tell_audit_brief.md` (lines on "cannot know whether the addon is installed", D2, and the installer exclusion) as outdated; do not rewrite its history. Update `docs/notes/ui_notes.txt` if it lists this item.
 - README tasks table and first-run text, CLAUDE.md module list and "not verified" list, the implementation plan (API table and file list), and one sentence in each of README and the script header saying which path is for developers and which for players.
 
 ### Build order

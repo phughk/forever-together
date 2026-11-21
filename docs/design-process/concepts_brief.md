@@ -1,6 +1,6 @@
 # p2prdf: peer-to-peer random dungeon finder
 
-> **Status: superseded in part by `design_draft.md` and `adr/`.** This brief is the brainstorm record. Where it differs from the design draft, the draft and the decision records win. The ten differences found on 2026-11-21 are listed in `reconciliation_report.md`: leases versus converging announcements, five crates versus one, two transports versus one, instance ID versus zone name only, one name field versus first name and surname, two repositories versus one, a 10,000-peer simulator versus functional tests, the Overview's dungeon and key wording, the noticeboard bootstrap versus peer exchange, and professions in the code (still an open question).
+> **Status: superseded in part by `docs/designs/forever-together.md` and `adr/`.** This brief is the brainstorm record. Where it differs from the design draft, the draft and the decision records win. The ten differences found on 2026-11-21 are listed in `reconciliation_report.md`: leases versus converging announcements, five crates versus one, two transports versus one, instance ID versus zone name only, one name field versus first name and surname, two repositories versus one, a 10,000-peer simulator versus functional tests, the Overview's dungeon and key wording, the noticeboard bootstrap versus peer exchange, and professions in the code (still an open question).
 
 * **Author:** Hugh Kaznowski
 * **Date:** 2026-11-20

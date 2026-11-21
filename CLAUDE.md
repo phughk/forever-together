@@ -10,6 +10,7 @@ Tauri 2 app: Rust backend (`app/`), React/TS frontend (`webapp/`), Storybook, a 
 
 - **Clean up agent worktrees.** When fanning work out to agents with worktree isolation, remove each worktree once its branch is merged and verified: `git worktree remove --force .claude/worktrees/<name>`, `git branch -D <branch>`, then `git worktree prune`. Never remove a worktree that is locked (a live agent) or has unmerged commits or uncommitted changes.
 - **Don't set `CARGO_TARGET_DIR`.** mbx (mr-boxington) owns target storage and the shared build cache, so a manual override would fight it. If a worktree still grows its own `app/target` (about 7 GB each in practice), plain `cargo` is bypassing mbx: run `mbx doctor`, and `mbx setup` if it warns that the Cargo shim isn't installed. Delete stray `target/` dirs.
+- **Write ADRs as things are decided, and tickets for what is left.** Every decision, and every piece of work finished that embodies one, gets an ADR in `docs/adr/` (next number, indexed in `docs/adr/README.md`) in the same change that makes it, not afterwards. Open work, ideas and unverified items go in `tickets/` (`NNNN-slug.md`, indexed in `tickets/README.md`). Do not leave decisions in briefs, notes or chat: briefs and loose design docs are archived under `docs/design-process/archive/` once their decisions are in ADRs.
 - **Never commit real character data.** The author's live codes, character names and zones are personal. Test vectors, stories and docs use invented characters (for example "Testa Fakename", zone "Testville"). Record facts from live captures, not the captures themselves.
 - **Only test what you changed.** Run targeted tests and clippy/typecheck for the touched side only; run everything for cross-cutting changes or when asked.
 
@@ -70,7 +71,7 @@ What is **not** verified (details and the full table in `docs/spike-s0.md`; trea
 ### Where the truth lives
 
 - `docs/designs/forever-together.md`: the design (overview, CUJs, architecture, risks, alternatives). `docs/designs/forever-together-implementation-plan.md`: build order, spike S0, defaults, API table, file list, test plan. `docs/rdf-code-spec.md`: the code format and wire messages. The first draft is archived at `docs/design-process/archive/p2prdf-draft-2026-11-20.md`.
-- `docs/adr/` (0001-0028, indexed in `docs/adr/README.md`): one decision record per file. **ADRs win over the draft and over `docs/design-process/concepts_brief.md`**, the older brainstorm. `docs/design-process/reconciliation_report.md` lists where the brief is out of date.
+- `docs/adr/` (0001-0032, indexed in `docs/adr/README.md`): one decision record per file. **ADRs win over the draft and over `docs/design-process/concepts_brief.md`**, the older brainstorm. `docs/design-process/reconciliation_report.md` lists where the brief is out of date.
 - `docs/design-process/reviews/`: the review reports. `consolidated_review_report.md` is the summary, `author_decisions.md` records the author's answers to the open questions D1-D9 and the new timing rules, and `goldfish_review_report.md` is the annotated fix list (applied).
 - When a decision changes, add an ADR or revise the existing one and say what it supersedes.
 

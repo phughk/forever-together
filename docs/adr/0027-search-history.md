@@ -2,7 +2,7 @@
 
 * **Status:** Accepted for stage 8a (record only). Extends [0008](0008-iroh-and-local-storage.md) (local storage). Amends [0013](0013-single-rust-crate.md) (the module list gains `history`). Cites [0003](0003-self-reported-data.md) and [0026](0026-search-health-from-own-observations.md). Every number below is an unverified starting value.
 * **Date:** 2026-11-21
-* **Deciders:** Hugh Kaznowski (resolutions 5, 9, 11 to 14 in `docs/notes/search_diagnosis_concepts_brief.md`)
+* **Deciders:** Hugh Kaznowski (resolutions 5, 9, 11 to 14 in `docs/design-process/archive/search_diagnosis_concepts_brief.md`)
 
 ## Context
 

@@ -32,3 +32,7 @@ Decisions for forever-together (short code `wowft`, working name `p2prdf` in old
 | 0026 | [The app reports search health from this peer's own observations](0026-search-health-from-own-observations.md) | Accepted (first slice; amends 0011) |
 | 0027 | [The app keeps a local history of finished searches, one entry each, and shows none of it](0027-search-history.md) | Accepted (stage 8a, record only; extends 0008, amends 0013) |
 | 0028 | [The desktop app installs the bundled addon](0028-the-desktop-app-installs-the-bundled-addon.md) | Accepted (first slice; amends 0002, 0013, 0020) |
+| 0029 | [The web app follows atomic design and "show, don't tell"](0029-atomic-design-and-show-dont-tell.md) | Accepted |
+| 0030 | [The web app is dark-only, with palette tokens and two fonts](0030-dark-only-theme-and-fonts.md) | Accepted |
+| 0031 | [The finder shows one screen per state, and a tap on a dungeon starts the search](0031-one-screen-per-state-and-click-to-search.md) | Accepted (amends 0011, 0026 presentation) |
+| 0032 | [Settings group phone access in one card, put expert settings behind Advanced, and lock them on a phone](0032-settings-phone-link-and-advanced.md) | Accepted |
