@@ -117,6 +117,11 @@ async fn search_lifecycle_joins_topics_and_reports_state() {
     let stage_clock = s.search.stage_clock_started_at.unwrap();
     assert!(stage_clock <= s.server_now && s.server_now - stage_clock < 60_000);
     assert_eq!(s.search.searching, Some(0));
+    let d = s.search.diagnosis.as_ref().unwrap();
+    assert_eq!(d.situation, "warming_up");
+    assert!(!d.ended);
+    assert_eq!(d.seen.players, 0);
+    assert_eq!(d.own_role.as_deref(), Some("tank"));
     assert!(s.party.is_none());
     let topic = crate::dungeons::topic_id(3, "5", code::Faction::Alliance, "the-deadmines", 0);
     assert!(net.calls().contains(&NetCall::Join(topic)));
@@ -129,6 +134,7 @@ async fn search_lifecycle_joins_topics_and_reports_state() {
     let s = core.state();
     assert_eq!(s.search.status, SearchStatus::Idle);
     assert!(s.search.dungeons.is_empty() && s.search.started_at.is_none());
+    assert!(s.search.diagnosis.is_none());
     assert!(net.calls().contains(&NetCall::Leave(topic)));
     // Stopping twice is harmless.
     core.stop_search().await.unwrap();
@@ -303,6 +309,7 @@ fn party_view_maps_the_engine_view() {
         party,
         committed: None,
         last_drop: None,
+        stats: None,
     };
     let mut track = PartyTrack::default();
 

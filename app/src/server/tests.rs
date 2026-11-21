@@ -27,6 +27,7 @@ pub(crate) fn sample_state() -> AppState {
             stage_clock_started_at: None,
             searching: None,
             topics: 0,
+            diagnosis: None,
         },
         party: None,
         network: NetworkView {
@@ -314,6 +315,46 @@ async fn valid_token_reads_state_in_the_client_shape() {
     assert_eq!(v["settings"]["known_peers_size"], 100);
     assert_eq!(v["network"]["bootstrap"], "none");
     assert!(v["character"].is_null() && v["party"].is_null());
+}
+
+#[tokio::test]
+async fn search_diagnosis_has_the_contract_shape() {
+    let mut state = sample_state();
+    assert!(
+        serde_json::to_value(&state).unwrap()["search"]["diagnosis"].is_null(),
+        "idle: null"
+    );
+    state.search.status = SearchStatus::LimitReached;
+    state.search.diagnosis = Some(DiagnosisView {
+        situation: "no_tank".into(),
+        ended: true,
+        seen: SeenView {
+            players: 8,
+            tanks: 0,
+            healers: 3,
+            damage: 5,
+        },
+        own_role: Some("damage".into()),
+        sample_full: false,
+        network_peers: 4,
+    });
+    let v = serde_json::to_value(&state).unwrap();
+    assert_eq!(
+        v["search"]["diagnosis"],
+        serde_json::json!({
+            "situation": "no_tank",
+            "ended": true,
+            "seen": {"players": 8, "tanks": 0, "healers": 3, "damage": 5},
+            "ownRole": "damage",
+            "sampleFull": false,
+            "networkPeers": 4
+        })
+    );
+    // An old client payload without the field still parses.
+    let mut old = serde_json::to_value(sample_state()).unwrap();
+    old["search"].as_object_mut().unwrap().remove("diagnosis");
+    let back: AppState = serde_json::from_value(old).unwrap();
+    assert!(back.search.diagnosis.is_none());
 }
 
 #[tokio::test]

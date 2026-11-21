@@ -109,7 +109,7 @@ Every route except the static files needs `Authorization: Bearer <token>`. The t
 
 | Route | Purpose |
 |-------|---------|
-| `GET /api/state` | snapshot: character, search, stage, counts, party, settings summary |
+| `GET /api/state` | snapshot: character, search, stage, counts, party, settings summary. `search` gains an optional `diagnosis` (situation code, `ended`, seen role counts, `ownRole`, `sampleFull`, `networkPeers`), ADR 0026 |
 | `GET /api/events` | live updates, read with `fetch` streaming so the token travels in a header, with a heartbeat line every 15 s and automatic reconnect by the client |
 | `POST /api/character` `{code}` | parse and store a code, return what was understood or a typed error |
 | `DELETE /api/character` | forget the code |

@@ -92,6 +92,15 @@ impl Sample {
         self.entries.is_empty()
     }
 
+    /// The sample holds as many ads as its cap allows, so what it shows is a slice.
+    pub fn is_full(&self) -> bool {
+        self.entries.len() >= self.cap
+    }
+
+    pub fn entries(&self) -> impl Iterator<Item = &Entry> {
+        self.entries.values()
+    }
+
     pub fn get(&self, peer: &PeerId) -> Option<&Entry> {
         self.entries.get(peer)
     }

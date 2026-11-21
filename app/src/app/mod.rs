@@ -15,7 +15,7 @@ use crate::code::{self, Character, CodeError};
 use crate::config::{CONFIRM_WINDOW, READY_WINDOW, Settings, WIDEN_STEP};
 use crate::dungeons::{self, Dungeon};
 use crate::engine::state::{Engine, Event, Mode, Profile, TopicSearch, View};
-use crate::engine::{DropCause, Message, NetError, Network, PartyId, apply_network};
+use crate::engine::{DropCause, Message, NetError, Network, PartyId, apply_network, diagnose};
 use crate::identity::PeerId;
 use crate::server::core::*;
 use crate::store::{KEY_CHARACTER, Store, get_json, put_json};
@@ -360,6 +360,9 @@ impl Model {
             }
         }
 
+        let network = self.net_status.borrow().clone();
+        let diagnosis = diagnosis_view(&view, network.peers);
+
         AppState {
             server_now: now_ms,
             character: self
@@ -378,9 +381,10 @@ impl Model {
                 } else {
                     0
                 },
+                diagnosis,
             },
             party,
-            network: self.net_status.borrow().clone(),
+            network,
             settings: settings_view(&self.settings),
         }
     }
@@ -407,6 +411,47 @@ impl Model {
             })
             .unwrap_or_default()
     }
+}
+
+/// The search diagnosis from the engine's own observations (ADR 0026). Only while a search
+/// runs (also while a party is committed, which the status calls searching) or after it
+/// expired.
+fn diagnosis_view(view: &View, network_peers: u32) -> Option<DiagnosisView> {
+    let ended = match view.mode {
+        Mode::Searching | Mode::Committed => false,
+        Mode::Expired => true,
+        _ => return None,
+    };
+    let st = view.stats?;
+    let c = if ended { st.peak } else { st.current };
+    let seen = SeenView {
+        players: c.players,
+        tanks: c.tanks,
+        healers: c.healers,
+        damage: c.damage,
+    };
+    let situation = diagnose::diagnose(&diagnose::Input {
+        ended,
+        elapsed: st.elapsed,
+        network_peers,
+        seen: c,
+        own_role: Some(st.own_role),
+    });
+    Some(DiagnosisView {
+        situation: situation.code().to_string(),
+        ended,
+        seen,
+        own_role: Some(
+            match st.own_role {
+                code::Role::Tank => "tank",
+                code::Role::Healer => "healer",
+                code::Role::Damage => "damage",
+            }
+            .to_string(),
+        ),
+        sample_full: st.sample_full,
+        network_peers,
+    })
 }
 
 fn topic_search(c: &Character, d: &Dungeon) -> TopicSearch {
@@ -891,6 +936,7 @@ fn placeholder_state() -> AppState {
             stage_clock_started_at: None,
             searching: None,
             topics: 0,
+            diagnosis: None,
         },
         party: None,
         network: NetworkView {

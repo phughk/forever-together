@@ -8,7 +8,8 @@ use super::party::{PARTY_SIZE, Party, party_id};
 use super::sample::Sample;
 use super::widen;
 use crate::config::{
-    AD_CUTOFF, AD_KEEPALIVE, BAN, CONFIRM_WINDOW, EPOCH, INVITE_WINDOW, READY_WINDOW, SAMPLE_SIZE,
+    AD_CUTOFF, AD_EXPIRY, AD_KEEPALIVE, BAN, CONFIRM_WINDOW, EPOCH, INVITE_WINDOW, READY_WINDOW,
+    SAMPLE_SIZE,
 };
 use crate::dungeons::TopicId;
 use crate::identity::PeerId;
@@ -165,6 +166,53 @@ pub struct DropInfo {
     pub peer: Option<PeerId>,
 }
 
+/// How many other players one node saw, by role. `players` is the sum of the three roles.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct RoleCounts {
+    pub players: u32,
+    pub tanks: u32,
+    pub healers: u32,
+    pub damage: u32,
+}
+
+impl RoleCounts {
+    fn add(&mut self, role: Role) {
+        self.players += 1;
+        match role {
+            Role::Tank => self.tanks += 1,
+            Role::Healer => self.healers += 1,
+            Role::Damage => self.damage += 1,
+        }
+    }
+
+    /// Each count raised to at least the other's. `players` is recomputed from the roles so it
+    /// stays the sum (a per-role peak need not come from one moment).
+    fn peak_with(&mut self, other: &RoleCounts) {
+        self.tanks = self.tanks.max(other.tanks);
+        self.healers = self.healers.max(other.healers);
+        self.damage = self.damage.max(other.damage);
+        self.players = self.players.max(other.players);
+    }
+}
+
+/// What this node observed during a search (ADR 0026). Self-reported claims only (ADR 0003): no
+/// peer id and no name is kept.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SearchStats {
+    /// Other players in the samples now that are compatible under the stage's rules and not
+    /// banned. In the frozen end snapshot this equals `peak`.
+    pub current: RoleCounts,
+    /// The most of each role seen at one tick over the search so far.
+    pub peak: RoleCounts,
+    /// A sample reached its cap, so the counts are a slice of the topic.
+    pub sample_full: bool,
+    pub own_role: Role,
+    /// The highest widening stage the search reached.
+    pub stage_reached: u8,
+    /// Time since the search began (frozen at the limit in the end snapshot).
+    pub elapsed: Duration,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MemberView {
     pub peer: PeerId,
@@ -189,6 +237,9 @@ pub struct View {
     pub committed: Option<(TopicId, PartyId)>,
     /// Why the most recent party was dropped. Kept until the next commit.
     pub last_drop: Option<DropInfo>,
+    /// Observations of the running search, or the frozen snapshot while `Expired`. `None`
+    /// otherwise (idle, final, or after the player stopped).
+    pub stats: Option<SearchStats>,
 }
 
 struct Search {
@@ -211,6 +262,10 @@ struct Search {
     decided: Option<u64>,
     /// The leader I accepted: (topic, epoch, leader). Only its announcement can commit me.
     lease: Option<(TopicId, u64, PeerId)>,
+    /// Most of each role seen at once so far, and whether any sample was full.
+    peak: RoleCounts,
+    peak_full: bool,
+    peak_stage: u8,
 }
 
 /// A leader's open invitations for one epoch.
@@ -247,6 +302,8 @@ pub struct Engine {
     final_party: Vec<PeerId>,
     final_details: BTreeMap<PeerId, MemberDetails>,
     last_drop: Option<DropInfo>,
+    /// The stats frozen when a search expired. Kept until the next `start` or a player stop.
+    snapshot: Option<SearchStats>,
 }
 
 const MAX_EARLY: usize = 64;
@@ -267,6 +324,7 @@ impl Engine {
             final_party: Vec::new(),
             final_details: BTreeMap::new(),
             last_drop: None,
+            snapshot: None,
         }
     }
 
@@ -308,7 +366,11 @@ impl Engine {
                 topics,
                 extra,
             } => self.start(now, profile, topics, extra, out),
-            Event::UserStop => self.stop(out),
+            Event::UserStop => {
+                self.stop(out);
+                // A stop by the player shows no end summary.
+                self.snapshot = None;
+            }
             Event::Tick => self.tick(now, out),
             Event::AdReceived { topic, ad } => {
                 self.on_ad(now, topic, ad, out);
@@ -419,6 +481,7 @@ impl Engine {
         out: &mut Vec<Action>,
     ) {
         self.stop(out);
+        self.snapshot = None;
         let mut samples = BTreeMap::new();
         for t in topics.iter().chain(extra.iter()) {
             samples
@@ -447,6 +510,9 @@ impl Engine {
             inbox: BTreeMap::new(),
             decided: None,
             lease: None,
+            peak: RoleCounts::default(),
+            peak_full: false,
+            peak_stage: 0,
         });
         self.mode = Mode::Searching;
         self.send_ads(now, out);
@@ -546,6 +612,7 @@ impl Engine {
 
     fn tick(&mut self, now: Duration, out: &mut Vec<Action>) {
         self.bans.retain(|_, until| now < *until);
+        self.record_peak(now);
         match self.mode {
             Mode::Searching => self.tick_searching(now, out),
             Mode::Committed => self.tick_committed(now, out),
@@ -562,7 +629,13 @@ impl Engine {
             )
         };
         if expired {
+            // `stop` drops the search, so freeze what it observed first.
+            let snapshot = self.stats(now).map(|mut st| {
+                st.current = st.peak;
+                st
+            });
             self.stop(out);
+            self.snapshot = snapshot;
             self.mode = Mode::Expired;
             out.push(Action::ShowState(self.view(now)));
             return;
@@ -1093,6 +1166,65 @@ impl Engine {
         out.push(Action::ShowState(self.view(now)));
     }
 
+    // ---- observations -----------------------------------------------------------------
+
+    /// The other players this node sees now: fresh, not banned, and compatible with the own ad
+    /// under the stricter stage of the pair (the rule `on_ad` and party building use). A peer in
+    /// several topics counts once. Also whether any sample is at its cap.
+    fn observe(&self, s: &Search, now: Duration) -> (RoleCounts, bool) {
+        let mut counts = RoleCounts::default();
+        let mut full = false;
+        let mut counted = BTreeSet::new();
+        for (topic, sample) in &s.samples {
+            full |= sample.is_full();
+            let Some(own) = s.own_ad.as_ref() else {
+                continue;
+            };
+            let min_level = self.min_level(topic);
+            for e in sample.entries() {
+                let ad = &e.ad;
+                if ad.peer == self.me
+                    || now.saturating_sub(e.last_seen) >= AD_EXPIRY
+                    || self.is_banned(&ad.peer, now)
+                    || !compatible(own, ad, own.stage.min(ad.stage), min_level)
+                {
+                    continue;
+                }
+                if counted.insert(ad.peer) {
+                    counts.add(ad.role);
+                }
+            }
+        }
+        (counts, full)
+    }
+
+    fn record_peak(&mut self, now: Duration) {
+        let Some(s) = self.search.as_ref() else {
+            return;
+        };
+        let (current, full) = self.observe(s, now);
+        let s = self.search.as_mut().expect("checked");
+        s.peak.peak_with(&current);
+        s.peak_full |= full;
+        s.peak_stage = s.peak_stage.max(s.stage);
+    }
+
+    /// The stats of the running search, with the peak raised to the current counts.
+    fn stats(&self, now: Duration) -> Option<SearchStats> {
+        let s = self.search.as_ref()?;
+        let (current, full) = self.observe(s, now);
+        let mut peak = s.peak;
+        peak.peak_with(&current);
+        Some(SearchStats {
+            current,
+            peak,
+            sample_full: s.peak_full || full,
+            own_role: s.profile.role,
+            stage_reached: s.peak_stage.max(s.stage),
+            elapsed: now.saturating_sub(s.search_start),
+        })
+    }
+
     // ---- view -------------------------------------------------------------------------
 
     pub fn view(&self, now: Duration) -> View {
@@ -1105,6 +1237,11 @@ impl Engine {
             party: Vec::new(),
             committed: None,
             last_drop: self.last_drop,
+            stats: if self.mode == Mode::Expired {
+                self.snapshot
+            } else {
+                self.stats(now)
+            },
         };
         if let Some(s) = &self.search {
             v.stage = s.stage;

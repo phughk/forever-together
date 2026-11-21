@@ -86,6 +86,36 @@ pub struct SearchView {
     pub stage_clock_started_at: Option<u64>,
     pub searching: Option<u32>,
     pub topics: u32,
+    /// What this node observed while searching, or at expiry. Absent when idle (ADR 0026).
+    #[serde(default)]
+    pub diagnosis: Option<DiagnosisView>,
+}
+
+/// Other players this node saw that are compatible under the current stage's rules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SeenView {
+    pub players: u32,
+    pub tanks: u32,
+    pub healers: u32,
+    pub damage: u32,
+}
+
+/// A situation code plus the counts behind it. The web app writes the sentences.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagnosisView {
+    /// One of `warming_up`, `not_connected`, `alone`, `no_tank`, `no_healer`,
+    /// `short_on_damage`, `healthy`. A String so a newer server can add codes.
+    pub situation: String,
+    /// The search expired: `seen` is the frozen peak, not live.
+    pub ended: bool,
+    pub seen: SeenView,
+    /// `tank`, `healer` or `damage`; null if unknown.
+    pub own_role: Option<String>,
+    /// The sample hit its cap, so the counts are a slice.
+    pub sample_full: bool,
+    pub network_peers: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

@@ -2,6 +2,7 @@
 //! No I/O. `Network` and `NetError` live here so `net` can implement them later.
 
 pub mod ad;
+pub mod diagnose;
 pub mod lead;
 pub mod party;
 pub mod rank;
@@ -13,7 +14,7 @@ pub mod widen;
 pub use ad::{Ad, Faction, Message, PartyId, Role, compatible, event_from_message};
 pub use state::{
     Action, DropCause, DropInfo, Engine, Event, MemberDetails, MemberView, Mode, Profile,
-    TopicSearch, View,
+    RoleCounts, SearchStats, TopicSearch, View,
 };
 
 use crate::dungeons::TopicId;
@@ -738,6 +739,100 @@ mod tests {
         assert_eq!(c.nodes[0].engine.mode(), Mode::Expired);
         assert!(c.nodes[0].joined.is_empty());
         assert_eq!(c.nodes[0].shown.last().unwrap().mode, Mode::Expired);
+        // The end snapshot is kept: it is not zeroed by `stop()`.
+        let v = c.nodes[0].engine.view(c.now);
+        let st = v.stats.expect("expired view carries the snapshot");
+        assert_eq!(st.peak, RoleCounts::default());
+        assert_eq!(st.own_role, Role::Tank);
+        assert_eq!(st.stage_reached, 4);
+        assert_eq!(st.elapsed, crate::config::SEARCH_LIMIT);
+        // A manual stop shows nothing, and a new start clears the old snapshot.
+        c.send(0, Event::UserStop);
+        assert!(c.nodes[0].engine.view(c.now).stats.is_none());
+    }
+
+    #[test]
+    fn expired_view_shows_the_peak_not_zero() {
+        // Node 0 (a tank) sees a healer and two damage for a while, then they leave.
+        let mut c = Cluster::new(&[1, 2, 3, 4]);
+        start(
+            &mut c,
+            0,
+            profile(Role::Tank, 24, 100, Faction::Alliance, "Ta"),
+        );
+        start(
+            &mut c,
+            1,
+            profile(Role::Healer, 24, 100, Faction::Alliance, "Hb"),
+        );
+        start(
+            &mut c,
+            2,
+            profile(Role::Damage, 25, 100, Faction::Alliance, "Dc"),
+        );
+        start(
+            &mut c,
+            3,
+            profile(Role::Damage, 25, 100, Faction::Horde, "Hostile"),
+        );
+        c.run(3);
+        let live = c.nodes[0].engine.view(c.now).stats.unwrap();
+        // Counted: the compatible healer and damage; the other faction is not.
+        assert_eq!(
+            (
+                live.current.players,
+                live.current.tanks,
+                live.current.healers,
+                live.current.damage
+            ),
+            (2, 0, 1, 1)
+        );
+        // The other nodes go away and node 0 runs to expiry alone.
+        for i in 1..4 {
+            c.nodes[i].alive = false;
+        }
+        c.run(605);
+        let v = c.nodes[0].engine.view(c.now);
+        assert_eq!(v.mode, Mode::Expired);
+        let st = v.stats.unwrap();
+        assert_eq!(
+            (
+                st.peak.players,
+                st.peak.tanks,
+                st.peak.healers,
+                st.peak.damage
+            ),
+            (2, 0, 1, 1)
+        );
+        assert_eq!(st.current, st.peak);
+    }
+
+    #[test]
+    fn two_nodes_see_each_other_with_the_right_roles() {
+        let mut c = Cluster::new(&[1, 2]);
+        start(
+            &mut c,
+            0,
+            profile(Role::Tank, 24, 100, Faction::Alliance, "Ta"),
+        );
+        start(
+            &mut c,
+            1,
+            profile(Role::Healer, 24, 100, Faction::Alliance, "Hb"),
+        );
+        c.run(2);
+        let a = c.nodes[0].engine.view(c.now).stats.unwrap();
+        let b = c.nodes[1].engine.view(c.now).stats.unwrap();
+        assert_eq!(
+            (a.own_role, a.current.healers, a.current.tanks),
+            (Role::Tank, 1, 0)
+        );
+        assert_eq!(
+            (b.own_role, b.current.tanks, b.current.healers),
+            (Role::Healer, 1, 0)
+        );
+        assert_eq!((a.current.players, b.current.players), (1, 1));
+        assert!(!a.sample_full);
     }
 
     #[test]
