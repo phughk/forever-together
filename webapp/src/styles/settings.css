@@ -16,6 +16,25 @@
 .ft-phonelink__scroll .ft-pairing { justify-items: center; }
 .ft-phonelink__reveal .ft-qr { max-width: min(220px, 34dvh); }
 .ft-phonelink__reveal .ft-setting { width: 100%; }
+/* Addon card: version values, the folder line, the paste field. */
+.ft-addonversions { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: 0; }
+.ft-addonversions__item { display: flex; gap: var(--space-2); }
+.ft-addonversions dt { color: var(--text-muted); }
+.ft-addonversions dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ft-addon__head { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.ft-addon__body { display: grid; gap: var(--space-3); justify-items: start; }
+.ft-addon__actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.ft-addon__folder { margin: 0; font-size: 0.85rem; color: var(--text-muted); overflow-wrap: anywhere; max-width: 100%; }
+.ft-addon__folder code { font-family: var(--font-mono, monospace); color: var(--text); }
+.ft-addon__line { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin: 0; }
+.ft-addonpath { display: grid; gap: var(--space-2); width: 100%; }
+.ft-addonpath__row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.ft-addonpath__row .ft-input { flex: 1 1 14rem; min-width: 0; }
+.ft-addonpath__choices { display: grid; gap: var(--space-1); justify-items: start; }
+.ft-addonpath__choice { font: inherit; font-family: var(--font-mono, monospace); font-size: 0.85rem; text-align: left; overflow-wrap: anywhere; max-width: 100%; padding: var(--space-1) var(--space-2); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); cursor: pointer; }
+.ft-addonpath__choice:hover:not(:disabled) { border-color: var(--text-muted); }
+.ft-addonpath__choice:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.ft-addonpath__choice:disabled { opacity: 0.6; cursor: default; }
 .ft-phonelink__value { margin: 0; font-size: 0.9rem; color: var(--text-muted); }
 .ft-advanced__summary { display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 .ft-advanced__title { font-weight: 600; color: var(--text); }
