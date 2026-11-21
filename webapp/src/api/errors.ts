@@ -58,5 +58,6 @@ export function describeAddonError(code: string): string {
 
 /** True when the server refused a loopback-only route to a remote (phone) caller. */
 export function isLoopbackOnly(e: unknown): boolean {
-  return isApiError(e) && e.status === 403;
+  // `addon_permission_denied` is also a 403, but it means the OS refused the write, not that this caller is a phone.
+  return isApiError(e) && e.status === 403 && !e.code.startsWith("addon_");
 }

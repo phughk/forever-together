@@ -25,7 +25,8 @@ export interface AddonSettingsProps {
   remote?: boolean;
   /** Install, or update, or reinstall: the page saves a detected folder first. */
   onInstall: () => void | Promise<void>;
-  onSaveFolder: (folder: string) => void | Promise<void>;
+  /** Resolve `false` when the folder was refused: the field then stays open. */
+  onSaveFolder: (folder: string) => void | boolean | Promise<void | boolean>;
   /** Open the folder field at first render (stories). */
   defaultFolderOpen?: boolean;
 }
@@ -129,8 +130,7 @@ export function AddonSettings({ info, result, busy, folderError, remote, onInsta
               busy={busy}
               error={folderError}
               onSubmit={async (f) => {
-                await onSaveFolder(f);
-                setFolderOpen(false);
+                if ((await onSaveFolder(f)) !== false) setFolderOpen(false);
               }}
               onCancel={pickFolder ? undefined : () => setFolderOpen(false)}
             />

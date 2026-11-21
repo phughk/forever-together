@@ -31,7 +31,7 @@ export interface SettingsPageProps {
   addonBusy?: boolean;
   addonFolderError?: string | null;
   onInstallAddon?: () => void | Promise<void>;
-  onSaveAddonFolder?: (folder: string) => void | Promise<void>;
+  onSaveAddonFolder?: (folder: string) => void | boolean | Promise<void | boolean>;
   /** Open the Advanced section at first render (stories). */
   advancedOpen?: boolean;
 }

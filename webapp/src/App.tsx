@@ -111,9 +111,11 @@ function Container({ api }: { api: Api }) {
       setAddonFolderError(null);
       try {
         setAddon(await api.setAddonFolder(folder));
+        return true;
       } catch (e) {
         if (isLoopbackOnly(e)) setRemote(true);
         setAddonFolderError(isApiError(e) && e.message ? e.message : describeAddonError(isApiError(e) ? e.code : ""));
+        return false;
       } finally {
         setAddonBusy(false);
       }
