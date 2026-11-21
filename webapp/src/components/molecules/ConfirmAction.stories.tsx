@@ -6,9 +6,9 @@ const meta = {
   title: "Molecules/ConfirmAction",
   component: ConfirmAction,
   args: {
-    label: "Reset token",
-    warning: "Every paired phone will be signed out and must scan the pairing QR again.",
-    confirmLabel: "Yes, reset",
+    label: "Sign out",
+    warning: "Phones must scan the QR again.",
+    confirmLabel: "Yes, sign out",
     onConfirm: () => {},
   },
 } satisfies Meta<typeof ConfirmAction>;
@@ -20,7 +20,7 @@ export const Disabled: Story = { args: { disabled: true } };
 export const Asking: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Reset token" }));
-    await expect(canvas.getByRole("button", { name: "Yes, reset" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Sign out" }));
+    await expect(canvas.getByRole("button", { name: "Yes, sign out" })).toBeVisible();
   },
 };

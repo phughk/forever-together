@@ -4,7 +4,7 @@ import { Text } from "../atoms/Typography";
 
 export interface ConfirmActionProps {
   label: string;
-  /** What will happen, shown before the second click. */
+  /** The consequence in one sentence, shown before the second click. */
   warning: string;
   confirmLabel: string;
   onConfirm: () => void | Promise<void>;

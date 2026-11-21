@@ -1,7 +1,8 @@
-import { Card } from "../atoms/Card";
+import { Button } from "../atoms/Button";
 import { Notice } from "../atoms/Notice";
-import { Text } from "../atoms/Typography";
 import { ConfirmAction } from "../molecules/ConfirmAction";
+import { Locked } from "../molecules/Locked";
+import { SettingRow } from "../molecules/SettingRow";
 
 export interface TokenSettingsProps {
   onReset: () => void | Promise<void>;
@@ -9,24 +10,27 @@ export interface TokenSettingsProps {
   error?: string | null;
 }
 
+/** The "Sign out all phones" row (the server call is still the token reset). Sits inside the Phone link card. */
 export function TokenSettings({ onReset, remote, error }: TokenSettingsProps) {
   return (
-    <Card title="Paired phones">
-      <Text size="small" muted>
-        Each phone holds a copy of this install's token. Resetting it signs out every phone at once. Lost a phone? Reset, then
-        pair the others again.
-      </Text>
-      {remote ? (
-        <Notice tone="info">The token can be reset only in the desktop app.</Notice>
-      ) : (
-        <ConfirmAction
-          label="Reset token"
-          confirmLabel="Yes, sign out all phones"
-          warning="Every paired phone will stop working until it scans the pairing QR again. This window gets the new token automatically."
-          onConfirm={onReset}
-        />
-      )}
+    <>
+      <SettingRow title="Sign out all phones">
+        <Locked locked={remote}>
+          {remote ? (
+            <Button variant="danger" disabled>
+              Sign out
+            </Button>
+          ) : (
+            <ConfirmAction
+              label="Sign out"
+              confirmLabel="Yes, sign out"
+              warning="Phones must scan the QR again."
+              onConfirm={onReset}
+            />
+          )}
+        </Locked>
+      </SettingRow>
       {error && <Notice tone="bad">{error}</Notice>}
-    </Card>
+    </>
   );
 }

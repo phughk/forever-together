@@ -1,75 +1,96 @@
+import { useState } from "react";
+import { Badge } from "../atoms/Badge";
+import { Button } from "../atoms/Button";
 import { Card } from "../atoms/Card";
 import { Notice } from "../atoms/Notice";
 import { Select } from "../atoms/Select";
 import { Switch } from "../atoms/Toggle";
 import { Text } from "../atoms/Typography";
+import { Locked } from "../molecules/Locked";
 import { PairingQr } from "../molecules/PairingQr";
 import { SettingRow } from "../molecules/SettingRow";
+import { TokenSettings } from "./TokenSettings";
+import "../../styles/settings.css";
 
 export type PairingState =
   | { kind: "off" }
   | { kind: "loading" }
   | { kind: "ready"; url: string; address: string; addresses: string[] }
-  /** The server refused: this window is not the desktop, only loopback may pair or change LAN mode. */
+  /** The server refused: this window is not the desktop, only loopback may pair or change the phone link. */
   | { kind: "forbidden" }
   | { kind: "error"; message: string };
 
 export interface LanSettingsProps {
+  /** Phone link on or off (the server field is still `lan_mode`). */
   lanMode: boolean;
   onChange: (on: boolean) => void | Promise<void>;
   pairing: PairingState;
-  /** Choose which of this computer's addresses the pairing link uses. */
+  /** Choose which of this computer's addresses the link uses. Only offered when there is more than one. */
   onAddressChange?: (address: string) => void;
-  /** The page runs on a phone or another device, so the switch is read-only. */
+  /** The page runs on a phone or another device: every control is locked. */
   remote?: boolean;
+  /** When given, a "Sign out all phones" row shows while the phone link is on. */
+  onResetToken?: () => void | Promise<void>;
+  /** Failure of the last sign-out, shown under its row. */
+  resetError?: string | null;
+  /** Start with the QR open (stories). */
+  defaultShowQr?: boolean;
 }
 
-export function LanSettings({ lanMode, onChange, pairing, remote, onAddressChange }: LanSettingsProps) {
+/** The "Phone link" card: the switch with its one-line risk, an "Add a phone" reveal for the QR, and sign out. */
+export function LanSettings({ lanMode, onChange, pairing, remote, onAddressChange, onResetToken, resetError, defaultShowQr }: LanSettingsProps) {
+  const [showQr, setShowQr] = useState(defaultShowQr ?? false);
+  const open = lanMode && showQr && !remote;
   return (
-    <Card title="Phone access (LAN mode)">
+    <Card>
       <SettingRow
-        title="Allow phones on this network"
-        description={remote ? "Change this on the desktop app." : "Off: only this computer can open the app."}
+        title="Phone link"
+        hint="Phones reach this PC over your home network without encryption. Anyone on it who gets your link could use the app. Switch off when you are done."
       >
-        <Switch checked={lanMode} disabled={remote} onChange={(on) => void onChange(on)}>
-          {lanMode ? "On" : "Off"}
-        </Switch>
+        <div className="ft-phonelink__state">
+          {lanMode && <Badge tone="warn">Not encrypted</Badge>}
+          <Locked locked={remote}>
+            <Switch checked={lanMode} disabled={remote} onChange={(on) => void onChange(on)}>
+              {lanMode ? "On" : "Off"}
+            </Switch>
+          </Locked>
+        </div>
       </SettingRow>
-      {lanMode && (
-        <Notice tone="warn">
-          The link between phone and computer is plain HTTP. On a network you do not trust, someone could read the pairing token.
-          Turn LAN mode off when you are done.
-        </Notice>
+      {lanMode && <p className="ft-phonelink__risk">Anyone on this Wi-Fi could connect.</p>}
+      {lanMode && !open && (
+        <Locked locked={remote}>
+          <Button variant="primary" disabled={remote} onClick={() => setShowQr(true)}>
+            Add a phone
+          </Button>
+        </Locked>
       )}
-      {pairing.kind === "loading" && <Text muted>Preparing the pairing code...</Text>}
-      {pairing.kind === "ready" && <PairingQr url={pairing.url} />}
-      {pairing.kind === "ready" && (
-        <details className="ft-details">
-          <summary>
-            Phones connect to <code>{pairing.address}</code>. Not working? Change address
-          </summary>
-          {pairing.addresses.length > 1 ? (
-            <SettingRow
-              title="Network address"
-              description="This computer is on more than one network. Pick the one your phone is on (usually the same Wi-Fi)."
-            >
-              <Select
-                mono
-                aria-label="Network address"
-                value={pairing.address}
-                options={pairing.addresses.map((a) => ({ value: a, label: a }))}
-                onChange={(e) => onAddressChange?.(e.target.value)}
-              />
-            </SettingRow>
-          ) : (
-            <Text muted>Only one network address was found on this computer, so there is nothing else to pick.</Text>
+      {open && (
+        <div className="ft-phonelink__reveal">
+          {pairing.kind === "loading" && <Text muted>Preparing the QR...</Text>}
+          {pairing.kind === "ready" && (
+            <>
+              <PairingQr url={pairing.url} />
+              <p className="ft-phonelink__value">
+                Phones connect to <code>{pairing.address}</code>
+              </p>
+              {pairing.addresses.length > 1 && (
+                <SettingRow title="Network" hint="This PC is on more than one network. Pick the one your phone is on, usually the same Wi-Fi.">
+                  <Select
+                    mono
+                    aria-label="Network address"
+                    value={pairing.address}
+                    options={pairing.addresses.map((a) => ({ value: a, label: a }))}
+                    onChange={(e) => onAddressChange?.(e.target.value)}
+                  />
+                </SettingRow>
+              )}
+            </>
           )}
-        </details>
+          <Button onClick={() => setShowQr(false)}>Done</Button>
+        </div>
       )}
-      {pairing.kind === "forbidden" && (
-        <Notice tone="info">The pairing code is shown only in the desktop app, so a phone cannot pair another phone.</Notice>
-      )}
-      {pairing.kind === "error" && <Notice tone="bad">{pairing.message}</Notice>}
+      {lanMode && pairing.kind === "error" && <Notice tone="bad">{pairing.message}</Notice>}
+      {lanMode && onResetToken && <TokenSettings onReset={onResetToken} remote={remote} error={resetError} />}
     </Card>
   );
 }
