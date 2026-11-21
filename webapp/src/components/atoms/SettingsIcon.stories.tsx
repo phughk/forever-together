@@ -13,6 +13,7 @@ export const All: Story = {
       <SettingsIcon name="monitor" />
       <SettingsIcon name="switch" />
       <SettingsIcon name="qr" />
+      <SettingsIcon name="flag" />
     </div>
   ),
 };

@@ -1,12 +1,20 @@
 /* Settings screens: lock icon, remote banner, phone link, advanced section, numbered steps. */
 .ft-icon { display: inline-block; flex: none; vertical-align: middle; }
+.ft-reportlink { display: inline-flex; align-items: center; gap: var(--space-2); justify-self: start; font-size: 0.88rem; color: var(--text-muted); text-decoration: none; }
+.ft-reportlink:hover { color: var(--text); text-decoration: underline; }
+.ft-reportlink:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .ft-locked { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--text-muted); max-width: 100%; }
 .ft-locked--block { display: flex; }
 .ft-locked--block > :first-child { flex: 1; min-width: 0; }
 .ft-remote-banner { display: flex; align-items: center; gap: var(--space-2); }
 .ft-phonelink__state { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 .ft-phonelink__risk { margin: 0; color: var(--warn); font-weight: 600; font-size: 0.9rem; }
-.ft-phonelink__reveal { display: grid; gap: var(--space-3); justify-items: start; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); }
+/* The QR opens as a sheet over the page, so it never makes the page scroll. Only its middle scrolls; Done stays visible. */
+.ft-sheet { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: var(--space-3); background: rgba(0, 0, 0, 0.55); }
+.ft-phonelink__reveal { display: flex; flex-direction: column; gap: var(--space-3); box-sizing: border-box; width: min(100%, 26rem); max-height: 100%; padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.ft-phonelink__scroll { display: grid; gap: var(--space-3); justify-items: center; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.ft-phonelink__scroll .ft-pairing { justify-items: center; }
+.ft-phonelink__reveal .ft-qr { max-width: min(220px, 34dvh); }
 .ft-phonelink__reveal .ft-setting { width: 100%; }
 .ft-phonelink__value { margin: 0; font-size: 0.9rem; color: var(--text-muted); }
 .ft-advanced__summary { display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }

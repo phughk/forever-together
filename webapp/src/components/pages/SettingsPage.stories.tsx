@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
+import { ISSUES_URL } from "../../lib/links";
 import { makeSettings } from "../../api/fixtures";
 import type { PairingState } from "../organisms/LanSettings";
 import { SettingsPage } from "./SettingsPage";
@@ -34,7 +35,11 @@ const addAPhone: Story["play"] = async ({ canvasElement }) => {
 };
 
 /** Phone link off, Advanced collapsed: the whole screen fits a 1280x720 window. */
-export const Defaults: Story = {};
+export const Defaults: Story = {
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole("link", { name: "Report a problem" })).toHaveAttribute("href", ISSUES_URL);
+  },
+};
 export const PhoneLinkOnWithoutQr: Story = { args: { settings: makeSettings({ lan_mode: true }), pairing: READY } };
 export const PhoneLinkOnWithQr: Story = { args: { settings: makeSettings({ lan_mode: true }), pairing: READY }, play: addAPhone };
 export const SeveralAddresses: Story = { args: { settings: makeSettings({ lan_mode: true }), pairing: SEVERAL }, play: addAPhone };

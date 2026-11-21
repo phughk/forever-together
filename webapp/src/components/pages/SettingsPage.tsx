@@ -1,6 +1,7 @@
 import type { ConnectionStatus, Settings } from "../../api/types";
 import { Notice } from "../atoms/Notice";
 import { RemoteBanner } from "../molecules/RemoteBanner";
+import { ReportProblemLink } from "../molecules/ReportProblemLink";
 import { AdvancedSettings } from "../organisms/AdvancedSettings";
 import { AppHeader, type View } from "../organisms/AppHeader";
 import { LanSettings, type PairingState } from "../organisms/LanSettings";
@@ -59,6 +60,7 @@ export function SettingsPage(p: SettingsPageProps) {
             onAddTrusted={p.onAddTrusted}
             onRemoveTrusted={p.onRemoveTrusted}
           />
+          <ReportProblemLink />
         </>
       }
     />

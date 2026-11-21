@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import "../../styles/settings.css";
 
-export type SettingsIconName = "lock" | "monitor" | "switch" | "qr";
+export type SettingsIconName = "lock" | "monitor" | "switch" | "qr" | "flag";
 
 export interface SettingsIconProps {
   name: SettingsIconName;
@@ -27,6 +27,12 @@ const PATHS: Record<SettingsIconName, ReactElement> = {
     <>
       <rect x="2" y="7" width="20" height="10" rx="5" />
       <circle cx="16" cy="12" r="2.5" />
+    </>
+  ),
+  flag: (
+    <>
+      <path d="M5 21V4" />
+      <path d="M5 4h12l-2 4 2 4H5" />
     </>
   ),
   qr: (
