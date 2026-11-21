@@ -140,7 +140,7 @@ Messages are postcard, length-prefixed with a 4-byte big-endian length, at most 
 
 ## 5. Dungeon table
 
-`app/data/dungeons.json`, committed before step 3. Fields: `slug`, `name`, `levelMin`, `levelMax`, `minLevel`, `factionHint` (`alliance`, `horde`, `both`, `none`), `zone`, `status` (`available`, `coming_soon`). The table has 29 entries, 20 available. **The author commits the file.** Recommendation for level L and zone Z: keep available entries with `minLevel <= L` and `levelMin - 3 <= L <= levelMax + 3`. Sort by: zone equal to Z (ASCII-lowercased compare) first; then the distance of L from the middle of the range; then `factionHint` equal to the character's faction, then `both`, then the other faction, then `none`; then the slug. The function is `recommend(character, table) -> Vec<DungeonSlug>`.
+`app/data/dungeons.json`, committed before step 3. Fields: `slug`, `name`, `levelMin`, `levelMax`, `minLevel`, `factionHint` (`alliance`, `horde`, `both`, `none`), `zone`. `minLevel` is `null` when no minimum is known, and then means no minimum. The table has 29 entries and all are searchable (no status field). **The author commits the file.** Recommendation for level L and zone Z: keep entries with `minLevel <= L` (a `null` minimum always passes) and `levelMin - 3 <= L <= levelMax + 3`. Sort by: zone equal to Z (ASCII-lowercased compare) first; then the distance of L from the middle of the range; then `factionHint` equal to the character's faction, then `both`, then the other faction, then `none`; then the slug. The function is `recommend(character, table) -> Vec<DungeonSlug>`.
 
 ## 6. Change policy
 

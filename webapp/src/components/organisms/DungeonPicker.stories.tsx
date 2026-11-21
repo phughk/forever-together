@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { DUNGEON_TABLE, dungeonsFor } from "../../api/fixtures";
+import { dungeonsFor } from "../../api/fixtures";
 import { DungeonPicker } from "./DungeonPicker";
 
 const rec = dungeonsFor(24, "Westfall");
@@ -25,4 +25,3 @@ export const SeveralSelected: Story = { args: { selected: ["the-deadmines", "wai
 export const NoRecommendations: Story = { args: { recommended: [], zone: "Orgrimmar" } };
 export const NoCharacter: Story = { args: { needsCharacter: true, recommended: [] } };
 export const SearchRunning: Story = { args: { searching: true, selected: ["the-deadmines"] } };
-export const OnlyComingSoon: Story = { args: { dungeons: DUNGEON_TABLE.filter((d) => d.status === "coming_soon"), recommended: [] } };

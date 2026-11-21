@@ -13,7 +13,7 @@ mod tests;
 
 use crate::code::{self, Character, CodeError};
 use crate::config::{CONFIRM_WINDOW, READY_WINDOW, Settings, WIDEN_STEP};
-use crate::dungeons::{self, Dungeon, Status};
+use crate::dungeons::{self, Dungeon};
 use crate::engine::state::{Engine, Event, Mode, Profile, TopicSearch, View};
 use crate::engine::{DropCause, Message, NetError, Network, PartyId, apply_network};
 use crate::identity::PeerId;
@@ -599,14 +599,9 @@ async fn handle_cmd<N: Network>(
                     name: d.name.clone(),
                     level_min: d.level_min,
                     level_max: d.level_max,
-                    min_level: d.min_level.unwrap_or(0),
+                    min_level: d.min_level,
                     faction_hint: "both".into(),
                     zone: d.zone.clone(),
-                    status: match d.status {
-                        Status::Available => "available",
-                        Status::ComingSoon => "coming_soon",
-                    }
-                    .into(),
                 })
                 .collect();
             let value = DungeonsResponse {
@@ -715,11 +710,11 @@ async fn start_search<N: Network>(
     let mut topics = Vec::new();
     for s in &chosen {
         match dungeons::find(&m.table, s) {
-            Some(d) if d.is_available() => topics.push(topic_search(&c, d)),
-            _ => {
+            Some(d) => topics.push(topic_search(&c, d)),
+            None => {
                 return Err(CoreError::bad_request(
                     "unknown_dungeon",
-                    format!("{s} is not an available dungeon"),
+                    format!("{s} is not a known dungeon"),
                 ));
             }
         }

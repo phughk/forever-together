@@ -35,8 +35,7 @@ export function DungeonPicker({
   const bySlug = new Map(dungeons.map((d) => [d.slug, d]));
   const recommendedEntries = recommended.flatMap((s) => bySlug.get(s) ?? []);
   const recSet = new Set(recommended);
-  const others = dungeons.filter((d) => d.status === "available" && !recSet.has(d.slug));
-  const comingSoon = dungeons.filter((d) => d.status === "coming_soon");
+  const others = dungeons.filter((d) => !recSet.has(d.slug));
 
   const toggle = (slug: string, on: boolean) =>
     onSelectionChange(on ? [...selected.filter((s) => s !== slug), slug] : selected.filter((s) => s !== slug));
@@ -63,7 +62,7 @@ export function DungeonPicker({
           </Text>
           {recommendedEntries.length === 0 && (
             <Notice tone="warn">
-              No dungeon is recommended for this level. You can still pick any available dungeon below.
+              No dungeon is recommended for this level. You can still pick any dungeon below.
             </Notice>
           )}
         </>
@@ -77,14 +76,8 @@ export function DungeonPicker({
       )}
       {others.length > 0 && (
         <>
-          <h3 className="ft-section-label">{recommendedEntries.length > 0 ? "Other dungeons" : "Available dungeons"}</h3>
+          <h3 className="ft-section-label">{recommendedEntries.length > 0 ? "Other dungeons" : "All dungeons"}</h3>
           <ul className="ft-list">{others.map(row)}</ul>
-        </>
-      )}
-      {comingSoon.length > 0 && (
-        <>
-          <h3 className="ft-section-label">Coming soon</h3>
-          <ul className="ft-list">{comingSoon.map(row)}</ul>
         </>
       )}
 
@@ -98,7 +91,7 @@ export function DungeonPicker({
         </Button>
         <Button
           disabled={needsCharacter || searching || recommendedEntries.length === 0}
-          onClick={() => onSelectionChange(recommendedEntries.filter((d) => d.status === "available").map((d) => d.slug))}
+          onClick={() => onSelectionChange(recommendedEntries.map((d) => d.slug))}
         >
           Select all recommended
         </Button>

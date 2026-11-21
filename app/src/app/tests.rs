@@ -103,14 +103,6 @@ async fn search_lifecycle_joins_topics_and_reports_state() {
             .code,
         "unknown_dungeon"
     );
-    // Coming-soon dungeons cannot be searched.
-    assert_eq!(
-        core.start_search(vec!["hall-of-thanes".into()])
-            .await
-            .unwrap_err()
-            .code,
-        "unknown_dungeon"
-    );
     assert!(net.calls().is_empty());
 
     core.start_search(vec!["the-deadmines".into(), "the-deadmines".into()])

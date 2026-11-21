@@ -71,7 +71,7 @@ export const UnknownZone: Story = {
   },
 };
 
-/** A level where no available dungeon fits. */
+/** A level above every dungeon range, so nothing is recommended. */
 export const NoRecommendations: Story = {
   args: {
     state: makeState({ character: makeCharacter({ level: 60, itemLevel: 180, zone: "Orgrimmar", faction: "horde" }) }),

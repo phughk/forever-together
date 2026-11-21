@@ -18,7 +18,7 @@ forever-together helps players of World of Warcraft Forever find a group for a d
 
 On Forever, a **realm** is a ruleset (PvP, PvE, RP-PvP, RP-PvE, later Hardcore) that runs on a shared server in each region. Players on the same realm can group, and players on different realms cannot. Players can group only with their own faction. A search **topic** is therefore `region + realm + faction + dungeon` ([ADR 0005](../adr/0005-topic-without-level.md)). Peers who share a topic find each other.
 
-Level is not in the topic. It travels in each player's search ad and is a matching condition, like item level. The app holds a fixed table of dungeons (level range, minimum level, a faction hint, zone, availability) and recommends dungeons from the character's level and zone ([ADR 0006](../adr/0006-dungeon-table.md)). The author expects very large player numbers and an unknown share running the app, so the design assumes busy topics and loosens a search over time when a topic is quiet. In v1 each topic is one swarm ([ADR 0005](../adr/0005-topic-without-level.md), amended).
+Level is not in the topic. It travels in each player's search ad and is a matching condition, like item level. The app holds a fixed table of dungeons (level range, minimum level, a faction hint, zone) and recommends dungeons from the character's level and zone ([ADR 0006](../adr/0006-dungeon-table.md)). The author expects very large player numbers and an unknown share running the app, so the design assumes busy topics and loosens a search over time when a topic is quiet. In v1 each topic is one swarm ([ADR 0005](../adr/0005-topic-without-level.md), amended).
 
 Nothing is hosted by the author. Peers find each other through remembered peers first, then peer exchange, and only as a last resort through trusted peers. Trusted peers are ordinary peers ([ADR 0023](../adr/0023-no-supernodes.md)).
 
@@ -35,7 +35,7 @@ The proposed solution is a pair of tools: the addon, which turns the live charac
 *   **Addon code.** The addon shows a copyable text code and a QR of the same data. The code is small enough that the QR scans from a game window (target: at most 122 characters, see the spec).
 *   **One shared code format.** A written, versioned specification with test vectors that the Lua encoder and the Rust decoder both pass, and an "update the addon" or "update the app" message on an unknown version ([ADR 0018](../adr/0018-code-format.md)).
 *   **Desktop app.** Accepts a pasted code, shows what it understood, and searches for a party of five (1 tank, 1 healer, 3 damage dealers) under the topic, matching on level, item level and role.
-*   **Dungeon recommendation.** The player picks one dungeon or searches all recommended ones. Location is a preference, not a check. Dungeons marked "Coming Soon" are shown but cannot be searched.
+*   **Dungeon recommendation.** The player picks one dungeon or searches all recommended ones. Location is a preference, not a check. Every dungeon in the table can be searched.
 *   **Search that loosens over time.** A search starts strict and relaxes in a fixed, visible order (item level, then secondary roles, then a larger level spread, then more dungeons). The schedule is part of the matching algorithm. The API cannot change it ([ADR 0011](../adr/0011-search-widening.md)).
 *   **Live progress.** The app shows how many players are searching, the current constraints, and what happens next.
 *   **Agreement among peers.** A peer confirms at most one party. A formed party announces that its members are taken, so others stop considering them. A party is final only when all five humans confirm. A member who does not confirm in time sends a Decline, and the rest return to searching ([ADR 0024](../adr/0024-liveness-and-decline.md)).
@@ -77,7 +77,6 @@ The proposed solution is a pair of tools: the addon, which turns the live charac
 
 *   **Zone matching.** Zone names are English in the table. Characters on other client languages get no same-zone ordering until map IDs are added.
 *   **Shared zones.** Several dungeons share a zone, so zone proximity cannot tell them apart, and the recommendation lists all of them.
-*   **Table updates.** How does the app learn that a "Coming Soon" dungeon is now available: a release, or a reloadable data file?
 *   **Professions** in the code.
 *   **Trusted peer deployment.** The first trusted peer is the same app in headless mode on an always-on machine run by the author. Who else may run one, and how are their keys added?
 
@@ -157,11 +156,11 @@ The QR encoder is written in plain Lua, because no QR library is available in th
 
 ### 2. Dungeon table and recommendation
 
-The app carries a fixed table (a data file, versioned with the app). The recommendation keeps available dungeons whose minimum level and level range fit the character's level (with 3 levels of slack), and lists dungeons whose zone equals the character's zone first. There is no distance calculation. A dungeon's ID in topics is a fixed English slug. Nothing refuses a player because of where they are. The player picks one dungeon or all recommended ones, which means joining several topics. The sort rules are in the spec.
+The app carries a fixed table (a data file, versioned with the app). The recommendation keeps dungeons whose minimum level (when known) and level range fit the character's level (with 3 levels of slack), and lists dungeons whose zone equals the character's zone first. There is no distance calculation. A dungeon's ID in topics is a fixed English slug. Nothing refuses a player because of where they are. The player picks one dungeon or all recommended ones, which means joining several topics. The sort rules are in the spec.
 
 ### 3. Topics and swarms
 
-A topic is `region + realm + faction + dungeon`, hashed with a protocol prefix and a shard number into a 32-byte ID. In v1 the shard number is always 0 and each topic is one `iroh-gossip` swarm. The number of topics is roughly 5 realms, 2 regions, 2 factions and the available dungeons (20 today), about 400, assuming those realm and region counts. That figure is an estimate: the app does not hard-code a realm list.
+A topic is `region + realm + faction + dungeon`, hashed with a protocol prefix and a shard number into a 32-byte ID. In v1 the shard number is always 0 and each topic is one `iroh-gossip` swarm. The number of topics is roughly 5 realms, 2 regions, 2 factions and the dungeons (29 today), about 580, assuming those realm and region counts. That figure is an estimate: the app does not hard-code a realm list.
 
 Peers in one swarm hold a partial view: about 5 active connections and 30 passive peers (the `iroh-gossip` defaults). Each peer also keeps a bounded sample of the latest ads it has seen and matches within it. When the sample is full, the peer drops the ads furthest from its own level first, so a dungeon with a wide level range still leaves it with candidates it can group with. This bias is **proposed**: whether it hurts agreement is an Open Question, and the simulation measures it.
 

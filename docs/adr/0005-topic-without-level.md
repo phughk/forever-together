@@ -10,7 +10,7 @@ The first design keyed searches by `region + realm + faction + dungeon + level`.
 
 ## Decision
 
-A topic is `region + realm + faction + dungeon`, hashed with a protocol prefix into a 32-byte topic ID. Level travels in each player's ad and is a matching condition (maximum level spread). About 400 topics exist (5 realms, 2 regions, 2 factions, 20 available dungeons). Ads are sent on change plus a slow keep-alive, and a peer's sample of ads favours similar levels (proposed). *Amended 2026-11-21:* v1 has one shard per topic. The shard number stays in the topic hash and is always 0, so shards can be added later without renaming topics. Sharding by peer ID alone would starve each shard of tanks and healers, so adding it needs a role-aware rule and real traffic numbers.
+A topic is `region + realm + faction + dungeon`, hashed with a protocol prefix into a 32-byte topic ID. Level travels in each player's ad and is a matching condition (maximum level spread). About 580 topics exist (5 realms, 2 regions, 2 factions, 29 dungeons). *Amended 2026-11-21:* this was about 400 with 20 available dungeons, before the author made all 29 searchable (ADR 0006). Ads are sent on change plus a slow keep-alive, and a peer's sample of ads favours similar levels (proposed). *Amended 2026-11-21:* v1 has one shard per topic. The shard number stays in the topic hash and is always 0, so shards can be added later without renaming topics. Sharding by peer ID alone would starve each shard of tanks and healers, so adding it needs a role-aware rule and real traffic numbers.
 
 ## Consequences
 

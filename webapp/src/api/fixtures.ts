@@ -15,24 +15,26 @@ export const NOW = 1_800_000_000_000;
 export const MIN = 60_000;
 
 export const DUNGEON_TABLE: DungeonEntry[] = [
-  { slug: "ragefire-chasm", name: "Ragefire Chasm", levelMin: 13, levelMax: 18, minLevel: 13, factionHint: "horde", zone: "Orgrimmar", status: "available" },
-  { slug: "wailing-caverns", name: "Wailing Caverns", levelMin: 15, levelMax: 25, minLevel: 15, factionHint: "none", zone: "The Barrens", status: "available" },
-  { slug: "the-deadmines", name: "The Deadmines", levelMin: 17, levelMax: 26, minLevel: 15, factionHint: "alliance", zone: "Westfall", status: "available" },
-  { slug: "shadowfang-keep", name: "Shadowfang Keep", levelMin: 22, levelMax: 30, minLevel: 18, factionHint: "none", zone: "Silverpine Forest", status: "available" },
-  { slug: "blackfathom-deeps", name: "Blackfathom Deeps", levelMin: 24, levelMax: 32, minLevel: 20, factionHint: "none", zone: "Ashenvale", status: "available" },
-  { slug: "the-stockade", name: "The Stockade", levelMin: 24, levelMax: 32, minLevel: 22, factionHint: "alliance", zone: "Stormwind City", status: "available" },
-  { slug: "gnomeregan", name: "Gnomeregan", levelMin: 29, levelMax: 38, minLevel: 24, factionHint: "alliance", zone: "Dun Morogh", status: "available" },
-  { slug: "razorfen-kraul", name: "Razorfen Kraul", levelMin: 29, levelMax: 38, minLevel: 25, factionHint: "none", zone: "The Barrens", status: "available" },
-  { slug: "scarlet-monastery", name: "Scarlet Monastery", levelMin: 34, levelMax: 45, minLevel: 30, factionHint: "none", zone: "Tirisfal Glades", status: "available" },
-  { slug: "razorfen-downs", name: "Razorfen Downs", levelMin: 37, levelMax: 46, minLevel: 35, factionHint: "none", zone: "The Barrens", status: "available" },
-  { slug: "uldaman", name: "Uldaman", levelMin: 41, levelMax: 51, minLevel: 35, factionHint: "none", zone: "Badlands", status: "available" },
-  { slug: "maraudon", name: "Maraudon", levelMin: 46, levelMax: 55, minLevel: 40, factionHint: "none", zone: "Desolace", status: "coming_soon" },
-  { slug: "sunken-temple", name: "The Temple of Atal'Hakkar", levelMin: 50, levelMax: 56, minLevel: 45, factionHint: "none", zone: "Swamp of Sorrows", status: "coming_soon" },
+  { slug: "ragefire-chasm", name: "Ragefire Chasm", levelMin: 13, levelMax: 18, minLevel: 13, factionHint: "horde", zone: "Orgrimmar" },
+  { slug: "wailing-caverns", name: "Wailing Caverns", levelMin: 15, levelMax: 25, minLevel: 15, factionHint: "none", zone: "The Barrens" },
+  { slug: "the-deadmines", name: "The Deadmines", levelMin: 17, levelMax: 26, minLevel: 15, factionHint: "alliance", zone: "Westfall" },
+  { slug: "shadowfang-keep", name: "Shadowfang Keep", levelMin: 22, levelMax: 30, minLevel: 18, factionHint: "none", zone: "Silverpine Forest" },
+  { slug: "blackfathom-deeps", name: "Blackfathom Deeps", levelMin: 24, levelMax: 32, minLevel: 20, factionHint: "none", zone: "Ashenvale" },
+  { slug: "the-stockade", name: "The Stockade", levelMin: 24, levelMax: 32, minLevel: 22, factionHint: "alliance", zone: "Stormwind City" },
+  { slug: "gnomeregan", name: "Gnomeregan", levelMin: 29, levelMax: 38, minLevel: 24, factionHint: "alliance", zone: "Dun Morogh" },
+  { slug: "razorfen-kraul", name: "Razorfen Kraul", levelMin: 29, levelMax: 38, minLevel: 25, factionHint: "none", zone: "The Barrens" },
+  { slug: "scarlet-monastery", name: "Scarlet Monastery", levelMin: 34, levelMax: 45, minLevel: 30, factionHint: "none", zone: "Tirisfal Glades" },
+  { slug: "razorfen-downs", name: "Razorfen Downs", levelMin: 37, levelMax: 46, minLevel: 35, factionHint: "none", zone: "The Barrens" },
+  { slug: "uldaman", name: "Uldaman", levelMin: 41, levelMax: 51, minLevel: 35, factionHint: "none", zone: "Badlands" },
+  { slug: "maraudon", name: "Maraudon", levelMin: 46, levelMax: 55, minLevel: 40, factionHint: "none", zone: "Desolace" },
+  { slug: "sunken-temple", name: "The Temple of Atal'Hakkar", levelMin: 50, levelMax: 56, minLevel: 45, factionHint: "none", zone: "Swamp of Sorrows" },
+  // No known minimum level: only the level range limits the recommendation.
+  { slug: "hall-of-thanes", name: "Hall of Thanes", levelMin: 13, levelMax: 18, minLevel: null, factionHint: "none", zone: "Ironforge" },
 ];
 
 export function dungeonsFor(level: number, zone: string): DungeonsResponse {
   const recommended = DUNGEON_TABLE.filter(
-    (d) => d.status === "available" && d.minLevel <= level && d.levelMin - 3 <= level && level <= d.levelMax + 3,
+    (d) => (d.minLevel === null || d.minLevel <= level) && d.levelMin - 3 <= level && level <= d.levelMax + 3,
   )
     .sort((a, b) => Number(b.zone === zone) - Number(a.zone === zone))
     .map((d) => d.slug);

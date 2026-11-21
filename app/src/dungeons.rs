@@ -9,13 +9,6 @@ use sha2::{Digest, Sha256};
 
 const TABLE_JSON: &str = include_str!("../data/dungeons.json");
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Status {
-    Available,
-    ComingSoon,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Dungeon {
@@ -23,16 +16,9 @@ pub struct Dungeon {
     pub name: String,
     pub level_min: u8,
     pub level_max: u8,
-    /// `None`: no minimum level (all of those are coming soon).
+    /// `None`: no known minimum level, so only the level range limits the recommendation.
     pub min_level: Option<u8>,
     pub zone: String,
-    pub status: Status,
-}
-
-impl Dungeon {
-    pub fn is_available(&self) -> bool {
-        self.status == Status::Available
-    }
 }
 
 /// The 32-byte hashed search topic.
@@ -63,7 +49,7 @@ pub fn find<'a>(table: &'a [Dungeon], slug: &str) -> Option<&'a Dungeon> {
     table.iter().find(|d| d.slug == slug)
 }
 
-/// Dungeons recommended for a character. Keeps available entries with `minLevel <= L` and
+/// Dungeons recommended for a character. Keeps entries with `minLevel <= L` (a `null` minimum always passes) and
 /// `levelMin - 3 <= L <= levelMax + 3`. Sorted by: zone equal to the character's zone (ASCII
 /// lowercased) first, then distance of L from the middle of the range, then slug.
 pub fn recommend<'a>(character: &Character, table: &'a [Dungeon]) -> Vec<&'a Dungeon> {
@@ -72,8 +58,7 @@ pub fn recommend<'a>(character: &Character, table: &'a [Dungeon]) -> Vec<&'a Dun
     let mut list: Vec<&Dungeon> = table
         .iter()
         .filter(|d| {
-            d.is_available()
-                && d.min_level.is_none_or(|m| m as i32 <= level)
+            d.min_level.is_none_or(|m| m as i32 <= level)
                 && d.level_min as i32 - 3 <= level
                 && level <= d.level_max as i32 + 3
         })
@@ -124,13 +109,12 @@ mod tests {
     }
 
     #[test]
-    fn table_has_29_entries_and_20_available() {
+    fn table_has_29_entries() {
         let t = load_table();
         assert_eq!(t.len(), 29);
-        assert_eq!(t.iter().filter(|d| d.is_available()).count(), 20);
-        // Coming soon entries have no minimum level, available ones always have one.
+        // Nine entries have no known minimum level.
+        assert_eq!(t.iter().filter(|d| d.min_level.is_none()).count(), 9);
         for d in &t {
-            assert_eq!(d.min_level.is_none(), !d.is_available(), "{}", d.slug);
             assert!(d.level_min <= d.level_max);
         }
         let mut seen: Vec<_> = t.iter().map(|d| d.slug.as_str()).collect();
@@ -160,10 +144,17 @@ mod tests {
 
     #[test]
     fn barrens_level_15() {
-        // ragefire 10..21 (dist 1), wailing 12..28 (dist 10, zone), deadmines 15..26 (dist 11)
+        // wailing 12..28 (dist 10, zone); hall of thanes 10..21 (dist 1, no minimum), ragefire
+        // 10..21 (dist 1, slug order after hall); ruins of lordaeron 12..23 (5); deadmines 15..26 (11).
         assert_eq!(
             slugs(&who(15, "The Barrens")),
-            ["wailing-caverns", "ragefire-chasm", "the-deadmines"]
+            [
+                "wailing-caverns",
+                "hall-of-thanes",
+                "ragefire-chasm",
+                "ruins-of-lordaeron",
+                "the-deadmines"
+            ]
         );
     }
 
@@ -175,8 +166,10 @@ mod tests {
                 "wailing-caverns", // zone
                 "shadowfang-keep", // dist 2, ties with the stockade, slug order
                 "the-stockade",
+                "excavation-site",   // 3
                 "blackfathom-deeps", // 6
                 "the-deadmines",     // 9
+                "city-of-dalaran",   // 11
                 "scarlet-monastery", // 23
             ]
         );
@@ -187,10 +180,12 @@ mod tests {
         assert_eq!(
             slugs(&who(38, "the barrens")), // zone compare ignores case
             [
-                "razorfen-kraul",
-                "razorfen-downs",
-                "scarlet-monastery",
-                "gnomeregan"
+                "razorfen-kraul",    // zone, dist 6
+                "razorfen-downs",    // zone, dist 14
+                "the-drowned-city",  // 1
+                "scarlet-monastery", // 3
+                "gnomeregan",        // 9, ties with krol'dok, slug order
+                "kroldok-stronghold",
             ]
         );
     }
@@ -201,9 +196,11 @@ mod tests {
             slugs(&who(60, "Eastern Plaguelands")),
             [
                 "stratholme", // zone
-                "dire-maul",  // dist 2, slug order among four
+                "dire-maul",  // dist 2, slug order among five
                 "scholomance",
+                "shapers-terrace",
                 "upper-blackrock-spire",
+                "blackmaw-hold",         // 5
                 "lower-blackrock-spire", // 5
                 "blackrock-depths",      // 8
                 "temple-of-atalhakkar",  // 10
@@ -213,18 +210,21 @@ mod tests {
     }
 
     #[test]
-    fn level_10_at_the_first_minimum_and_below_every_minimum() {
-        assert_eq!(slugs(&who(10, "Orgrimmar")), ["ragefire-chasm"]);
-        assert!(slugs(&who(5, "Durotar")).is_empty());
+    fn a_missing_minimum_level_means_no_minimum() {
+        // Hall of Thanes has no known minimum: level 10 is the bottom of its range window
+        // (13 - 3), so it appears alongside ragefire-chasm (minimum 10).
+        assert_eq!(
+            slugs(&who(10, "Orgrimmar")),
+            ["ragefire-chasm", "hall-of-thanes"]
+        );
+        let t = load_table();
+        assert!(find(&t, "hall-of-thanes").unwrap().min_level.is_none());
     }
 
     #[test]
-    fn coming_soon_is_never_recommended() {
-        for lvl in 1..=60 {
-            for d in recommend(&who(lvl, ""), &load_table()) {
-                assert!(d.is_available());
-            }
-        }
+    fn below_every_level_range_nothing_is_recommended() {
+        assert!(slugs(&who(9, "Orgrimmar")).is_empty());
+        assert!(slugs(&who(5, "Durotar")).is_empty());
     }
 
     #[test]

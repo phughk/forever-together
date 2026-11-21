@@ -12,13 +12,11 @@ export interface DungeonOptionProps {
 }
 
 export function DungeonOption({ dungeon, selected, onToggle, inZone, disabled }: DungeonOptionProps) {
-  const comingSoon = dungeon.status === "coming_soon";
-  const off = disabled || comingSoon;
   return (
-    <label className={["ft-dungeon", selected && "ft-dungeon--selected", off && "ft-dungeon--disabled"].filter(Boolean).join(" ")}>
+    <label className={["ft-dungeon", selected && "ft-dungeon--selected", disabled && "ft-dungeon--disabled"].filter(Boolean).join(" ")}>
       <Checkbox
         checked={selected}
-        disabled={off}
+        disabled={disabled}
         aria-label={`Search ${dungeon.name}`}
         onChange={(checked) => onToggle(dungeon.slug, checked)}
       />
@@ -30,7 +28,6 @@ export function DungeonOption({ dungeon, selected, onToggle, inZone, disabled }:
           </span>
           <span>{dungeon.zone}</span>
           {inZone && <Badge tone="info">You are here</Badge>}
-          {comingSoon && <Badge tone="warn">Coming soon</Badge>}
         </span>
       </span>
     </label>

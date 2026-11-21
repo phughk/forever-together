@@ -55,11 +55,11 @@ pub struct DungeonEntry {
     pub name: String,
     pub level_min: u8,
     pub level_max: u8,
-    pub min_level: u8,
+    /// `None`: no known minimum level.
+    pub min_level: Option<u8>,
     /// The table has no faction column, so this is always `both`.
     pub faction_hint: String,
     pub zone: String,
-    pub status: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

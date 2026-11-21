@@ -172,7 +172,7 @@ Each path appears once and is marked Create, Modify or Delete.
 *   **Unit tests.**
     *   `mise run test-addon` for the addon.
     *   `code`: every vector, every error, and the internal-space case.
-    *   `dungeons`: 29 entries, 20 available, and recommendation order. Cases: a Barrens character at levels 15, 25 and 38, an end-game character, and a level below every minimum. The exact expected lists are computed by hand from the committed table and written into the tests when the table is committed.
+    *   `dungeons`: 29 entries, all searchable, and recommendation order. Cases: a Barrens character at levels 15, 25 and 38, an end-game character, a null minimum level treated as no minimum, and a level below every level range. The exact expected lists are computed by hand from the committed table and written into the tests when the table is committed.
     *   `engine`: the worked example above; 1 tank, 1 healer and 3 damage per party; a tank invites for at most one party per epoch, an invitee accepts one leader per epoch (the lowest rank) and only that leader's announcement commits it, and a peer confirms at most one; `partyId` is deterministic; a `Taken` peer is dropped from samples; expired ads are dropped; `Decline` returns members to searching with no penalty; a missed heartbeat bans locally for 60 s and the ban is not sent; widening follows the stage table and the search limit; Horde and Alliance never match.
     *   `net`: signature rejection; LRU eviction and persistence across a restart; exchange limits; bootstrap order; backoff bounds; unverified entries do not count until dialed.
     *   `store`: round trips and key layout, and identity persistence across a restart.

@@ -46,10 +46,10 @@ export interface DungeonEntry {
   name: string;
   levelMin: number;
   levelMax: number;
-  minLevel: number;
+  /** `null`: no known minimum level. */
+  minLevel: number | null;
   factionHint: FactionHint;
   zone: string;
-  status: "available" | "coming_soon";
 }
 
 export interface DungeonsResponse {
