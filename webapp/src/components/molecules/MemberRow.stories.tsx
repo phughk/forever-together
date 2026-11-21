@@ -10,15 +10,19 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const ReadyNotConfirmed: Story = {};
-export const Confirmed: Story = { args: { member: makeMember(1, { confirmed: true, firstName: null, surname: null }) } };
-export const WaitingForReady: Story = { args: { member: makeMember(2, { ready: false, firstName: null, surname: null }) } };
-export const Declined: Story = { args: { member: makeMember(3, { declined: true, firstName: null, surname: null }) } };
-export const You: Story = { args: { member: makeMember(0, { confirmed: true, firstName: null, surname: null }) } };
-export const NameRevealed: Story = { args: { member: makeMember(1, { confirmed: true }), revealName: true } };
+export const Waiting: Story = { args: { member: makeMember(1, { confirmed: false, firstName: null, surname: null }) } };
+export const Accepted: Story = { args: { member: makeMember(1, { confirmed: true, firstName: null, surname: null }) } };
+export const YouWaiting: Story = { args: { member: makeMember(0, { confirmed: false, firstName: null, surname: null }) } };
+export const YouAccepted: Story = { args: { member: makeMember(0, { confirmed: true, firstName: null, surname: null }) } };
+export const NameWithCopyButton: Story = { args: { member: makeMember(1, { confirmed: true }), revealName: true } };
+export const YouInFinalParty: Story = { args: { member: makeMember(0, { confirmed: true }), revealName: true } };
 export const LongNameRevealed: Story = {
   args: {
     member: makeMember(1, { confirmed: true, firstName: "Bartholomewmaximilian", surname: "Featherstonehaugh-Cholmondeley" }),
     revealName: true,
   },
+};
+export const Phone: Story = {
+  args: { member: makeMember(1, { confirmed: true }), revealName: true },
+  globals: { viewport: { value: "mobile1", isRotated: false } },
 };

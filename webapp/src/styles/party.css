@@ -1,0 +1,30 @@
+/* Party panel, member rows and the app header. Selectors are doubled where they override organisms.css and molecules.css. */
+
+.ft-header.ft-header--one-row { flex-wrap: nowrap; gap: var(--space-3); }
+.ft-header__brand.ft-header__brand--row { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.ft-header__brand--row h1 { margin: 0; font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ft-header__brand--row .ft-conn { flex: none; }
+.ft-header.ft-header--one-row .ft-header__nav { flex: none; align-items: center; }
+.ft-button--icon { width: 40px; padding: 0; }
+.ft-button--icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.ft-member__tick {
+  display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 999px;
+  border: 1.5px solid var(--border); color: transparent; font-size: 0.8rem; font-weight: 700; flex: none;
+}
+.ft-member__tick--on { border-color: var(--good); background: var(--good-bg); color: var(--good); }
+.ft-member.ft-member--slot { grid-template-columns: auto auto 1fr auto; }
+.ft-member.ft-member--slot .ft-member__status { grid-column: auto; justify-content: flex-end; }
+
+.ft-party { display: grid; gap: var(--space-3); }
+.ft-party__actions { display: flex; gap: var(--space-2); }
+.ft-party__actions .ft-button { flex: 1; }
+
+@media (max-width: 640px) {
+  .ft-header__brand--row h1 { font-size: 1rem; }
+  .ft-party--confirming { padding-bottom: 72px; }
+  .ft-party__actions {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    padding: var(--space-3) var(--space-4); background: var(--surface); border-top: 1px solid var(--border);
+  }
+}
