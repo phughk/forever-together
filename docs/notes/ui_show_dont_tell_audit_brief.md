@@ -224,3 +224,7 @@ Open:
 - The story play functions (`InfoTip`, combine toggle, tap-starts) compiled and built but were not run.
 - The four scrolling edge variations above.
 - Not built, by decision D9: per-phone count, auto-off timer, installer, issue form.
+
+### Follow-up (2026-11-21)
+
+Closed: the "Report a problem" link (`ISSUES_URL`, Settings footer); every story play function was run in Firefox against the built Storybook and passes; idle now shows a one-line character strip with an Edit disclosure (6 dungeon rows at 1280x720, 7 at 390x844); the stale notice sits inside the strip; long names ellipsize; the pairing QR opens as a sheet (Done always visible). No measured variation scrolls the page at 1280x720 or 390x844. Still open: `ADDON_URL` is null.
