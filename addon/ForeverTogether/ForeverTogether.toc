@@ -2,6 +2,7 @@
 ## Title: Forever Together
 ## Notes: Shows your character as a text code and a QR code for the Forever Together app. /wowft
 ## Author: Hugh Kaznowski
+## IconTexture: Interface\AddOns\ForeverTogether\icon
 ## Version: 0.1.0
 
 Codec.lua
