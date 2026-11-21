@@ -15,4 +15,5 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+export const WithHint: Story = { args: { description: undefined, hint: "Phones must be on the same Wi-Fi as this computer." } };
 export const NoDescription: Story = { args: { description: undefined } };
