@@ -25,7 +25,7 @@ mise run dev        # desktop app (Tauri + Vite)
 | `mise run typecheck` | typecheck the web app |
 | `mise run test` | Rust unit and integration tests (about 40 s, the multi-instance tests are slow on purpose) |
 | `mise run lint` | clippy with warnings denied, and a rustfmt check |
-| `mise run test-addon` | build the headless WoW Lua VM and run the addon tests in it |
+| `mise run test-addon` | build the headless WoW Lua VM and run the addon tests in it. The submodule URL is a local path, so git may refuse to clone it ("transport 'file' not allowed"); run `git -c protocol.file.allow=always submodule update --init vendor/wow-forever-addons` once in your own shell |
 | `mise run install-addon` | copy the addon into `$WOW_ADDONS_DIR` (must end in `AddOns`) |
 | `mise run check` | typecheck, lint, test and test-addon: everything CI should run |
 | `mise run build` | bundle the app for this platform |
