@@ -69,3 +69,22 @@ Reading:
 ## Smoke run of the built binary (2026-11-21)
 
 `forever-together --print-public-key` printed a stable 64-hex key, and `--headless` with the default iroh preset ran for 25 s and exited cleanly on SIGINT. Nothing was logged, so this shows only that the process starts and stays up; it does not show relay or DNS reachability. Still unverified: the real window, the live relay and DNS, the live game client, the phone scan and the on-screen addon window.
+
+## Simulation re-run under the revised floor (2026-11-21)
+
+The floor is now measured against what a central greedy build over the whole swarm could place (the `capacity` figure in the report). Re-run of `engine::sim::tests::report` (release, seeded):
+
+| Scenario | Leader, 6 rounds (30 s), share of central-build capacity |
+|---|---|
+| 3000 peers, sample 100, delivery 0.95 | 100.0% |
+| 3000 peers, delivery 0.80 | 99.8% |
+| 3000 peers, delivery 1.00 | 100.0% |
+| 3000 peers, sample 300 | 100.0% |
+| 300 peers | 100.0% |
+| 100 peers | 100.0% |
+| 10000 peers | 99.9% |
+| 3000 peers, 8% tanks | 100.0% |
+| 3000 peers, 30% tanks | 94.7% |
+| 8 seeds, 3000 peers | 97.4% to 99.8% at 3 rounds, all at least 97.4% |
+
+Every row meets the 70% floor within 30 s under the revised measure, including the small and tank-scarce swarms. At 3 rounds (15 s) the lowest row is the 30%-tanks swarm at 77.6%. The old all-peers figures (for example 49.1% at 8% tanks) are capped by the role mix, not by the mechanism. Direct-message loss of 5% without retries costs about 10 points at 3 rounds; one retry restores it, and iroh direct streams are reliable. This is still a model: no live network, no churn.
