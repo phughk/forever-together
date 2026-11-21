@@ -321,7 +321,7 @@ Smallest slice: steps 1 to 5 with the macOS candidate, a Windows guess built fro
 
 ## Resolutions (2026-11-21)
 
-The author accepted decisions 1 to 7 and answered the open questions. They are recorded in [ADR 0028](../adr/0028-the-desktop-app-installs-the-bundled-addon.md).
+The author accepted decisions 1 to 7 and answered the open questions. They are recorded in [ADR 0028](../../adr/0028-the-desktop-app-installs-the-bundled-addon.md).
 
 1. Embed with `build.rs` and `include_bytes!`, no new crate. Accepted.
 2. Stage and swap, replacing the whole `ForeverTogether` folder, so files a player added inside it are removed, like the dev script. Accepted (open question 2: yes, acceptable).
