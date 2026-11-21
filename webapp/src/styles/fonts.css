@@ -1,4 +1,4 @@
-/* Lora (SIL Open Font License, see ../assets/fonts/Lora-OFL.txt), bundled so the app needs no network. Variable weight 400-700. */
+/* Lora (SIL Open Font License, see ../assets/fonts/Lora-OFL.txt), bundled so the app needs no network. Variable weight 400-700. Used for game entity names. */
 @font-face {
   font-family: "Lora";
   src: url("../assets/fonts/Lora-VariableFont_wght.woff2") format("woff2");
@@ -10,6 +10,21 @@
   font-family: "Lora";
   src: url("../assets/fonts/Lora-Italic-VariableFont_wght.woff2") format("woff2");
   font-weight: 400 700;
+  font-style: italic;
+  font-display: swap;
+}
+/* Overpass (SIL Open Font License, see ../assets/fonts/Overpass-OFL.txt), bundled so the app needs no network. Variable weight 100-900. Used for UI text. */
+@font-face {
+  font-family: "Overpass";
+  src: url("../assets/fonts/Overpass-VariableFont_wght.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Overpass";
+  src: url("../assets/fonts/Overpass-Italic-VariableFont_wght.woff2") format("woff2");
+  font-weight: 100 900;
   font-style: italic;
   font-display: swap;
 }
