@@ -1,19 +1,162 @@
-import { invoke } from "@tauri-apps/api/core";
-import { useState } from "react";
-import { Button } from "./components/Button";
+import { useCallback, useEffect, useState } from "react";
+import { describeCodeError, isApiError, isLoopbackOnly } from "./api/errors";
+import type { Api, DungeonsResponse, Settings } from "./api/types";
+import { ApiProvider, useAppState } from "./api/useAppState";
+import { NotPairedPage } from "./components/pages/NotPairedPage";
+import { FinderPage } from "./components/pages/FinderPage";
+import { SettingsPage } from "./components/pages/SettingsPage";
+import type { PairingState } from "./components/organisms/LanSettings";
+import type { View } from "./components/organisms/AppHeader";
 
-export function App() {
-  const [greeting, setGreeting] = useState("");
+const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
+const EMPTY_DUNGEONS: DungeonsResponse = { dungeons: [], recommended: [] };
 
-  async function greet() {
-    setGreeting(await invoke<string>("greet", { name: "world" }));
+function failureText(e: unknown, fallback: string): string {
+  if (isLoopbackOnly(e)) return "That can only be changed in the desktop app.";
+  return isApiError(e) && e.message ? e.message : fallback;
+}
+
+/** Connects the pages to the API: state stream, dungeon list, form state and settings calls. */
+function Container({ api }: { api: Api }) {
+  const { state, status, now } = useAppState(api);
+  const [view, setView] = useState<View>("finder");
+  const [dungeons, setDungeons] = useState<DungeonsResponse>(EMPTY_DUNGEONS);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [dismissedParty, setDismissedParty] = useState<string | null>(null);
+  const [remote, setRemote] = useState(!LOOPBACK.has(window.location.hostname));
+  const [pairing, setPairing] = useState<PairingState>({ kind: "off" });
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+
+  const characterKey = state?.character ? `${state.character.level}|${state.character.zone}|${state.character.createdAt}` : "none";
+  const hasState = state !== null;
+
+  // The dungeon list and recommendations depend on the character, so reload when it changes.
+  useEffect(() => {
+    if (!hasState) return;
+    let cancelled = false;
+    api
+      .getDungeons()
+      .then((d) => !cancelled && setDungeons(d))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [api, hasState, characterKey]);
+
+  const lanMode = state?.settings.lan_mode ?? false;
+  useEffect(() => {
+    if (view !== "settings" || !lanMode) {
+      setPairing({ kind: "off" });
+      return;
+    }
+    let cancelled = false;
+    setPairing({ kind: "loading" });
+    api
+      .getPairing()
+      .then((p) => !cancelled && setPairing({ kind: "ready", url: p.url }))
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        if (isLoopbackOnly(e)) {
+          setRemote(true);
+          setPairing({ kind: "forbidden" });
+        } else {
+          setPairing({ kind: "error", message: failureText(e, "Could not get the pairing link.") });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, view, lanMode]);
+
+  const changeSettings = useCallback(
+    async (patch: Partial<Settings>) => {
+      setSettingsError(null);
+      try {
+        await api.putSettings(patch);
+      } catch (e) {
+        if (isLoopbackOnly(e)) setRemote(true);
+        setSettingsError(failureText(e, "The setting could not be saved."));
+      }
+    },
+    [api],
+  );
+
+  if (status === "unauthorized") return <NotPairedPage />;
+  if (!state) return null;
+
+  const shown = state.party && state.party.phase === "dropped" && state.party.id === dismissedParty ? { ...state, party: null } : state;
+
+  if (view === "settings") {
+    return (
+      <SettingsPage
+        settings={state.settings}
+        status={status}
+        pairing={pairing}
+        remote={remote}
+        error={settingsError}
+        onNavigate={setView}
+        onLanModeChange={(on) => changeSettings({ lan_mode: on })}
+        onResetToken={async () => {
+          try {
+            await api.resetToken();
+          } catch (e) {
+            setSettingsError(failureText(e, "The token could not be reset."));
+          }
+        }}
+        onKnownPeersSizeChange={(n) => changeSettings({ known_peers_size: n })}
+        onAddTrusted={(k) =>
+          changeSettings({ trusted_peers: [...state.settings.trusted_peers.filter((x) => x !== k), k] })
+        }
+        onRemoveTrusted={(k) => changeSettings({ trusted_peers: state.settings.trusted_peers.filter((x) => x !== k) })}
+      />
+    );
   }
 
   return (
-    <main>
-      <h1>template-rust-app</h1>
-      <Button onClick={greet}>Greet from Rust</Button>
-      {greeting && <p>{greeting}</p>}
-    </main>
+    <FinderPage
+      state={shown}
+      dungeons={dungeons}
+      now={now}
+      status={status}
+      selected={selected}
+      codeError={codeError}
+      busy={busy}
+      onNavigate={setView}
+      onSelectionChange={setSelected}
+      onSubmitCode={async (code) => {
+        setBusy(true);
+        setCodeError(null);
+        try {
+          await api.submitCharacter(code);
+        } catch (e) {
+          setCodeError(describeCodeError(e));
+        } finally {
+          setBusy(false);
+        }
+      }}
+      onForgetCharacter={() => api.forgetCharacter().then(() => setSelected([]))}
+      onStartSearch={async (slugs) => {
+        setBusy(true);
+        try {
+          await api.startSearch(slugs);
+        } finally {
+          setBusy(false);
+        }
+      }}
+      onStopSearch={() => api.stopSearch()}
+      onConfirmParty={() => api.confirmParty()}
+      onDeclineParty={() => api.declineParty()}
+      onDismissParty={() => setDismissedParty(state.party?.id ?? null)}
+    />
+  );
+}
+
+export function App({ api }: { api: Api }) {
+  return (
+    <ApiProvider api={api}>
+      <Container api={api} />
+    </ApiProvider>
   );
 }

@@ -1,0 +1,59 @@
+/* Molecules: small groups of atoms with one purpose. */
+
+.ft-field { display: grid; grid-template-columns: minmax(6rem, 9rem) 1fr; gap: var(--space-3); align-items: baseline; padding: var(--space-2) 0; border-bottom: 1px solid var(--border); }
+.ft-field:last-child { border-bottom: 0; }
+.ft-field__label { font-size: 0.85rem; color: var(--text-muted); }
+.ft-field__value { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; overflow-wrap: anywhere; }
+
+.ft-form { display: grid; gap: var(--space-3); }
+.ft-form__row { display: flex; gap: var(--space-2); align-items: stretch; }
+.ft-form__row > .ft-input { flex: 1; min-width: 0; }
+
+.ft-dungeon { display: grid; grid-template-columns: auto 1fr; gap: 0 var(--space-3); align-items: center; padding: var(--space-1) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; }
+.ft-dungeon--disabled { opacity: 0.6; cursor: not-allowed; }
+.ft-dungeon--selected { border-color: var(--accent-solid); background: var(--accent-bg); }
+.ft-dungeon__body { display: grid; gap: 2px; min-width: 0; padding: var(--space-2) 0; }
+.ft-dungeon__name { font-weight: 600; overflow-wrap: anywhere; }
+.ft-dungeon__meta { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; font-size: 0.82rem; color: var(--text-muted); }
+
+.ft-step { display: grid; grid-template-columns: 2rem 1fr auto; gap: var(--space-3); align-items: start; padding: var(--space-2) 0; opacity: 0.55; }
+.ft-step--current, .ft-step--done { opacity: 1; }
+.ft-step__num { display: inline-flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem; border: 1px solid var(--border); border-radius: 50%; font-size: 0.8rem; font-weight: 700; }
+.ft-step--current .ft-step__num { color: var(--on-accent); background: var(--accent-solid); border-color: var(--accent-solid); }
+.ft-step--done .ft-step__num { color: var(--good); border-color: var(--good); }
+.ft-step__title { font-weight: 600; }
+
+.ft-member { display: grid; grid-template-columns: auto 1fr auto; gap: var(--space-3); align-items: center; padding: var(--space-2) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.ft-member--self { border-color: var(--accent-solid); }
+.ft-member__main { min-width: 0; display: grid; gap: 2px; }
+.ft-member__name { font-weight: 600; overflow-wrap: anywhere; }
+.ft-member__claimed { font-size: 0.75rem; font-weight: 400; color: var(--text-muted); }
+.ft-member__meta { font-size: 0.82rem; color: var(--text-muted); }
+.ft-member__status { display: flex; flex-wrap: wrap; gap: var(--space-1); justify-content: flex-end; }
+
+.ft-countdown { display: grid; gap: var(--space-1); }
+.ft-countdown__head { display: flex; justify-content: space-between; gap: var(--space-3); font-size: 0.9rem; }
+.ft-countdown__time { font-variant-numeric: tabular-nums; font-weight: 700; }
+
+.ft-conn { display: inline-flex; align-items: center; gap: var(--space-2); font-size: 0.85rem; color: var(--text-muted); }
+
+.ft-setting { display: flex; justify-content: space-between; gap: var(--space-4); align-items: center; padding: var(--space-3) 0; border-bottom: 1px solid var(--border); }
+.ft-setting:last-child { border-bottom: 0; }
+.ft-setting__text { display: grid; gap: 2px; min-width: 0; }
+.ft-setting__title { font-weight: 600; }
+
+.ft-pairing { display: grid; gap: var(--space-3); justify-items: start; }
+.ft-pairing__url { max-width: 100%; word-break: break-all; }
+
+.ft-peer { display: flex; align-items: center; gap: var(--space-3); justify-content: space-between; padding: var(--space-1) 0; }
+.ft-peer__key { font-family: var(--mono); font-size: 0.8rem; min-width: 0; overflow-wrap: anywhere; }
+
+.ft-confirm-action { display: grid; gap: var(--space-2); justify-items: start; }
+.ft-confirm-action__row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+@media (max-width: 30rem) {
+  .ft-field { grid-template-columns: 1fr; gap: 0; }
+  .ft-member { grid-template-columns: auto 1fr; }
+  .ft-member__status { grid-column: 1 / -1; justify-content: flex-start; }
+  .ft-setting { flex-direction: column; align-items: flex-start; }
+}

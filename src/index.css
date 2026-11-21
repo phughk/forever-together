@@ -1,12 +1,22 @@
+@import "./styles/tokens.css";
+@import "./styles/atoms.css";
+@import "./styles/molecules.css";
+@import "./styles/organisms.css";
+@import "./styles/templates.css";
+
 :root {
-  color-scheme: light dark;
-  font-family: system-ui, sans-serif;
+  font-family: var(--font);
 }
+
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
   margin: 0;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.4;
 }
 
-main {
-  padding: max(1rem, env(safe-area-inset-top)) 1rem 1rem;
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
 }
