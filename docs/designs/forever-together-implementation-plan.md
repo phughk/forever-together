@@ -120,8 +120,11 @@ Every route except the static files needs `Authorization: Bearer <token>`. The t
 | `GET /api/settings` / `PUT /api/settings` | read or change user settings. `lan_mode` and `trusted_peers` are loopback only. |
 | `GET /api/pairing` (loopback) | the pairing URL |
 | `POST /api/token/reset` (loopback) | new token, un-pairs every phone. The desktop window reloads and receives the new token. |
+| `GET /api/addon` (loopback) | addon install status: bundled version, folder, candidates, installed version, `status` (ADR 0028) |
+| `PUT /api/addon/folder` `{folder}` (loopback) | validate and save the AddOns folder as `addon_dir` |
+| `POST /api/addon/install` (loopback) | install the bundled addon into the saved folder by stage and swap; no path in the body |
 
-Loopback-only routes: `GET /api/pairing`, `POST /api/token/reset`, `DELETE /api/history`, and writes to `lan_mode` and `trusted_peers`. Loopback is decided by the socket's peer address. Changing `lan_mode` restarts the listener. Embedded files are served through Tauri's asset resolver.
+Loopback-only routes: `GET /api/pairing`, `POST /api/token/reset`, `DELETE /api/history`, `GET /api/addon`, `PUT /api/addon/folder`, `POST /api/addon/install`, and writes to `lan_mode` and `trusted_peers`. Loopback is decided by the socket's peer address. Changing `lan_mode` restarts the listener. Embedded files are served through Tauri's asset resolver.
 
 ## Target files
 
@@ -149,7 +152,7 @@ Each path appears once and is marked Create, Modify or Delete.
 15. `app/Cargo.toml`, `app/Cargo.lock` (Modify). Rename the package. Dependencies `iroh`, `iroh-gossip`, `tokio`, `axum`, `serde`, `postcard`, `serde_json`, `varaq`, `rand`, `sha2`, `data-encoding`, `clap`, `tracing`. **Versions and features are pinned when step 3 starts** (open: a crate for the OS keychain, only needed if S0 chooses it; base45 is hand-written). Check that no OpenSSL dependency is pulled in.
 16. `app/tauri.conf.json`, `app/capabilities/default.json` (Modify). Rename the identifier and product. No static windows. The window is created in code, loads the local URL, and has no IPC capabilities.
 17. `app/src/main.rs`, `app/src/lib.rs` (Modify). Flags `--headless`, `--print-public-key`, `--data-dir`. Window mode starts the runtime, loads the identity, starts network and server, then opens `http://127.0.0.1:<port>/#token=<token>`. Headless mode starts the network with a large known-peers cache and no server.
-18. `app/src/config.rs` (Create). The constants and settings above, loading and saving user settings.
+18. `app/src/config.rs` (Create). The constants and settings above, loading and saving user settings. `addon_dir: Option<String>` holds the AddOns folder for the addon installer (ADR 0028, loopback only).
 19. `app/src/identity.rs` (Create). Load or create the secret key once, keep it, expose the peer ID.
 20. `app/src/code.rs` (Create). Decode and validate per the spec, plus a test-only encoder.
 21. `app/src/dungeons.rs` (Create) and `app/data/dungeons.json` (Create, committed by the author before step 3). Recommendation per the spec and `topics_for(character, dungeons) -> Vec<TopicId>`.
@@ -157,6 +160,7 @@ Each path appears once and is marked Create, Modify or Delete.
 23. `app/src/net/` (Create: `mod.rs`, `iroh_net.rs`, `gossip.rs`, `exchange.rs`, `bootstrap.rs`, `known_peers.rs`, `trusted.rs`, `fake.rs`). `known_peers.rs` reserves cache slots for the player's active topics before applying least-recently-used eviction. `bootstrap.rs` never contacts a trusted peer while an earlier step works. `trusted.rs` holds the built-in keys (empty until the author supplies one) and takes a `Vec<PeerId>` so tests pass their own.
 24. `app/src/store/` (Create: `mod.rs`, `varaq_store.rs`, `mem.rs`). Keys: `identity/secret`, `known_peers/<peerId>`, `settings`, `api/token`, `character`, `history/<start UTC seconds>` (ADR 0027).
 24a. `app/src/history.rs` (Create). Search history entries over the store: `record`, `prune` (180 days, 100 per dungeon, 500 total), `clear`, with the checkpoint and outcome rules of ADR 0027. The engine emits `SearchFacts`; the app layer records them.
+24b. `app/build.rs` (Create), `app/src/addon_install.rs` (Create), `app/src/server/addon_routes.rs` (Create). The build script embeds `addon/ForeverTogether/` as a table of `include_bytes!` entries. The module detects the AddOns folder, reports status and installs by stage and swap with folder containment rules. The routes translate HTTP to the module (ADR 0028).
 25. `app/src/server/` (Create: `mod.rs`, `routes.rs`, `auth.rs`, `static_files.rs`, `events.rs`, `pairing.rs`). Serves files from `WOWFT_WEB_DIR` first (path normalized so it cannot leave the folder, `/api` never overridden), then the embedded files. Pairing URL `http://<lan-ip>:<port>/#token=<token>`, with the LAN address chosen as the first private IPv4 address of the active interface.
 26. `src/` (web app: Create components and stories, Modify `App.tsx`, `main.tsx`, `index.css`), `index.html` (Modify), `vite.config.ts` (Modify only if needed), `.storybook/` (Modify only if needed). Atomic design per `CLAUDE.md`. `src/api/` holds the client, types and the state hook with token handling and the event stream. Page stories cover: first run, a stale code, an unknown code version, an unknown zone, no recommendations, a long first name and surname, a quiet topic at the last stage, a party where one member has not confirmed (Ready received, Confirm not), phone width. The settings page shows only the user settings (LAN mode, token reset, known-peers size, trusted peers).
 27. `app/tests/` and inline `#[cfg(test)]` modules (Create). See the Verification Plan.

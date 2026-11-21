@@ -316,3 +316,40 @@ Stays unverified until then: the Forever folder layout beyond the author's macOS
 ### Smallest slice and deferrals
 
 Smallest slice: steps 1 to 5 with the macOS candidate, a Windows guess built from environment variables, and the paste field. Deferred: native dialog, Linux detection, Battle.net hints, drag and drop, first-run integration, installed-file manifest.
+
+## Resolutions (2026-11-21)
+
+The author accepted decisions 1 to 7 and answered the open questions. They are recorded in [ADR 0028](../adr/0028-the-desktop-app-installs-the-bundled-addon.md).
+
+1. Embed with `build.rs` and `include_bytes!`, no new crate. Accepted.
+2. Stage and swap, replacing the whole `ForeverTogether` folder, so files a player added inside it are removed, like the dev script. Accepted (open question 2: yes, acceptable).
+3. Three loopback-only routes, no path in the install body, only `addon_dir` in settings. Accepted.
+4. v1 picker is detection plus a pasted path. A server-side native dialog is stage 2. Accepted.
+5. Candidates are `_forever_` only. A detected folder is confirmed once before the first write. Accepted.
+6. A byte-comparison status `files_differ` besides the version status. Accepted.
+7. The Addon card sits between the Phone link card and Advanced. Accepted.
+
+Open questions:
+
+1. "Installed newer" uses the same single button ("Install 0.x anyway"), with no second click.
+2. Replacing the whole folder is accepted (see 2 above).
+3. The first-run "Get the addon" step stays unchanged in this slice.
+4. `mise run install-addon` and `scripts/install-addon.sh` stay as they are: a development convenience, not part of the app. The README tasks row and the script header say the script is for developers and the Settings Addon card is for players. `_forever_` is the only detected flavour.
+
+Notes: the author bumps the `## Version:` in the addon `.toc` by hand, and players use release builds (GitHub tags and release artifacts the author adds), so "installed newer" is rare.
+
+Still unverified until a live run on a real install: the Forever folder layout beyond the author's macOS machine, the Windows and Linux defaults, game behaviour during an in-place swap, Windows locking and admin rights, and dot-prefixed folders being ignored.
+
+## Implementation status
+
+Updated by the integrator. Build order from above:
+
+| Step | Work | Status |
+| --- | --- | --- |
+| 1 | ADR 0028 and the contract | done (docs) |
+| 2 | Pure module and bundle (`app/build.rs`, `app/src/addon_install.rs`, tests) | pending |
+| 3 | Routes, settings field, core wiring | pending |
+| 4 | Webapp (molecules, organism, API client, mock API, stories) | pending |
+| 5 | Docs and script note | done (docs, script comment) |
+| 6 | Manual run on the real install | pending |
+| 7 | Stage 2: native dialog route, extra candidates, first-run integration | pending |

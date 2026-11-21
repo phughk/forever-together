@@ -22,7 +22,7 @@ Findings in one paragraph: the finder and settings screens explain themselves in
 - Delete the five-row stage list and the "Network" field from the search card (zoom-out, comprehension, inventive, structural). Stage 1 is a no-op in v1, and the row text says so ("no change in v1").
 - Shrink the nine-field character card to a one-line summary with a Stale badge kept outside any collapsed part (all except implementation).
 - Move Peers (known-peers size, trusted peers) and Search history behind a collapsed Advanced section. Merge LAN mode and token into one "Phone access" card (design, zoom-out, comprehension, inventive, structural).
-- Replace the addon paragraph with a state-driven first run (design, comprehension, structural, inventive). The app cannot know whether the addon is installed. The only fact it has is `character === null` (codebase-details, implementation). So the first-run state can say "Paste your code", it cannot tick "addon installed".
+- Replace the addon paragraph with a state-driven first run (design, comprehension, structural, inventive). The app cannot know whether the addon is installed. The only fact it has is `character === null` (codebase-details, implementation). So the first-run state can say "Paste your code", it cannot tick "addon installed". *(Update 2026-11-21: the installer feature, ADR 0028, changes this. The app can read the installed addon version once a folder is known. The first-run "Get the addon" step is unchanged in this slice.)*
 - Third-person wording ("this computer sees", "this app did not reach", "The app does not know the zone") should go (comprehension, design).
 
 ### Where they disagree
@@ -81,7 +81,7 @@ Goals
 
 Non-goals
 
-- No in-app addon installer, no GitHub release tracking, no issue-report form, no x/y location (from `ui_notes.txt`; separate features). A plain static link to the addon page and a plain "Report a problem" link are allowed.
+- No in-app addon installer, no GitHub release tracking, no issue-report form, no x/y location (from `ui_notes.txt`; separate features). A plain static link to the addon page and a plain "Report a problem" link are allowed. *(Update 2026-11-21: the installer feature, ADR 0028, changes this. The app can read the installed addon version once a folder is known. The first-run "Get the addon" step is unchanged in this slice.)*
 - No new server fields. Per-phone counts, auto-off timers and an "addon installed" flag are out.
 - No change to matching, widening or diagnosis logic. Presentation and copy only.
 - No new routing or screens beyond what the viewport fit needs.
@@ -131,7 +131,7 @@ Severity: High means a first-run or core-flow player is blocked or misled. Mediu
 ### Decisions for the author
 
 - D1. Multi-select: keep it behind a "Combine dungeons" toggle (recommended), or drop it. One accidental tap now starts a search. Stop is one tap, and the choice is frozen while searching, so say if that is acceptable.
-- D2. First-run: accept that the app can only show "Paste your code", never "addon not installed", unless a server field is added later. Supply the addon link URL.
+- D2. First-run: accept that the app can only show "Paste your code", never "addon not installed", unless a server field is added later. Supply the addon link URL. *(Update 2026-11-21: the installer feature, ADR 0028, changes this. The app can read the installed addon version once a folder is known. The first-run "Get the addon" step is unchanged in this slice.)*
 - D3. On a phone, show Advanced read-only, or hide it. Today a phone can change only `known_peers_size`.
 - D4. Choose the word for trusted peers ("Backup contacts" is a placeholder) and for the phone link ("Phone link" versus "Use on your phone").
 - D5. Info tap text: hard cap near 160 characters, string only, and it may hold only what the screen cannot show. Agree the rule that if removing an info tap would not change what the player does, the content should have been a visual or a label.
@@ -145,14 +145,14 @@ Severity: High means a first-run or core-flow player is blocked or misled. Mediu
 The author asked for every open decision to be handled and the work driven to completion. Each decision takes the brief's own recommendation. All are revisable.
 
 - **D1.** Click-to-search for one dungeon, with multi-select behind a "Combine dungeons" toggle. The choice is frozen while searching; Stop stays one tap.
-- **D2.** The first run shows "Paste your code" and never claims to know whether the addon is installed. No addon link URL was supplied, so the link lives in one constant (`ADDON_URL`) that is empty for now. While it is empty, step 1 renders as plain text without a link. Supply the URL there.
+- **D2.** The first run shows "Paste your code" and never claims to know whether the addon is installed. No addon link URL was supplied, so the link lives in one constant (`ADDON_URL`) that is empty for now. While it is empty, step 1 renders as plain text without a link. Supply the URL there. *(Update 2026-11-21: the installer feature, ADR 0028, changes this. The app can read the installed addon version once a folder is known. The first-run "Get the addon" step is unchanged in this slice.)*
 - **D3.** On a phone, Advanced is shown read-only, with a lock icon on each control that only the desktop may change.
 - **D4.** "Backup contacts" for trusted peers, "Phone link" for the LAN feature. Rename table below stands.
 - **D5.** InfoTip text is a string, capped at about 160 characters. If removing an info tap would not change what the player does, the content should have been a visual or a label.
 - **D6.** Approved: the hedge moves to the label "Seen from here" and `~`. ADR 0026 gets a dated note.
 - **D7.** One "Searching wider" chip, the rules in an info tap, no countdown to the next step.
 - **D8.** Advanced section first. Tabs only if Settings still scrolls at 1280x720 afterwards.
-- **D9.** Confirmed out of scope: per-phone count, auto-off timer, installer, issue form.
+- **D9.** Confirmed out of scope: per-phone count, auto-off timer, installer, issue form. *(Update 2026-11-21: the installer feature, ADR 0028, changes this. The app can read the installed addon version once a folder is known. The first-run "Get the addon" step is unchanged in this slice.)*
 
 ### Rename table (proposal for D4 and #16)
 
@@ -223,7 +223,7 @@ Open:
 - `ADDON_URL` in `webapp/src/lib/links.ts` is null. Supply the addon page URL; until then step 1 of the first run shows as plain text.
 - The story play functions (`InfoTip`, combine toggle, tap-starts) compiled and built but were not run.
 - The four scrolling edge variations above.
-- Not built, by decision D9: per-phone count, auto-off timer, installer, issue form.
+- Not built, by decision D9: per-phone count, auto-off timer, installer, issue form. *(Update 2026-11-21: the installer feature, ADR 0028, changes this. The app can read the installed addon version once a folder is known. The first-run "Get the addon" step is unchanged in this slice.)*
 
 ### Follow-up (2026-11-21)
 
