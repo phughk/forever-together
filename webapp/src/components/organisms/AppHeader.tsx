@@ -1,7 +1,6 @@
 import type { ConnectionStatus as Status } from "../../api/types";
 import "../../styles/party.css";
 import { Button } from "../atoms/Button";
-import { Heading } from "../atoms/Typography";
 import { ConnectionStatus } from "../molecules/ConnectionStatus";
 
 export type View = "finder" | "settings";
@@ -21,29 +20,32 @@ function GearIcon() {
   );
 }
 
-/** One row: the title and the online dot on the left, Finder and a Settings icon on the right. */
+function BackIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M19 12H5M11 6l-6 6 6 6" />
+    </svg>
+  );
+}
+
+/**
+ * One slim row with only what carries information: a Settings gear on the finder, a Back arrow on Settings,
+ * and a connection chip that appears only when the connection is not fine.
+ */
 export function AppHeader({ view, onNavigate, status }: AppHeaderProps) {
   return (
-    <header className="ft-header ft-header--one-row">
-      <div className="ft-header__brand ft-header__brand--row">
-        <Heading level={1} as="h1">
-          forever-together
-        </Heading>
-        <ConnectionStatus status={status} />
-      </div>
-      <nav className="ft-header__nav" aria-label="Main">
-        <Button aria-current={view === "finder" ? "page" : undefined} onClick={() => onNavigate("finder")}>
-          Finder
+    <header className={`ft-header ft-header--${view}`}>
+      {view === "settings" && (
+        <Button className="ft-button--icon" aria-label="Back" onClick={() => onNavigate("finder")}>
+          <BackIcon />
         </Button>
-        <Button
-          className="ft-button--icon"
-          aria-label="Settings"
-          aria-current={view === "settings" ? "page" : undefined}
-          onClick={() => onNavigate("settings")}
-        >
+      )}
+      <ConnectionStatus status={status} />
+      {view === "finder" && (
+        <Button className="ft-button--icon ft-header__gear" aria-label="Settings" onClick={() => onNavigate("settings")}>
           <GearIcon />
         </Button>
-      </nav>
+      )}
     </header>
   );
 }
