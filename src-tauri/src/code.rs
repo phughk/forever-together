@@ -182,17 +182,9 @@ impl<'a> Reader<'a> {
 /// character and must survive inside the text.
 pub fn decode(text: &str) -> Result<Character, CodeError> {
     let text = text.trim();
-    let body = match text.strip_prefix(PREFIX) {
-        Some(b) => b,
-        None => {
-            // "WFT<digit>:" with another digit is a future version.
-            let b = text.as_bytes();
-            if b.len() >= 5 && &b[..3] == b"WFT" && b[3].is_ascii_digit() && b[4] == b':' {
-                return Err(CodeError::UnknownVersion);
-            }
-            return Err(CodeError::BadText);
-        }
-    };
+    // Another prefix is `BadText` (spec "Errors"): a future version is reported from the version
+    // byte of a record with the right prefix, never from the prefix text.
+    let body = text.strip_prefix(PREFIX).ok_or(CodeError::BadText)?;
     let rec = base45_decode(body)?;
     decode_record(&rec)
 }
@@ -442,7 +434,8 @@ mod tests {
             decode(&format!("{PREFIX}{}", base45_encode(&v2))),
             Err(CodeError::UnknownVersion)
         );
-        assert_eq!(decode("WFT2:ABC"), Err(CodeError::UnknownVersion));
+        // A wrong prefix is BadText; a future version shows in the version byte (vectors).
+        assert_eq!(decode("WFT2:ABC"), Err(CodeError::BadText));
         // bad text
         assert_eq!(decode("hello"), Err(CodeError::BadText));
         assert_eq!(decode("WFT1:abc"), Err(CodeError::BadText));
@@ -497,46 +490,320 @@ mod tests {
         assert!(encode(&sample_character()).len() <= 122);
     }
 
-    /// Shared vectors in `docs/rdf-code-vectors.json` (created by plan step 1). Skipped with a
-    /// message while the file is absent. The assumed shape, until the file exists: an object
-    /// with `cases`, each `{ name, text, error? }` where `error` is an error name and a case
-    /// without `error` must decode.
-    #[test]
-    fn shared_vectors() {
+    // ---- Shared vectors: docs/rdf-code-vectors.json (also read by the addon tests) ----
+
+    use serde_json::Value;
+
+    fn vectors() -> Value {
         let path =
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/rdf-code-vectors.json");
-        let Ok(raw) = std::fs::read_to_string(&path) else {
-            eprintln!(
-                "SKIPPED shared_vectors: {} does not exist yet (plan step 1)",
-                path.display()
+        let raw = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
+        serde_json::from_str(&raw).expect("vectors file is JSON")
+    }
+
+    fn list<'a>(v: &'a Value, key: &str) -> &'a Vec<Value> {
+        let a = v[key]
+            .as_array()
+            .unwrap_or_else(|| panic!("`{key}` is not an array"));
+        assert!(!a.is_empty(), "`{key}` is empty");
+        a
+    }
+
+    fn s<'a>(v: &'a Value, key: &str) -> &'a str {
+        v[key]
+            .as_str()
+            .unwrap_or_else(|| panic!("`{key}` missing in {v}"))
+    }
+
+    fn hex(h: &str) -> Vec<u8> {
+        data_encoding::HEXLOWER.decode(h.as_bytes()).unwrap()
+    }
+
+    /// The vocabulary of the vectors: `Name` or `InvalidField(field)`.
+    fn describe(e: &CodeError) -> String {
+        match e {
+            CodeError::InvalidField(f) => format!("InvalidField({f})"),
+            other => other.name().to_owned(),
+        }
+    }
+
+    fn int(f: &Value, key: &'static str, max: u64) -> Result<u64, CodeError> {
+        let n = f[key].as_u64().unwrap_or(u64::MAX);
+        if n > max {
+            return Err(CodeError::InvalidField(key));
+        }
+        Ok(n)
+    }
+
+    fn text_field(
+        f: &Value,
+        key: &'static str,
+        min: usize,
+        max: usize,
+    ) -> Result<String, CodeError> {
+        let t = f[key].as_str().ok_or(CodeError::InvalidField(key))?;
+        if t.len() < min || t.len() > max {
+            return Err(CodeError::InvalidField(key));
+        }
+        Ok(t.to_owned())
+    }
+
+    /// What an encoder must accept: vector `fields` to a `Character`, or the encode error.
+    fn character_from_fields(f: &Value) -> Result<Character, CodeError> {
+        let faction = match f["faction"].as_str() {
+            Some("alliance") => Faction::Alliance,
+            Some("horde") => Faction::Horde,
+            _ => return Err(CodeError::InvalidField("faction")),
+        };
+        let level = int(f, "level", 255)?;
+        if level == 0 {
+            return Err(CodeError::InvalidField("level"));
+        }
+        Ok(Character {
+            role: Role::from_bits(int(f, "role", 3)? as u8),
+            secondary_role: Role::from_bits(int(f, "secondaryRole", 3)? as u8),
+            faction,
+            class: int(f, "class", 255)? as u8,
+            race: int(f, "race", 255)? as u8,
+            level: level as u8,
+            item_level: int(f, "itemLevel", 65535)? as u16,
+            spec: int(f, "spec", 65535)? as u16,
+            created_minutes: int(f, "created", u32::MAX as u64)? as u32,
+            counter: int(f, "counter", 65535)? as u16,
+            region: int(f, "region", 255)? as u8,
+            realm: text_field(f, "realm", 1, MAX_NAME)?,
+            first_name: text_field(f, "firstName", 1, MAX_NAME)?,
+            surname: text_field(f, "surname", 1, MAX_NAME)?,
+            zone: text_field(f, "zone", 0, MAX_ZONE)?,
+        })
+    }
+
+    /// Every category of the file is exercised: a category the tests do not know fails.
+    #[test]
+    fn shared_vectors_cover_every_category() {
+        let v = vectors();
+        let handled = [
+            "_comment",
+            "prefix",
+            "base45",
+            "base45_errors",
+            "crc16",
+            "records",
+            "decode_errors",
+            "paste",
+            "encode_errors",
+            "counter_wrap",
+            "limits",
+            "qr",
+            "qr_capacity_alnum_m",
+            "qr_errors",
+        ];
+        for k in v.as_object().unwrap().keys() {
+            assert!(
+                handled.contains(&k.as_str()),
+                "vector category `{k}` is not tested"
             );
-            return;
-        };
-        let v: serde_json::Value = serde_json::from_str(&raw).expect("vectors file is JSON");
-        let cases = v
-            .get("cases")
-            .and_then(|c| c.as_array())
-            .or_else(|| v.as_array());
-        let Some(cases) = cases else {
-            eprintln!("SKIPPED shared_vectors: file has no recognised `cases` array");
-            return;
-        };
-        for case in cases {
-            let Some(text) = case.get("text").and_then(|t| t.as_str()) else {
-                continue;
-            };
-            let name = case.get("name").and_then(|n| n.as_str()).unwrap_or("?");
-            let expected = case
-                .get("error")
-                .or_else(|| case.get("err"))
-                .and_then(|e| e.as_str());
-            match (expected, decode(text)) {
-                (None, Ok(_)) => {}
-                (Some(e), Err(got)) => {
-                    assert_eq!(got.name(), e.split('(').next().unwrap(), "case {name}")
+        }
+        for k in handled {
+            assert!(v.get(k).is_some(), "vector category `{k}` disappeared");
+        }
+        assert_eq!(s(&v, "prefix"), PREFIX);
+    }
+
+    #[test]
+    fn shared_vectors_base45() {
+        let v = vectors();
+        for c in list(&v, "base45") {
+            let name = s(c, "name");
+            assert_eq!(
+                base45_decode(s(c, "text")).unwrap(),
+                hex(s(c, "hex")),
+                "{name}"
+            );
+            assert_eq!(base45_encode(&hex(s(c, "hex"))), s(c, "text"), "{name}");
+        }
+        for c in list(&v, "base45_errors") {
+            assert_eq!(
+                base45_decode(s(c, "text")),
+                Err(CodeError::BadText),
+                "{}",
+                s(c, "name")
+            );
+        }
+    }
+
+    #[test]
+    fn shared_vectors_crc16() {
+        for c in list(&vectors(), "crc16") {
+            assert_eq!(
+                crc16(&hex(s(c, "hex"))) as u64,
+                c["crc"].as_u64().unwrap(),
+                "{}",
+                s(c, "name")
+            );
+        }
+    }
+
+    #[test]
+    fn shared_vectors_records_decode_and_encode() {
+        let v = vectors();
+        let mut min = usize::MAX;
+        let mut max = 0;
+        for c in list(&v, "records") {
+            let name = s(c, "name");
+            let want =
+                character_from_fields(&c["fields"]).unwrap_or_else(|e| panic!("{name}: {e}"));
+            let bytes = hex(s(c, "hex"));
+            min = min.min(bytes.len());
+            max = max.max(bytes.len());
+            assert_eq!(decode(s(c, "text")).as_ref(), Ok(&want), "decode {name}");
+            assert_eq!(
+                decode_record(&bytes).as_ref(),
+                Ok(&want),
+                "decode_record {name}"
+            );
+            assert_eq!(encode_record(&want), bytes, "encode_record {name}");
+            assert_eq!(encode(&want), s(c, "text"), "encode {name}");
+        }
+        let lim = &v["limits"];
+        assert_eq!(MIN_RECORD as u64, lim["min_record_bytes"].as_u64().unwrap());
+        assert_eq!(min as u64, lim["min_record_bytes"].as_u64().unwrap());
+        assert_eq!(max as u64, lim["max_record_bytes"].as_u64().unwrap());
+    }
+
+    #[test]
+    fn shared_vectors_decode_errors() {
+        let mut seen = std::collections::BTreeSet::new();
+        for c in list(&vectors(), "decode_errors") {
+            let name = s(c, "name");
+            let want = s(c, "error");
+            match decode(s(c, "text")) {
+                Err(e) => assert_eq!(describe(&e), want, "{name}"),
+                Ok(_) => panic!("{name}: expected {want}, decoded fine"),
+            }
+            seen.insert(want.split('(').next().unwrap().to_owned());
+        }
+        // The whole vocabulary is present in the vectors.
+        for n in [
+            "UnknownVersion",
+            "BadCheck",
+            "Truncated",
+            "BadText",
+            "TrailingBytes",
+            "InvalidField",
+        ] {
+            assert!(seen.contains(n), "no decode_errors vector for {n}");
+        }
+    }
+
+    #[test]
+    fn shared_vectors_paste() {
+        for c in list(&vectors(), "paste") {
+            let name = s(c, "name");
+            let clean = decode(s(c, "text")).unwrap();
+            assert_eq!(decode(s(c, "pasted")), Ok(clean), "{name}");
+        }
+    }
+
+    #[test]
+    fn shared_vectors_encode_errors() {
+        for c in list(&vectors(), "encode_errors") {
+            let name = s(c, "name");
+            match character_from_fields(&c["fields"]) {
+                Err(e) => assert_eq!(describe(&e), s(c, "error"), "{name}"),
+                Ok(_) => panic!("{name}: expected {}, accepted", s(c, "error")),
+            }
+        }
+    }
+
+    #[test]
+    fn shared_vectors_counter_wrap() {
+        let v = vectors();
+        let w = &v["counter_wrap"];
+        let (from, to) = (
+            w["from"].as_u64().unwrap() as u16,
+            w["to"].as_u64().unwrap() as u16,
+        );
+        // Both ends survive the code, and the engine treats the wrapped counter as newer.
+        let mut c = sample_character();
+        c.counter = from;
+        assert_eq!(decode(&encode(&c)).unwrap().counter, from);
+        c.counter = to;
+        assert_eq!(decode(&encode(&c)).unwrap().counter, to);
+        assert!(crate::engine::ad::counter_newer(to, from));
+        assert!(!crate::engine::ad::counter_newer(from, to));
+    }
+
+    /// The app does not draw the character QR (the addon does), so the Rust side checks what it
+    /// owns: the sizes the vectors promise, the capacity table, and that each matrix is a
+    /// well-formed square for the smallest version that fits its text.
+    #[test]
+    fn shared_vectors_qr_shape_and_capacity() {
+        let v = vectors();
+        let cap_table = v["qr_capacity_alnum_m"].as_object().unwrap();
+        let cap = |ver: u64| cap_table[&ver.to_string()].as_u64().unwrap() as usize;
+        assert_eq!(cap_table.len(), 10);
+        for (ver, want) in (1..=10).zip([20, 38, 61, 90, 122, 154, 178, 221, 262, 311]) {
+            assert_eq!(cap(ver), want, "capacity of version {ver}");
+        }
+        assert!(encode(&sample_character()).len() <= cap(5));
+        for c in list(&v, "records") {
+            assert!(s(c, "text").len() <= cap(8), "{}", s(c, "name"));
+        }
+        for c in list(&v, "qr") {
+            let name = s(c, "name");
+            let ver = c["version"].as_u64().unwrap();
+            let size = c["size"].as_u64().unwrap() as usize;
+            let text = s(c, "text");
+            assert_eq!(size as u64, 17 + 4 * ver, "{name}");
+            assert!(text.len() <= cap(ver), "{name}: text does not fit");
+            assert!(
+                ver == 1 || text.len() > cap(ver - 1),
+                "{name}: not the smallest version"
+            );
+            assert!(c["mask"].as_u64().unwrap() < 8, "{name}");
+            let rows = c["rows"].as_array().unwrap();
+            assert_eq!(rows.len(), size, "{name}");
+            for r in rows {
+                let r = r.as_str().unwrap();
+                assert_eq!(r.len(), size, "{name}");
+                assert!(r.bytes().all(|b| b == b'0' || b == b'1'), "{name}");
+            }
+            // Finder patterns: the 7x7 ring and 3x3 core at three corners, and the dark module.
+            let at = |r: usize, c: usize| rows[r].as_str().unwrap().as_bytes()[c] == b'1';
+            for (r0, c0) in [(0, 0), (0, size - 7), (size - 7, 0)] {
+                for i in 0..7 {
+                    for j in 0..7 {
+                        let ring = i == 0 || i == 6 || j == 0 || j == 6;
+                        let core = (2..=4).contains(&i) && (2..=4).contains(&j);
+                        assert_eq!(at(r0 + i, c0 + j), ring || core, "{name} finder");
+                    }
                 }
-                (None, Err(got)) => panic!("case {name}: expected success, got {got:?}"),
-                (Some(e), Ok(_)) => panic!("case {name}: expected {e}, decoded fine"),
+            }
+            assert!(at(4 * ver as usize + 9, 8), "{name}: dark module");
+        }
+    }
+
+    #[test]
+    fn shared_vectors_qr_errors() {
+        let v = vectors();
+        let max = v["qr_capacity_alnum_m"]["10"].as_u64().unwrap() as usize;
+        for c in list(&v, "qr_errors") {
+            let name = s(c, "name");
+            let text = s(c, "text");
+            match s(c, "error") {
+                // Valid alphanumeric text longer than version 10 holds.
+                "TooLong" => {
+                    assert!(text.len() > max, "{name}");
+                    assert!(text.bytes().all(|b| BASE45.contains(&b)), "{name}");
+                }
+                // Not encodable in alphanumeric mode: empty, or characters outside it.
+                "BadText" => assert!(
+                    text.is_empty() || !text.bytes().all(|b| BASE45.contains(&b)),
+                    "{name}"
+                ),
+                other => panic!("{name}: unknown QR error {other}"),
             }
         }
     }
