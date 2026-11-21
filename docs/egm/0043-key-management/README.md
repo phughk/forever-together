@@ -11,6 +11,6 @@ Covers tickets 0003, 0008, 0009, 0043 and 0044: how the app stores, exports, imp
 
 ## Files
 
-* `brief.md`
+* `design_draft.md` (no brief: drafted from tickets and code)
 * `reviews/`
 * `resolutions.md`
