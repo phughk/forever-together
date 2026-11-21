@@ -13,7 +13,7 @@ Encrypt the exported scan log to `net::trusted::BUILTIN[0]` (ADR 0038 amendment)
 * Decide: reuse the trusted peer's Ed25519 key (converted to X25519) or ship a dedicated intake key beside it. Default in the ADR is a sealed box on the converted key.
 * File: header (format version, recipient key id) plus ciphertext, suffix `.wowft-scans`. No plain export. Export unavailable until `BUILTIN` has a key (ticket 0008).
 * Review step: show the player what will be sent before it is encrypted.
-* A decrypt tool for the author, in the CLI (reads the private key from a key file, prints the JSON), tested with invented characters.
+* No decrypt command in the app: the author decrypts with `age -d -i <exported key>`. Add a round-trip test (encrypt with the recipient code, decrypt with an identity loaded from the exported OpenSSH file), using invented characters.
 
 ## Done when
 
