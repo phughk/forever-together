@@ -1,0 +1,15 @@
+/* Lora (SIL Open Font License, see ../assets/fonts/Lora-OFL.txt), bundled so the app needs no network. Variable weight 400-700. */
+@font-face {
+  font-family: "Lora";
+  src: url("../assets/fonts/Lora-VariableFont_wght.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Lora";
+  src: url("../assets/fonts/Lora-Italic-VariableFont_wght.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: italic;
+  font-display: swap;
+}
