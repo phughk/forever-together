@@ -211,3 +211,16 @@ Other risks: the audit's rename table changes wording that ADRs and the design d
 3. State-driven first run in place of the addon paragraph, with no dead dungeon list (#3).
 4. One-line character summary in place of nine fields (#4).
 5. Settings: merge phone access, token and QR into one "Phone link" card with a one-sentence warning, and move Peers and history behind Advanced (#5, #6, #11).
+
+## Implementation status (2026-11-21)
+
+All 16 ranked items are implemented and merged: batch 0 (`InfoTip`, `Details`, `hint` on `Card` and `SettingRow`), batch 1 (Settings, search card and diagnosis, dungeon list and first run, party and header) and batch 2 (one screen per state, wiring, cleanup, jargon sweep). Typecheck, `build-storybook` and `build` pass.
+
+Measured in Firefox against the built Storybook, at 1280x720 and 390x844: first run, idle, searching, party found, party final, ended, Settings and not-paired fit the viewport with the primary action visible. Page-level scroll remains in five edge variations (out-of-date code notice on idle at both sizes, idle with the longest names on a phone, Settings with the QR open at both sizes); the primary action stays in view in each. Only one screenshot was looked at; the rest is numbers.
+
+Open:
+
+- `ADDON_URL` in `webapp/src/lib/links.ts` is null. Supply the addon page URL; until then step 1 of the first run shows as plain text.
+- The story play functions (`InfoTip`, combine toggle, tap-starts) compiled and built but were not run.
+- The four scrolling edge variations above.
+- Not built, by decision D9: per-phone count, auto-off timer, installer, issue form.
