@@ -7,7 +7,8 @@ Layout of a folder:
 ```
 NNNN-slug/
   README.md       status (open or closed), rounds run, links to the ticket and ADRs
-  brief.md        the concepts brief
+  brief.md        the concepts brief (when the pass has one)
+  design_draft.md the design draft (when the pass drafts one)
   reviews/        r1-<reviewer>.md, r2-<reviewer>.md ... one file per reviewer per round
   resolutions.md  the author's answers, dated
 ```
@@ -16,4 +17,4 @@ Copy `_template/README.md` when starting. Nothing else goes in a folder, and not
 
 | Iteration | Ticket | Status | ADRs |
 |-----------|--------|--------|------|
-| none yet | | | |
+| [0043-key-management](0043-key-management/README.md) | [0043](../../tickets/0043-key-management.md) | open (drafting) | 0039, 0038 |
