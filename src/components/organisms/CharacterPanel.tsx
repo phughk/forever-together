@@ -57,9 +57,8 @@ export function CharacterPanel({ character, now, onSubmitCode, onForget, busy, e
         <Field label="Level">{character.level}</Field>
         <Field label="Role">{ROLE_LABEL[character.role]}</Field>
         <Field label="Item level">{character.itemLevel > 0 ? character.itemLevel : "Unknown"}</Field>
-        <Field label="Realm">
-          {character.realm} (region {character.region || "unknown"})
-        </Field>
+        <Field label="Realm">{character.realmName}</Field>
+        <Field label="Region">{character.regionName}</Field>
         <Field label="Zone">{character.zone || "Unknown"}</Field>
         <Field label="Code age">
           {formatAge(ageS)}

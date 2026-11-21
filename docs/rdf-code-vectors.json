@@ -498,6 +498,94 @@
    },
    "hex": "0121010118019c004901ba81400001030133075468616c696f6e0a427269676874776f6f64085765737466616c6cb471",
    "text": "WFT1:J60W50P13LWJEA90QN448Y50$60V-0 8DXVD-3EGD1*KEC3DPWE.3E3TC82B QEJ.C VDN M"
+  },
+  {
+   "name": "synthetic: PvP realm 14, region 3",
+   "fields": {
+    "role": 3,
+    "secondaryRole": 0,
+    "itemLevel": 12,
+    "spec": 100,
+    "created": 29000000,
+    "counter": 1,
+    "region": 3,
+    "zone": "Testville",
+    "level": 10,
+    "race": 1,
+    "class": 1,
+    "realm": "14",
+    "faction": "alliance",
+    "firstName": "Testa",
+    "surname": "Fakename"
+   },
+   "hex": "012301010a000c006401ba81400001030231340554657374610846616b656e616d65095465737476696c6c65d96a",
+   "text": "WFT1:L60W50+B1CN1-SC0QN448Y50LC0.P65UA QE0CCH+8/PD..DF$D3816$COWEXEDTVD%LR"
+  },
+  {
+   "name": "synthetic: PvE realm 15, region 3",
+   "fields": {
+    "role": 3,
+    "secondaryRole": 0,
+    "itemLevel": 12,
+    "spec": 100,
+    "created": 29000000,
+    "counter": 1,
+    "region": 3,
+    "zone": "Testville",
+    "level": 10,
+    "race": 1,
+    "class": 1,
+    "realm": "15",
+    "faction": "horde",
+    "firstName": "Tester",
+    "surname": "Faketon"
+   },
+   "hex": "013301010a000c006401ba8140000103023135065465737465720746616b65746f6e095465737476696c6c650123",
+   "text": "WFT1:$60W50+B1CN1-SC0QN448Y50LC0TV65UA QE5$CH-09EC7$C-3E3816$COWEXEDTVDL60"
+  },
+  {
+   "name": "synthetic: RP-PvP realm 18, region 3",
+   "fields": {
+    "role": 3,
+    "secondaryRole": 0,
+    "itemLevel": 12,
+    "spec": 100,
+    "created": 29000000,
+    "counter": 1,
+    "region": 3,
+    "zone": "Testville",
+    "level": 10,
+    "race": 1,
+    "class": 1,
+    "realm": "18",
+    "faction": "alliance",
+    "firstName": "Testo",
+    "surname": "Fakesson"
+   },
+   "hex": "012301010a000c006401ba814000010302313805546573746f0846616b6573736f6e095465737476696c6c6590a6",
+   "text": "WFT1:L60W50+B1CN1-SC0QN448Y50LC0V375UA QET1EH+8/PDZQE-3E3816$COWEXEDTVD+CI"
+  },
+  {
+   "name": "synthetic: unknown realm realm 27, region 3",
+   "fields": {
+    "role": 3,
+    "secondaryRole": 0,
+    "itemLevel": 12,
+    "spec": 100,
+    "created": 29000000,
+    "counter": 1,
+    "region": 3,
+    "zone": "Testville",
+    "level": 10,
+    "race": 1,
+    "class": 1,
+    "realm": "27",
+    "faction": "horde",
+    "firstName": "Testi",
+    "surname": "Fakeling"
+   },
+   "hex": "013301010a000c006401ba81400001030232370554657374690846616b656c696e67095465737476696c6c652f29",
+   "text": "WFT1:$60W50+B1CN1-SC0QN448Y50MC00/65UA QENCDH+8/PDXVD3/D3816$COWEXEDTVDD/5"
   }
  ],
  "decode_errors": [

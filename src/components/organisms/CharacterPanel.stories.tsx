@@ -16,6 +16,12 @@ export const StaleCode: Story = { args: { character: makeCharacter({ createdAt: 
 export const UnknownZone: Story = { args: { character: makeCharacter({ zone: "Zul'Gurub Outskirts", zoneKnown: false }) } };
 export const EmptyZone: Story = { args: { character: makeCharacter({ zone: "", zoneKnown: false }) } };
 export const ItemLevelUnknown: Story = { args: { character: makeCharacter({ itemLevel: 0, role: "unknown" }) } };
+export const RolePlayRealm: Story = {
+  args: { character: makeCharacter({ realm: "18", realmName: "RP-PvP", faction: "horde" }) },
+};
+export const UnknownRealmId: Story = {
+  args: { character: makeCharacter({ realm: "27", realmName: "realm 27", region: 9, regionName: "region 9" }) },
+};
 export const LongNames: Story = {
   args: { character: makeCharacter({ firstName: "Bartholomewmaximilian", surname: "Featherstonehaugh-Cholmondeley" }) },
 };

@@ -139,7 +139,8 @@ local function describe(f)
     "Faction: " .. f.faction,
     "Role: " .. ROLES[f.role],
     "Item level: " .. (f.itemLevel > 0 and f.itemLevel or "unknown"),
-    "Realm: " .. f.realm .. "  Region: " .. f.region,
+    "Realm: " .. RD.RealmName(f.realm),
+    "Region: " .. RD.RegionName(f.region),
     "Zone: " .. (f.zone ~= "" and f.zone or "unknown"),
   }
   return table.concat(lines, "\n")

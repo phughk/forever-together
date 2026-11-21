@@ -6,6 +6,7 @@
 
 Codec.lua
 Qr.lua
+Names.lua
 Core.lua
 Window.lua
 Commands.lua

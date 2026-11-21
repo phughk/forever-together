@@ -1,6 +1,6 @@
 # forever-together code and protocol specification, version 1
 
-Status: draft, awaiting spike S0. Values marked **provisional** may change when S0 reports. This file is the single source for the character code and the wire messages. The addon tests and the Rust tests both read `docs/rdf-code-vectors.json` (created in step 1; format below). The design is in [`designs/forever-together.md`](designs/forever-together.md) and the build order is in [`designs/forever-together-implementation-plan.md`](designs/forever-together-implementation-plan.md).
+Status: draft, awaiting spike S0 (realm, region and name format verified by live capture 2026-11-21, see "Realm and region"). Values marked **provisional** may change when S0 reports. This file is the single source for the character code and the wire messages. The addon tests and the Rust tests both read `docs/rdf-code-vectors.json` (created in step 1; format below). The design is in [`designs/forever-together.md`](designs/forever-together.md) and the build order is in [`designs/forever-together-implementation-plan.md`](designs/forever-together-implementation-plan.md).
 
 Short code: `wowft`. Names in this file: code prefix `WFT1:`, topic prefix `wowft/1/`, peer exchange ALPN `wowft/peers/1`.
 
@@ -40,7 +40,34 @@ A decoder refuses trailing bytes between the zone and the check, and any record 
 
 ### Realm and region
 
-The realm value and the region are opaque values from the client, compared as given. **Provisional:** which calls return them is an S0 output. Rule to keep topic strings equal across clients: the addon sends the realm as a decimal numeric ID (for example the game-mode record ID) when the client gives one, and otherwise the client's text lowercased in ASCII. If S0 finds that the only source is localized text, the spec adds a mapping table to canonical IDs before the code is frozen. Two peers on the same ruleset must produce the same topic string. Provisional implementation (see `spike-s0.md`): `C_GameRules.GetCurrentGameModeRecordID()` as a decimal string, else `GetRealmName()` lowercased in ASCII and cut at 24 bytes.
+The realm value and the region are opaque values from the client, compared as given. **Topics hash the raw region number and the raw realm string** (`wowft/1/<region>/<realm>/...`), never the display names below, so a name table can change without moving anyone to another topic. Names are display only (window, app).
+
+**Verified by live capture, 2026-11-21** (the capture itself is personal and is not stored; the vectors file holds synthetic characters with the same realm and region values):
+
+- The realm value is the game-mode record ID from `C_GameRules.GetCurrentGameModeRecordID()` as a decimal string.
+- The region is the number from `GetCurrentRegion()`.
+- First name and surname come as two fields (`UnitName` / `GetUnitName` give "First Surname").
+
+| Region | Name | Status |
+|--------|------|--------|
+| 3 | EU | verified live |
+| 1 | US | assumed (standard `GetCurrentRegion` numbering) |
+| 2 | KR | assumed |
+| 4 | TW | assumed |
+| 5 | CN | assumed |
+| 0 | unknown | the call returned nothing |
+| any other | shown as `region <n>` | not mapped |
+
+| Realm value | Ruleset | Status |
+|-------------|---------|--------|
+| `14` | PvP | verified live |
+| `15` | PvE | verified live |
+| `18` | RP-PvP | verified live |
+| RP-PvE | not known | **not captured**, deliberately not guessed |
+| Hardcore | not known | **not captured**, deliberately not guessed |
+| any other value | shown as `realm <id>` | mapped when a capture names it |
+
+Still assumed: the RP-PvE and Hardcore IDs, whether the other regions use the same numbering as EU, and that the same ID means the same ruleset in every region. The fallback when the game-mode call is missing, `GetRealmName()` lowercased in ASCII and cut at 24 bytes, is untested on a live client (a realm name is not a ruleset). Two peers on the same ruleset must produce the same topic string. The tables live in `addon/ForeverTogether/Names.lua` and `code::region_name` / `code::realm_name` in `src-tauri/src/code.rs`; the app exposes the names as `realmName` and `regionName` on the character in the API.
 
 ### Size
 
@@ -60,9 +87,9 @@ Strip leading and trailing whitespace and line breaks only. Never strip spaces i
 
 | Field | Source | Fallback | Unknown value |
 |-------|--------|----------|---------------|
-| first name, surname | `UnitName("player")` and `GetUnitName("player")` (assumed to give "First Surname", unverified until S0) | split `GetUnitName("player")` on the first space | code is not built, window says why |
-| realm | realm-value call confirmed by S0 | none | code is not built |
-| region | `GetCurrentRegion()` | none | 0 |
+| first name, surname | `UnitName("player")` and `GetUnitName("player")` (give "First Surname", verified live 2026-11-21) | split `GetUnitName("player")` on the first space | code is not built, window says why |
+| realm | `C_GameRules.GetCurrentGameModeRecordID()` as a decimal string (verified live 2026-11-21) | none | code is not built |
+| region | `GetCurrentRegion()` (verified live, EU = 3) | none | 0 |
 | faction | `UnitFactionGroup("player")` | none | code is not built |
 | class, race, level | `UnitClass`, `UnitRace`, `UnitLevel` | none | class and race 0, level invalid |
 | spec, role | `GetSpecialization()` then `GetSpecializationInfo(index)`, whose fifth return is the role: TANK 1, HEALER 2, DAMAGER 3 | none | spec 0, role 0 |

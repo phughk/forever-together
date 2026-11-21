@@ -37,7 +37,11 @@ pub struct CharacterView {
     pub item_level: u16,
     pub role: RoleView,
     pub realm: String,
+    /// Display name of `realm` (PvP, PvE, RP-PvP, or `realm <id>` when unknown).
+    pub realm_name: String,
     pub region: u8,
+    /// Display name of `region` (EU, US, ... or `region <n>` when unknown).
+    pub region_name: String,
     pub zone: String,
     pub zone_known: bool,
     /// Server-clock milliseconds when the addon built the code.

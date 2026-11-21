@@ -249,6 +249,31 @@ pub fn decode_record(rec: &[u8]) -> Result<Character, CodeError> {
     })
 }
 
+/// Display name of a region number. Display only: topics hash the raw number. Verified live 2026-11-21: 3 = EU. Assumed
+/// (standard `GetCurrentRegion` numbering, not yet seen): 1 US, 2 KR, 4 TW, 5 CN. Same table as `addon/ForeverTogether/Names.lua`.
+pub fn region_name(region: u8) -> String {
+    match region {
+        0 => "unknown".to_owned(),
+        1 => "US".to_owned(),
+        2 => "KR".to_owned(),
+        3 => "EU".to_owned(),
+        4 => "TW".to_owned(),
+        5 => "CN".to_owned(),
+        n => format!("region {n}"),
+    }
+}
+
+/// Display name of a realm value (the game-mode record ID as a decimal string). Display only: topics hash the raw value.
+/// Verified live 2026-11-21: 14 = PvP, 15 = PvE, 18 = RP-PvP. The RP-PvE and Hardcore IDs are unknown and not guessed.
+pub fn realm_name(realm: &str) -> String {
+    match realm {
+        "14" => "PvP".to_owned(),
+        "15" => "PvE".to_owned(),
+        "18" => "RP-PvP".to_owned(),
+        other => format!("realm {other}"),
+    }
+}
+
 /// Test-only encoder, the reference for round trips and for building fixtures elsewhere.
 #[cfg(test)]
 pub mod test_encoder {
@@ -609,6 +634,33 @@ mod tests {
             assert!(v.get(k).is_some(), "vector category `{k}` disappeared");
         }
         assert_eq!(s(&v, "prefix"), PREFIX);
+    }
+
+    #[test]
+    fn region_and_realm_display_names() {
+        assert_eq!(region_name(3), "EU");
+        assert_eq!(region_name(0), "unknown");
+        assert_eq!(region_name(9), "region 9");
+        assert_eq!(realm_name("14"), "PvP");
+        assert_eq!(realm_name("15"), "PvE");
+        assert_eq!(realm_name("18"), "RP-PvP");
+        assert_eq!(realm_name("27"), "realm 27");
+    }
+
+    #[test]
+    fn synthetic_realm_vectors_decode_to_known_names() {
+        let v = vectors();
+        let mut n = 0;
+        for c in list(&v, "records") {
+            if !s(c, "name").starts_with("synthetic:") {
+                continue;
+            }
+            let ch = decode(s(c, "text")).unwrap();
+            assert_eq!(region_name(ch.region), "EU");
+            assert!(["PvE", "PvP", "RP-PvP", "realm 27"].contains(&realm_name(&ch.realm).as_str()));
+            n += 1;
+        }
+        assert_eq!(n, 4);
     }
 
     #[test]

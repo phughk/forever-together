@@ -28,7 +28,11 @@ export interface CharacterView {
   itemLevel: number;
   role: Role;
   realm: string;
+  /** Display name of `realm`: PvP, PvE, RP-PvP, or "realm <id>" when unknown. */
+  realmName: string;
   region: number;
+  /** Display name of `region`: EU, US, ... or "region <n>" when unknown. */
+  regionName: string;
   /** Zone name as the client reported it, empty when unknown. */
   zone: string;
   /** False when the zone is empty or not in the dungeon table. */
