@@ -1,7 +1,7 @@
 # Key management for forever-together
 
 *   **Author:** Hugh Kaznowski
-*   **Status:** Proposed (drafted and reconciled 2026-11-21; not yet reviewed with `egm-review`)
+*   **Status:** Proposed (round 1 review done 2026-11-21; revisions pending, see `reviews/r1-consolidated_review_report.md`)
 *   **Date:** 2026-11-21
 *   **Ticket:** [0043](../../../tickets/0043-key-management.md), which also covers 0003, 0008, 0009 and 0044.
 *   **Related decisions:** [ADR 0008](../../adr/0008-iroh-and-local-storage.md), [0023](../../adr/0023-no-supernodes.md), [0038](../../adr/0038-scan-log-and-opt-in-export.md), [0039](../../adr/0039-key-management.md).
