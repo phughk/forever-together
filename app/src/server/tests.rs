@@ -331,6 +331,7 @@ async fn search_diagnosis_has_the_contract_shape() {
     state.search.status = SearchStatus::LimitReached;
     state.search.diagnosis = Some(DiagnosisView {
         situation: "no_tank".into(),
+        outlook: None,
         ended: true,
         seen: SeenView {
             players: 8,
@@ -355,6 +356,7 @@ async fn search_diagnosis_has_the_contract_shape() {
         v["search"]["diagnosis"],
         serde_json::json!({
             "situation": "no_tank",
+            "outlook": null,
             "ended": true,
             "seen": {"players": 8, "tanks": 0, "healers": 3, "damage": 5},
             "ownRole": "damage",
@@ -366,6 +368,18 @@ async fn search_diagnosis_has_the_contract_shape() {
             }
         })
     );
+    // The outlook is one of three codes, camelCase-free, and a payload without it parses as none.
+    let mut with = state.clone();
+    with.search.diagnosis.as_mut().unwrap().outlook = Some("sometimes_found".into());
+    let w = serde_json::to_value(&with).unwrap();
+    assert_eq!(w["search"]["diagnosis"]["outlook"], "sometimes_found");
+    let mut without = w.clone();
+    without["search"]["diagnosis"]
+        .as_object_mut()
+        .unwrap()
+        .remove("outlook");
+    let back: AppState = serde_json::from_value(without).unwrap();
+    assert_eq!(back.search.diagnosis.unwrap().outlook, None);
     // A diagnosis from before the counters parses with zeros.
     let mut older = v.clone();
     older["search"]["diagnosis"]

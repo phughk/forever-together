@@ -215,6 +215,9 @@ pub struct SearchStats {
     pub elapsed: Duration,
     /// Attempt counters (ADR 0026), counts only. Frozen with the rest in the end snapshot.
     pub attempts: Attempts,
+    /// The counts at the first checkpoint (`CHECKPOINT_1`) once this search has reached it while
+    /// still searching; `None` before (ADR 0027, estimator). Frozen with the rest when ended.
+    pub checkpoint: Option<Checkpoint>,
 }
 
 /// What this node did and received while looking for a party. Everything here is something the
@@ -224,6 +227,9 @@ pub struct SearchStats {
 pub struct Attempts {
     /// Invitations this node sent as a leader (one per invited peer).
     pub invites_sent: u32,
+    /// Distinct epochs (rounds) in which this node sent invitations. One round's silence is not
+    /// a pattern: an accept takes up to 2 s to come back (ADR 0026).
+    pub invite_epochs: u32,
     /// Accepts received for those invitations (once per peer and epoch).
     pub accepts_got: u32,
     /// Invitations this node received as an invitee and kept.
@@ -346,6 +352,9 @@ struct Search {
     drops: u32,
     declines: u32,
     invites_sent: u32,
+    /// The latest epoch an invitation went out in, and how many epochs had one.
+    last_invite_epoch: Option<u64>,
+    invite_epochs: u32,
     accepts_got: u32,
     invites_got: u32,
     /// Peers whose ads a taken notice removed (counted once each; only the count leaves).
@@ -608,6 +617,8 @@ impl Engine {
             drops: 0,
             declines: 0,
             invites_sent: 0,
+            last_invite_epoch: None,
+            invite_epochs: 0,
             accepts_got: 0,
             invites_got: 0,
             taken_seen: BTreeSet::new(),
@@ -838,7 +849,12 @@ impl Engine {
         let Some((topic, invited)) = found else {
             return;
         };
-        self.search.as_mut().unwrap().invites_sent += invited.len() as u32;
+        let s = self.search.as_mut().unwrap();
+        s.invites_sent += invited.len() as u32;
+        if s.last_invite_epoch != Some(epoch) {
+            s.last_invite_epoch = Some(epoch);
+            s.invite_epochs += 1;
+        }
         for peer in invited.keys() {
             out.push(Action::SendMessage {
                 topic,
@@ -1398,12 +1414,14 @@ impl Engine {
             elapsed: now.saturating_sub(s.search_start),
             attempts: Attempts {
                 invites_sent: s.invites_sent,
+                invite_epochs: s.invite_epochs,
                 accepts_got: s.accepts_got,
                 invites_got: s.invites_got,
                 taken_seen: s.taken_seen.len() as u32,
                 drops: s.drops,
                 declines: s.declines,
             },
+            checkpoint: s.checkpoint_1,
         })
     }
 

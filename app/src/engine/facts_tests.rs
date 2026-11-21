@@ -53,6 +53,20 @@ fn a_solo_tank_to_expiry_gives_one_expired_fact_with_checkpoints() {
 }
 
 #[test]
+fn the_live_stats_carry_the_checkpoint_only_once_it_is_taken() {
+    let mut c = Cluster::new(&[1]);
+    solo(&mut c);
+    c.run(50);
+    assert_eq!(
+        c.nodes[0].engine.view(c.now).stats.unwrap().checkpoint,
+        None
+    );
+    c.run(10);
+    let cp = c.nodes[0].engine.view(c.now).stats.unwrap().checkpoint;
+    assert_eq!(cp.map(|c| c.counts), Some(RoleCounts::default()));
+}
+
+#[test]
 fn a_search_that_ends_before_a_checkpoint_stores_none_not_zero() {
     let mut c = Cluster::new(&[1]);
     solo(&mut c);
@@ -171,10 +185,12 @@ fn unanswered_invitations_give_nobody_answered_after_min_attempts() {
     assert_eq!(a.invites_sent, 4, "one round invites the four");
     assert!(a.invites_sent < diagnose::MIN_ATTEMPTS, "not yet enough");
     assert_eq!(a.accepts_got, 0);
+    assert_eq!(a.invite_epochs, 1, "all four went out in one round");
     c.run(48);
     let v = c.nodes[0].engine.view(c.now);
     let a = v.stats.unwrap().attempts;
     assert!(a.invites_sent >= diagnose::MIN_ATTEMPTS);
+    assert!(a.invite_epochs >= diagnose::MIN_INVITE_EPOCHS);
     assert_eq!((a.accepts_got, a.invites_got), (0, 0));
     assert_eq!(diagnose_of(&v, 4), Situation::NobodyAnswered);
 }

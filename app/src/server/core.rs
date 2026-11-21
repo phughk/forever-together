@@ -108,6 +108,12 @@ pub struct DiagnosisView {
     /// One of `warming_up`, `not_connected`, `others_grouping`, `alone`, `no_tank`,
     /// `no_healer`, `short_on_damage`, `nobody_answered`, `healthy`. A String so a newer server can add codes.
     pub situation: String,
+    /// One hedged clause from this node's own earlier searches (ADR 0027): `usually_found`,
+    /// `sometimes_found` or `rarely_found`. Null or absent when there is no dependable history,
+    /// while warming up or not connected, once the search ended, and (for `usually_found`) next
+    /// to any live problem. Never a number.
+    #[serde(default)]
+    pub outlook: Option<String>,
     /// The search expired: `seen` is the frozen peak, not live.
     pub ended: bool,
     pub seen: SeenView,

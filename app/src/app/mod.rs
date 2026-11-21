@@ -276,9 +276,39 @@ struct Model {
     /// Set while the host ends a search for its own reasons (character change), so the engine's
     /// `Stopped` is not a result and is not recorded.
     stop_is_not_a_result: bool,
+    /// The readable history entries, loaded once and refreshed after each recorded entry or
+    /// cleared, so the 1 s tick never reads the store. Empty when a read failed: no estimate.
+    history_cache: Vec<history::Entry>,
 }
 
 impl Model {
+    /// Reload the cached entries from the store. A failed read means no estimate.
+    fn reload_history(&mut self) {
+        self.history_cache = match history::load(self.store.as_ref()) {
+            Ok(rows) => rows.into_iter().map(|(_, e)| e).collect(),
+            Err(e) => {
+                tracing::warn!("search history not read: {e}");
+                Vec::new()
+            }
+        };
+    }
+
+    /// The banded outlook for the running search, from the cached entries. Only once the search
+    /// has reached its 55 s checkpoint (see `history::estimate`).
+    fn outlook_band(&self, view: &View) -> Option<history::estimate::Band> {
+        let cp = view.stats?.checkpoint?;
+        let dungeon = self.slugs.first()?;
+        history::estimate::estimate(
+            &self.history_cache,
+            &history::estimate::Observation {
+                counts: cp.counts,
+                own_role: view.stats?.own_role,
+                dungeon,
+            },
+        )
+        .band()
+    }
+
     fn now(&self) -> Duration {
         (self.clock)()
     }
@@ -370,7 +400,8 @@ impl Model {
         }
 
         let network = self.net_status.borrow().clone();
-        let diagnosis = diagnosis_view(&view, network.peers);
+        let band = self.outlook_band(&view);
+        let diagnosis = diagnosis_view(&view, network.peers, band);
 
         AppState {
             server_now: now_ms,
@@ -425,7 +456,11 @@ impl Model {
 /// The search diagnosis from the engine's own observations (ADR 0026). Only while a search
 /// runs (also while a party is committed, which the status calls searching) or after it
 /// expired.
-fn diagnosis_view(view: &View, network_peers: u32) -> Option<DiagnosisView> {
+fn diagnosis_view(
+    view: &View,
+    network_peers: u32,
+    band: Option<history::estimate::Band>,
+) -> Option<DiagnosisView> {
     let ended = match view.mode {
         Mode::Searching | Mode::Committed => false,
         Mode::Expired => true,
@@ -448,8 +483,11 @@ fn diagnosis_view(view: &View, network_peers: u32) -> Option<DiagnosisView> {
         attempts: st.attempts,
     });
     let a = st.attempts;
+    // History may add one banded clause but never changes the situation (ADR 0026).
+    let outlook = history::estimate::outlook(situation, ended, band).map(|b| b.code().to_string());
     Some(DiagnosisView {
         situation: situation.code().to_string(),
+        outlook,
         ended,
         seen,
         own_role: Some(
@@ -517,7 +555,7 @@ fn local_utc_offset_secs() -> i32 {
 
 /// Write the history entry for a finished search (ADR 0027). Never fails or stops a search: a
 /// store error is logged by `history::record_facts`.
-fn record_search(m: &Model, now: Duration, facts: &SearchFacts) {
+fn record_search(m: &mut Model, now: Duration, facts: &SearchFacts) {
     let mut facts = facts.clone();
     if m.stop_is_not_a_result && facts.outcome == SearchOutcome::Stopped {
         facts.outcome = SearchOutcome::Ignored;
@@ -533,7 +571,9 @@ fn record_search(m: &Model, now: Duration, facts: &SearchFacts) {
         faction: c.faction,
         dungeon: dungeon.clone(),
     };
-    history::record_facts(m.store.as_ref(), &facts, &ctx);
+    if history::record_facts(m.store.as_ref(), &facts, &ctx) {
+        m.reload_history();
+    }
 }
 
 /// How often a heartbeat goes to a member that has no outstanding one.
@@ -694,6 +734,7 @@ async fn handle_cmd<N: Network>(
             m.character = None;
             // A cleared character's history must not survive (ADR 0027).
             let h = history::clear(m.store.as_ref());
+            m.history_cache.clear();
             let r = m
                 .store
                 .delete(KEY_CHARACTER)
@@ -705,6 +746,7 @@ async fn handle_cmd<N: Network>(
         Cmd::ClearHistory(reply) => {
             let r =
                 history::clear(m.store.as_ref()).map_err(|e| CoreError::internal(e.to_string()));
+            m.history_cache.clear();
             finish(m, state, reply, r);
         }
         Cmd::Dungeons(reply) => {
@@ -947,7 +989,9 @@ impl LiveCore {
             net_status: deps.net_status,
             published: placeholder_state(),
             stop_is_not_a_result: false,
+            history_cache: Vec::new(),
         };
+        model.reload_history();
         let first = model.app_state();
         model.published = first.clone();
         let state = Arc::new(watch::channel(first).0);

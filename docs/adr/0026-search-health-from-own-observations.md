@@ -54,4 +54,14 @@ Staging item 6 of the brief. It changes the first slice only by adding to it.
   * Invitations that arrived after the decision time or were dropped for the per-epoch cap.
   * Accepts a leader got for a party it later lost (they stay in `accepts_got`).
   * Rounds as a unit: a round invites the whole sample's party plus spares, so the invitation count is a count of messages, not of epochs.
-* **Unverified.** `MIN_ATTEMPTS = 6` (a little over one small round of 4 to 11 invitations; fewer would call one epoch's silence a pattern) and `TINY_SAMPLE` are guesses until a live run. Because one round can already reach 6, `nobody_answered` can show for the 2 s between an invitation and the first accept in a search that has had no accept yet; it clears at the first accept.
+* **Unverified.** `MIN_ATTEMPTS = 6` (a little over one small round of 4 to 11 invitations; fewer would call one epoch's silence a pattern) and `TINY_SAMPLE` are guesses until a live run. (The 2 s flicker this allowed is fixed in the amendment below.)
+
+## Amendment 2026-11-21 (later): rounds before `nobody_answered`, and the `outlook` clause
+
+* **Flicker fixed.** `nobody_answered` could show for the 2 s between a round's invitations and the first accept. It now also needs invitations sent in at least `MIN_INVITE_EPOCHS` (2) different epochs, besides `invites_sent >= MIN_ATTEMPTS` and no accept at all. The engine counts this as `Attempts.invite_epochs` (epochs in which this node sent invitations, one increment per epoch, reset on `start`, frozen in the end snapshot). By the second round (5 s later) the first round's accepts have come back, so one lost accept cannot be mistaken for a pattern. `MIN_ATTEMPTS` stays 6. `invite_epochs` is not on the wire. Unverified like the other thresholds.
+* **`diagnosis.outlook`** (`string | null`, `#[serde(default)]`): `usually_found`, `sometimes_found` or `rarely_found`. It is the one banded clause history may add ([0027](0027-search-history.md), brief Resolution 8). The situation code is never changed by history; `diagnose` stays pure and takes no history. Rules, enforced in one function and table-tested:
+  * Never while `ended`, and never with `warming_up` or `not_connected`.
+  * `usually_found` only with `healthy` or `others_grouping`: it is never shown next to `no_tank`, `no_healer`, `short_on_damage`, `nobody_answered` or `alone`, so history cannot reassure against a live problem.
+  * `sometimes_found` and `rarely_found` may accompany any other situation.
+  * No number, date or count from history is ever sent. The web app owns the wording and should give a provenance ("in your earlier searches").
+
