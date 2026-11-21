@@ -8,7 +8,7 @@
 
 ## What
 
-Ask players on US, KR, TW and CN (and any new ruleset such as Hardcore) to send their export in a GitHub issue; add an issue template that says what to attach and warns about names. Record the mapped values in the spec and ADR 0004.
+Encrypted exports are safe to attach to a public issue. Ask players on US, KR, TW and CN (and any new ruleset such as Hardcore) to send their export in a GitHub issue; add an issue template that says what to attach and warns about names. Record the mapped values in the spec and ADR 0004.
 
 ## Done when
 

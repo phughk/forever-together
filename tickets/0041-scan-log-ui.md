@@ -8,7 +8,7 @@
 
 ## What
 
-A Settings card shows how many characters and scans are logged, an Export button with the one-sentence consent line, a Clear button, and a link to the issue page. Desktop only; locked on a phone. Show, don't tell: no paragraphs.
+A Settings card (Export disabled with a reason until a trusted key exists, a preview of what will be sent) shows how many characters and scans are logged, an Export button with the one-sentence consent line, a Clear button, and a link to the issue page. Desktop only; locked on a phone. Show, don't tell: no paragraphs.
 
 ## Done when
 

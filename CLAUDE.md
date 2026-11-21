@@ -71,7 +71,7 @@ What is **not** verified (details and the full table in `docs/spike-s0.md`; trea
 
 ### Where the truth lives
 
-- `docs/adr/` (0001-0038, indexed in `docs/adr/README.md`): one decision record per file, and the only place decisions live. ADR 0034 is the system overview, goals, journeys, non-functional requirements and risks; ADR 0035 is the protocol constants, widening schedule, engine contract and API table. `docs/rdf-code-spec.md`: the code format and wire messages. `docs/spike-s0.md`: spike results.
+- `docs/adr/` (0001-0039, indexed in `docs/adr/README.md`): one decision record per file, and the only place decisions live. ADR 0034 is the system overview, goals, journeys, non-functional requirements and risks; ADR 0035 is the protocol constants, widening schedule, engine contract and API table. `docs/rdf-code-spec.md`: the code format and wire messages. `docs/spike-s0.md`: spike results.
 - `tickets/`: open work, one file per ticket (`tickets/README.md` is the index).
 - `docs/design-process/archive/`: history only (the first draft, the former design doc and implementation plan, the concept briefs, and the review reports under `reviews/`, including `author_decisions.md` with the author's answers D1-D9). **ADRs win over everything there.** Do not edit the archive to record new decisions.
 - When a decision changes, add an ADR or revise the existing one and say what it supersedes.

@@ -6,6 +6,8 @@
 * **ADRs:** none
 * **EGM:** none
 
+**Folded into ticket 0043 (key management).** Keep this open only until 0043 lands.
+
 ## What
 
 Trusted nodes run on cloud instances and need a stable key supplied by the operator instead of a generated one. Decide the interface (flag, env var or file) and its permission checks.

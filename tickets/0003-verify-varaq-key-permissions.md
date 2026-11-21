@@ -6,6 +6,8 @@
 * **ADRs:** none
 * **EGM:** none
 
+**Related:** ticket 0043 adds key export and import, so permission handling matters more.
+
 ## What
 
 Check that the `varaq` store holds the secret key with restrictive file permissions on macOS, Windows and Linux, and that varaq 0.1.x is good enough.

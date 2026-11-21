@@ -46,3 +46,5 @@ One file per ticket, named `NNNN-slug.md`. Status is `open` unless it says other
 | 0040 | [Scan log: export and clear API](0040-scan-log-export-api.md) | feature |
 | 0041 | [Scan log: Settings card and export flow](0041-scan-log-ui.md) | feature |
 | 0042 | [Collect region and realm values from players](0042-collect-region-and-realm-values.md) | verification |
+| 0043 | [Key management: export, import and reset keys from the CLI](0043-key-management.md) | feature |
+| 0044 | [Encrypt the scan export to the first trusted peer key](0044-encrypted-scan-export.md) | feature |

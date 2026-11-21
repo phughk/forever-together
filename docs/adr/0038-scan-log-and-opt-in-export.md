@@ -31,9 +31,19 @@ flowchart LR
     R --> A[Author records facts in the spec]
 ```
 
+## Amendment 2026-11-21: the export is encrypted to the first trusted peer's key
+
+Decided by the author. The exported JSON is encrypted to the public key of the **first entry in `net::trusted::BUILTIN`**; the author holds the matching private key and decrypts it. An encrypted file is safe to attach to a public GitHub issue, which a plain file is not.
+
+* **Encrypted only.** The app offers no plain export. If `BUILTIN` has no key yet (ticket 0008), export is unavailable and the card says so. *Default.*
+* **Scheme.** *Default:* a sealed box: an ephemeral X25519 key agrees a secret with the recipient's key converted from Ed25519, and the JSON is encrypted with an authenticated cipher, so only the key holder can open it and the player cannot read it back. *Caveat:* the iroh key is a signing key; reusing it for encryption is generally discouraged. The alternative is a dedicated intake key, generated and held by the author, shipped beside the trusted key. Decided in ticket 0044.
+* **Review before export.** Because the player cannot read the file afterwards, the app shows what will be sent (characters, number of scans, a sample entry) before it encrypts. The consent line stays. Only `BUILTIN[0]` is used; keys the player adds under `trusted_peers` are never an export recipient.
+* **Format.** A small header (format version, recipient key id) then the ciphertext, saved as one file with a `.wowft-scans` suffix. The recipient key id lets the author rotate the key and know which key to use.
+* **Key loss.** Without the private key nobody can read old files. Backups of that key are ticket 0043 and [0039](0039-key-management.md).
+
 ## Consequences
 
 * Region and realm values for players on other regions arrive as codes, and the author maps them as in ADR 0004.
-* A third party reading an exported file learns names, realms and zones of the player's characters. The player chooses to share it.
+* A third party reading an exported file learns nothing: it is encrypted to the author's key. Only the key holder, and anyone who obtains that key, can read names, realms and zones.
 * Entries older than 90 days vanish even if nobody has exported them.
-* Not decided: whether to offer an export that hides names, and a size cap for the file. The cap of 20 entries per character bounds a character, not the number of characters.
+* Not decided: a size cap for the file. Hiding names in the export is less urgent now that the file is encrypted. The cap of 20 entries per character bounds a character, not the number of characters.

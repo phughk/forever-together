@@ -6,6 +6,8 @@
 * **ADRs:** none
 * **EGM:** none
 
+**Also needed by ticket 0044:** the first `BUILTIN` key is the recipient of encrypted scan exports. Back up its private key (ticket 0043) before shipping it.
+
 ## What
 
 `net::trusted::BUILTIN` is empty. Run an always-on copy with `--headless`, print its key with `--print-public-key` and add it. The private key is never committed.

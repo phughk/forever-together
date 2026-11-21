@@ -41,3 +41,4 @@ Decisions for forever-together (short code `wowft`, working name `p2prdf` in old
 | 0035 | [Protocol constants, widening schedule, engine contract and local API](0035-protocol-constants-engine-contract-and-api.md) | Accepted (contains the archived implementation plan) |
 | 0036 | [Tickets drive work, EGM iterations live in one folder per ticket, and ADRs record the outcome](0036-how-designs-and-decisions-are-maintained.md) | Accepted |
 | 0038 | [The app keeps a log of the codes it has scanned and lets the player export it to attach to a GitHub issue](0038-scan-log-and-opt-in-export.md) | Accepted (not built) |
+| 0039 | [The app's keys can be exported, imported and reset from the command line](0039-key-management.md) | Accepted (requirements; not built) |
