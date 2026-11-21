@@ -363,3 +363,12 @@ fn party_view_maps_the_engine_view() {
     assert_eq!(p.members[0].first_name.as_deref(), Some("N1"));
     assert_eq!(p.members[0].surname.as_deref(), Some("S1"));
 }
+
+/// The local offset is a plausible zone offset (UTC-12 to UTC+14) and an unrepresentable
+/// instant falls back to 0 instead of panicking.
+#[test]
+fn local_offset_is_plausible() {
+    let off = super::local_utc_offset_secs(1_800_000_000);
+    assert!((-12 * 3600..=14 * 3600).contains(&off), "{off}");
+    assert_eq!(super::local_utc_offset_secs(u64::MAX), 0);
+}

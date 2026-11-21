@@ -107,9 +107,15 @@ pub struct Entry {
     /// UTC seconds. The start is the key.
     pub start_utc: u64,
     pub end_utc: u64,
-    /// Local offset from UTC in seconds, so local time of day can be derived later. 0 while the
-    /// app cannot learn it (see `app::local_utc_offset_secs`).
+    /// The local offset from UTC in seconds at `end_utc`, so the local end time is
+    /// `end_utc + utc_offset_secs`. Each timestamp has its own offset because daylight saving
+    /// can change between the start and the end of a search. Entries written before the offsets
+    /// were recorded carry 0, which means "not known" (they are not necessarily UTC).
     pub utc_offset_secs: i32,
+    /// The local offset in seconds at `start_utc`: the local start time is
+    /// `start_utc + start_utc_offset_secs`.
+    #[serde(default)]
+    pub start_utc_offset_secs: i32,
     pub region: u8,
     pub realm: String,
     pub faction: String,
@@ -157,7 +163,10 @@ pub fn key_for(start_utc: u64) -> String {
 #[derive(Debug, Clone)]
 pub struct Context {
     pub end_utc: u64,
+    /// The local offset from UTC in seconds at the end of the search.
     pub utc_offset_secs: i32,
+    /// The local offset from UTC in seconds at the start of the search.
+    pub start_utc_offset_secs: i32,
     pub region: u8,
     pub realm: String,
     pub faction: Faction,
@@ -188,6 +197,7 @@ pub fn entry_from_facts(facts: &SearchFacts, ctx: &Context) -> Option<Entry> {
         start_utc: ctx.end_utc.saturating_sub(facts.elapsed.as_secs()),
         end_utc: ctx.end_utc,
         utc_offset_secs: ctx.utc_offset_secs,
+        start_utc_offset_secs: ctx.start_utc_offset_secs,
         region: ctx.region,
         realm: ctx.realm.clone(),
         faction: match ctx.faction {
@@ -305,6 +315,7 @@ pub(crate) mod tests {
             start_utc: start,
             end_utc: start + 600,
             utc_offset_secs: 0,
+            start_utc_offset_secs: 0,
             region: 3,
             realm: "15".into(),
             faction: "alliance".into(),
@@ -363,12 +374,28 @@ pub(crate) mod tests {
     fn ctx(end: u64) -> Context {
         Context {
             end_utc: end,
-            utc_offset_secs: 0,
+            utc_offset_secs: 3600,
+            start_utc_offset_secs: 0,
             region: 3,
             realm: "15".into(),
             faction: Faction::Alliance,
             dungeon: "testville-depths".into(),
         }
+    }
+
+    /// Each timestamp keeps its own offset (daylight saving can change during a search), and an
+    /// entry written before the start offset existed still decodes.
+    #[test]
+    fn entries_carry_an_offset_per_timestamp_and_old_entries_still_decode() {
+        let e = entry_from_facts(&facts(SearchOutcome::Expired, 600), &ctx(1_800_000_600)).unwrap();
+        assert_eq!((e.start_utc_offset_secs, e.utc_offset_secs), (0, 3600));
+        // Local end time is the UTC end time plus its own offset.
+        assert_eq!(e.end_utc as i64 + e.utc_offset_secs as i64, 1_800_004_200);
+        let mut v = serde_json::to_value(&e).unwrap();
+        v.as_object_mut().unwrap().remove("start_utc_offset_secs");
+        let old: Entry = serde_json::from_value(v).unwrap();
+        assert_eq!(old.start_utc_offset_secs, 0);
+        assert_eq!(old.utc_offset_secs, 3600);
     }
 
     fn keys(s: &MemStore) -> Vec<String> {

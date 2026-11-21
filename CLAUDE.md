@@ -36,6 +36,7 @@ The frontend follows atomic design. Every level must be covered in Storybook.
   - Sections suppressed for first-time users (e.g. no recent activity on a dashboard).
   - A 40-character vs. a 340-character headline.
   - Admin users seeing extra buttons/options compared to regular users.
+- **Show, don't tell.** A component must be intuitive from its shape, state and labels. Do not use paragraphs of text to explain what a component is or how to use it. Prefer, in this order: a clear label, an icon or visual state (a switch that is on or off, a selected row, a progress bar, role icons with counts), a short value next to its label ("Players seen: 8"), and one short sentence only where the screen cannot show the fact. A card with more than about two sentences of explanation is a signal to redesign the component, not to trim the words. Warnings and notices state the consequence in one sentence and nothing else. Text that explains a setting belongs in a tooltip or a collapsed "Details", never in the default view. Respect the viewport: a component that needs scrolling to be understood is too big.
 - Storybook organization should mirror the levels (Atoms / Molecules / Organisms / Templates / Pages), and each component ships with stories for its meaningful states and variants.
 
 ## Commands

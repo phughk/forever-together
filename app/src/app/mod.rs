@@ -546,11 +546,14 @@ async fn feed<N: Network>(m: &mut Model, net: &mut Option<N>, ev: Event) {
     let _ = rest;
 }
 
-/// The local offset from UTC in seconds. The standard library cannot tell, and a date-time
-/// dependency is not worth it for a field nothing reads yet, so this is 0. TODO: the browser
-/// knows the offset and could send it with a command (ADR 0027).
-fn local_utc_offset_secs() -> i32 {
-    0
+/// The local offset from UTC in seconds at the given instant (UTC seconds): positive east of
+/// Greenwich, and including daylight saving at that instant. 0 if the system cannot say.
+fn local_utc_offset_secs(at_utc: u64) -> i32 {
+    use chrono::{Local, Offset, TimeZone};
+    i64::try_from(at_utc)
+        .ok()
+        .and_then(|secs| Local.timestamp_opt(secs, 0).single())
+        .map_or(0, |t| t.offset().fix().local_minus_utc())
 }
 
 /// Write the history entry for a finished search (ADR 0027). Never fails or stops a search: a
@@ -563,9 +566,12 @@ fn record_search(m: &mut Model, now: Duration, facts: &SearchFacts) {
     let (Some(c), Some(dungeon)) = (m.character.as_ref(), m.slugs.first()) else {
         return;
     };
+    let end_utc = now.as_secs();
+    let start_utc = end_utc.saturating_sub(facts.elapsed.as_secs());
     let ctx = history::Context {
-        end_utc: now.as_secs(),
-        utc_offset_secs: local_utc_offset_secs(),
+        end_utc,
+        utc_offset_secs: local_utc_offset_secs(end_utc),
+        start_utc_offset_secs: local_utc_offset_secs(start_utc),
         region: c.region,
         realm: c.realm.clone(),
         faction: c.faction,
