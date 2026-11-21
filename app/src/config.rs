@@ -52,6 +52,8 @@ pub fn trusted_backoff(attempt: u32, unit: f64) -> Duration {
 #[serde(default)]
 pub struct Settings {
     pub lan_mode: bool,
+    /// The LAN address the pairing link uses; `None` picks the one on the active network.
+    pub lan_address: Option<String>,
     pub known_peers_cache: usize,
     /// Extra trusted peer keys, hex.
     pub trusted_peers: Vec<String>,
@@ -61,6 +63,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             lan_mode: false,
+            lan_address: None,
             known_peers_cache: 100,
             trusted_peers: Vec::new(),
         }
@@ -100,6 +103,7 @@ mod tests {
         assert_eq!(Settings::load(&store).unwrap(), Settings::default());
         let s = Settings {
             lan_mode: true,
+            lan_address: Some("10.0.0.7".into()),
             known_peers_cache: 7,
             trusted_peers: vec!["ab".into()],
         };

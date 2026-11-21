@@ -91,7 +91,7 @@ export function createMockApi(opts: MockApiOptions = {}): MockApi {
     },
     async putSettings(patch) {
       await delay();
-      if ("lan_mode" in patch || "trusted_peers" in patch) loopbackOnly();
+      if ("lan_mode" in patch || "lan_address" in patch || "trusted_peers" in patch) loopbackOnly();
       const settings: Settings = { ...state.settings, ...patch };
       push({ ...state, settings });
       return settings;

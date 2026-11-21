@@ -149,6 +149,8 @@ pub struct NetworkView {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SettingsView {
     pub lan_mode: bool,
+    /// The chosen pairing address, or null for automatic.
+    pub lan_address: Option<String>,
     pub known_peers_size: usize,
     pub trusted_peers: Vec<String>,
 }
@@ -157,6 +159,8 @@ pub struct SettingsView {
 #[serde(deny_unknown_fields)]
 pub struct SettingsPatch {
     pub lan_mode: Option<bool>,
+    /// An IPv4 address, or an empty string to go back to automatic.
+    pub lan_address: Option<String>,
     pub known_peers_size: Option<usize>,
     pub trusted_peers: Option<Vec<String>>,
 }
@@ -164,7 +168,7 @@ pub struct SettingsPatch {
 impl SettingsPatch {
     /// Writes to these need a loopback caller.
     pub fn touches_loopback_only(&self) -> bool {
-        self.lan_mode.is_some() || self.trusted_peers.is_some()
+        self.lan_mode.is_some() || self.lan_address.is_some() || self.trusted_peers.is_some()
     }
 }
 

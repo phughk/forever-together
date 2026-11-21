@@ -198,7 +198,9 @@ async fn get_pairing<C: AppCore>(State(s): S<C>, uri: Uri) -> Response {
             "No private network address was found",
         );
     };
+    let saved = s.core.settings().lan_address.and_then(|a| a.parse().ok());
     let ip = ip_param(&uri)
+        .or(saved)
         .filter(|ip| addresses.contains(ip))
         .unwrap_or(default);
     let port = s.guard.port.load(Ordering::Relaxed);

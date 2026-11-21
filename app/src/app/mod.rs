@@ -142,6 +142,7 @@ fn code_error(e: CodeError) -> CoreError {
 fn settings_view(s: &Settings) -> SettingsView {
     SettingsView {
         lan_mode: s.lan_mode,
+        lan_address: s.lan_address.clone(),
         known_peers_size: s.known_peers_cache,
         trusted_peers: s.trusted_peers.clone(),
     }
@@ -517,6 +518,17 @@ fn validate_settings(patch: SettingsPatch, current: &Settings) -> Result<Setting
     if let Some(l) = patch.lan_mode {
         s.lan_mode = l;
     }
+    if let Some(a) = patch.lan_address {
+        let a = a.trim();
+        s.lan_address = if a.is_empty() {
+            None
+        } else {
+            let ip: std::net::Ipv4Addr = a.parse().map_err(|_| {
+                CoreError::bad_request("bad_lan_address", "lan_address must be an IPv4 address")
+            })?;
+            Some(ip.to_string())
+        };
+    }
     if let Some(k) = patch.known_peers_size {
         if !(1..=100_000).contains(&k) {
             return Err(CoreError::bad_request(
@@ -887,6 +899,7 @@ fn placeholder_state() -> AppState {
         },
         settings: SettingsView {
             lan_mode: false,
+            lan_address: None,
             known_peers_size: 0,
             trusted_peers: vec![],
         },

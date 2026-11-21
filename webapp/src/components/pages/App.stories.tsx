@@ -20,7 +20,7 @@ export const InteractiveWithCharacter: Story = { args: { initial: makeState(), l
 export const InteractiveSearching: Story = { args: { initial: makeState({ search: searchingFor(30) }) } };
 export const InteractiveOnPhone: Story = {
   globals: { viewport: { value: "mobile1", isRotated: false } },
-  args: { initial: makeState({ search: searchingFor(30), settings: { lan_mode: true, known_peers_size: 100, trusted_peers: [] } }), remote: true },
+  args: { initial: makeState({ search: searchingFor(30), settings: { lan_mode: true, lan_address: null, known_peers_size: 100, trusted_peers: [] } }), remote: true },
 };
 
 export const NotPaired: StoryObj = { render: () => <NotPairedPage /> };

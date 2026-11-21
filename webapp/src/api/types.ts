@@ -107,6 +107,8 @@ export interface NetworkView {
 
 export interface Settings {
   lan_mode: boolean;
+  /** The address the pairing link uses; null picks one automatically. */
+  lan_address: string | null;
   known_peers_size: number;
   trusted_peers: string[];
 }

@@ -27,7 +27,6 @@ function Container({ api }: { api: Api }) {
   const [dismissedParty, setDismissedParty] = useState<string | null>(null);
   const [remote, setRemote] = useState(!LOOPBACK.has(window.location.hostname));
   const [pairing, setPairing] = useState<PairingState>({ kind: "off" });
-  const [lanAddress, setLanAddress] = useState<string | undefined>(undefined);
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
   const characterKey = state?.character ? `${state.character.level}|${state.character.zone}|${state.character.createdAt}` : "none";
@@ -47,6 +46,7 @@ function Container({ api }: { api: Api }) {
   }, [api, hasState, characterKey]);
 
   const lanMode = state?.settings.lan_mode ?? false;
+  const lanAddress = state?.settings.lan_address ?? undefined;
   useEffect(() => {
     if (view !== "settings" || !lanMode) {
       setPairing({ kind: "off" });
@@ -99,7 +99,7 @@ function Container({ api }: { api: Api }) {
         error={settingsError}
         onNavigate={setView}
         onLanModeChange={(on) => changeSettings({ lan_mode: on })}
-        onLanAddressChange={setLanAddress}
+        onLanAddressChange={(a) => changeSettings({ lan_address: a })}
         onResetToken={async () => {
           try {
             await api.resetToken();

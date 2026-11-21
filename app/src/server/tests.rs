@@ -35,6 +35,7 @@ pub(crate) fn sample_state() -> AppState {
         },
         settings: SettingsView {
             lan_mode: false,
+            lan_address: None,
             known_peers_size: 100,
             trusted_peers: vec![],
         },

@@ -173,6 +173,7 @@ async fn settings_are_validated_saved_and_published() {
         core.settings(),
         SettingsView {
             lan_mode: false,
+            lan_address: None,
             known_peers_size: 100,
             trusted_peers: vec![]
         }
@@ -183,6 +184,7 @@ async fn settings_are_validated_saved_and_published() {
             lan_mode: Some(true),
             known_peers_size: Some(250),
             trusted_peers: Some(vec![key.clone(), key.to_lowercase(), format!(" {key} ")]),
+            ..Default::default()
         })
         .await
         .unwrap();
@@ -222,6 +224,31 @@ async fn settings_are_validated_saved_and_published() {
     }
     // A refused patch changes nothing.
     assert_eq!(core.settings(), s);
+    // The LAN address is validated, normalised and clearable.
+    let e = core
+        .update_settings(SettingsPatch {
+            lan_address: Some("not an ip".into()),
+            ..Default::default()
+        })
+        .await
+        .unwrap_err();
+    assert_eq!(e.status, StatusCode::BAD_REQUEST);
+    let with = core
+        .update_settings(SettingsPatch {
+            lan_address: Some(" 10.0.0.7 ".into()),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    assert_eq!(with.lan_address.as_deref(), Some("10.0.0.7"));
+    let cleared = core
+        .update_settings(SettingsPatch {
+            lan_address: Some(String::new()),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    assert_eq!(cleared.lan_address, None);
     // A partial patch leaves the other fields.
     let s2 = core
         .update_settings(SettingsPatch {

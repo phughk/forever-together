@@ -66,7 +66,7 @@ export function makeCharacter(over: Partial<CharacterView> = {}): CharacterView 
 }
 
 export function makeSettings(over: Partial<Settings> = {}): Settings {
-  return { lan_mode: false, known_peers_size: 100, trusted_peers: [], ...over };
+  return { lan_mode: false, lan_address: null, known_peers_size: 100, trusted_peers: [], ...over };
 }
 
 export function idleSearch(): SearchView {
