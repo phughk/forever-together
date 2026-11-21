@@ -19,29 +19,22 @@ const Slot = ({ label, height }: { label: string; height: number }) => (
   </div>
 );
 
-const meta = { title: "Templates/Layouts", component: FinderTemplate } satisfies Meta<typeof FinderTemplate>;
+const meta = { title: "Templates/Layouts", component: FinderTemplate, parameters: { layout: "fullscreen" } } satisfies Meta<typeof FinderTemplate>;
 export default meta;
 
 export const FinderWithAllSlots: StoryObj = {
   render: () => (
     <FinderTemplate
-      header={<Slot label="header (one row)" height={56} />}
+      header={<Slot label="header (one row, about 3.5rem)" height={56} />}
       notices={<Slot label="notices (1 to 2 lines)" height={40} />}
-      top={<Slot label="top: search progress or party (full width)" height={160} />}
-      left={<Slot label="left column (about 22rem): character" height={320} />}
-      right={<Slot label="right column: dungeons (1 to 30 rows)" height={420} />}
+      strip={<Slot label="strip: one-line character summary (at most about 5rem)" height={64} />}
+      main={<Slot label="main: one card for the current screen (dungeon list scrolls inside)" height={420} />}
     />
   ),
 };
 
-export const FinderWithoutTopOrNotices: StoryObj = {
-  render: () => (
-    <FinderTemplate
-      header={<Slot label="header" height={56} />}
-      left={<Slot label="left column" height={320} />}
-      right={<Slot label="right column" height={420} />}
-    />
-  ),
+export const FinderWithoutStripOrNotices: StoryObj = {
+  render: () => <FinderTemplate header={<Slot label="header" height={56} />} main={<Slot label="main" height={420} />} />,
 };
 
 export const FinderAtPhoneWidth: StoryObj = {

@@ -29,5 +29,5 @@ button.ft-dungeon:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* Dungeon picker list region */
 .ft-picker__head { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: space-between; }
-.ft-picker__region { display: grid; gap: var(--space-2); max-height: min(60vh, 34rem); overflow-y: auto; overscroll-behavior: contain; padding-right: var(--space-1); }
+.ft-picker__region { display: grid; gap: var(--space-2); max-height: max(12rem, min(34rem, calc(100dvh - 30.5rem))); overflow-y: auto; overscroll-behavior: contain; padding-right: var(--space-1); }
 .ft-picker__bar { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; background: var(--surface); border-top: 1px solid var(--border); }

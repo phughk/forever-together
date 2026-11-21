@@ -43,6 +43,15 @@ export function dungeonsFor(level: number, zone: string): DungeonsResponse {
   return { dungeons: DUNGEON_TABLE, recommended };
 }
 
+/** `n` dungeons (the table repeated with new slugs) to prove the list scrolls inside its own region. The first four are recommended. */
+export function manyDungeons(n: number): DungeonsResponse {
+  const dungeons = Array.from({ length: n }, (_, i) => {
+    const base = DUNGEON_TABLE[i % DUNGEON_TABLE.length]!;
+    return i < DUNGEON_TABLE.length ? base : { ...base, slug: `${base.slug}-${i}`, name: `${base.name} (${i})` };
+  });
+  return { dungeons, recommended: dungeons.slice(0, 4).map((d) => d.slug) };
+}
+
 export const SAMPLE_CODE =
   "WFT1:KJ2 8E4%KDJ5EDGX.EC5-D3/DX0DWEDQ0GDCEC9JCUF5$CC0/E8KE9JD7DDE40DK$D5.D";
 

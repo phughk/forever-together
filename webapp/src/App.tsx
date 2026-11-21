@@ -21,7 +21,6 @@ function Container({ api }: { api: Api }) {
   const { state, status, now } = useAppState(api);
   const [view, setView] = useState<View>("finder");
   const [dungeons, setDungeons] = useState<DungeonsResponse>(EMPTY_DUNGEONS);
-  const [selected, setSelected] = useState<string[]>([]);
   const [codeError, setCodeError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [dismissedParty, setDismissedParty] = useState<string | null>(null);
@@ -63,7 +62,7 @@ function Container({ api }: { api: Api }) {
           setRemote(true);
           setPairing({ kind: "forbidden" });
         } else {
-          setPairing({ kind: "error", message: failureText(e, "Could not get the pairing link.") });
+          setPairing({ kind: "error", message: failureText(e, "Could not get the phone link.") });
         }
       });
     return () => {
@@ -104,7 +103,7 @@ function Container({ api }: { api: Api }) {
           try {
             await api.resetToken();
           } catch (e) {
-            setSettingsError(failureText(e, "The token could not be reset."));
+            setSettingsError(failureText(e, "Phones could not be signed out."));
           }
         }}
         onClearHistory={async () => {
@@ -130,11 +129,9 @@ function Container({ api }: { api: Api }) {
       dungeons={dungeons}
       now={now}
       status={status}
-      selected={selected}
       codeError={codeError}
       busy={busy}
       onNavigate={setView}
-      onSelectionChange={setSelected}
       onSubmitCode={async (code) => {
         setBusy(true);
         setCodeError(null);
@@ -146,7 +143,7 @@ function Container({ api }: { api: Api }) {
           setBusy(false);
         }
       }}
-      onForgetCharacter={() => api.forgetCharacter().then(() => setSelected([]))}
+      onForgetCharacter={() => api.forgetCharacter()}
       onStartSearch={async (slugs) => {
         setBusy(true);
         try {
