@@ -185,3 +185,73 @@ A project-specific file header carrying a version and recipient key id, around a
 ### Using the key as a raw hex or other project-specific file
 
 *   **Left out:** the author wants a key other software can read. Raw hex works only with this app.
+
+## Detailed Implementation
+
+Paths are from the repository root. No file is deleted. The webapp is not touched by this design: no key operation is reachable from the web API (a goal). Work is in two parts. **Part 1** (ticket 0043) is the CLI and key file and can be built and tested alone. **Part 2** (ticket 0044) is the scan-log encryption; it depends on the scan log (0039, 0040), which does not exist yet, and on a `BUILTIN` key (0008).
+
+### Part 1: key commands
+
+| File | Change | Why |
+|------|--------|-----|
+| `app/Cargo.toml` | Add the OpenSSH key crate (`ssh-key` with the `ed25519` feature, to be confirmed against the open question). | Read and write the standard key file. Only `ed25519-dalek` is a dependency today. |
+| `app/src/keys.rs` (new) | The key operations over `&dyn Store` and file paths: `show`, `export_to_file`, `import_from_file`, `reset`. Pure of the CLI: they take a store and a path and return a result or a typed error (`KeyError`: file exists, not an ed25519 OpenSSH key, key is encrypted, would replace an existing key without force, store failure). OpenSSH encode and decode live here. | One home for the logic, testable with `MemStore` and a temp directory, no network or window. |
+| `app/src/identity.rs` | Add `Identity::from_secret` use for import (already present), a function to replace the stored secret in one write, and one to delete and regenerate (reset). Keep the stored format: 32 bytes under `KEY_IDENTITY_SECRET`. | The stored key must not change shape; import and reset need atomic replace semantics (parse first, write once). |
+| `app/src/cli.rs` | Add an optional `key` subcommand with `show`, `export <file>`, `import <file> [--force]`, `reset [--yes]`. Keep `--print-public-key` as an alias for `key show`, and keep `--headless` and `--data-dir` as they are. `Mode` gains a `Key(KeyCommand)` variant. Update the tests for flag and subcommand parsing, including that no subcommand still gives `Window`, `--headless` still gives `Headless`, and `--print-public-key` still wins. | The decided command shape. |
+| `app/src/lib.rs` | Declare `mod keys`; in `run`, dispatch `Mode::Key` before any window, runtime or network start-up, and exit with a failure status and a message on error. | Key commands must never start the app. |
+| `app/src/runtime.rs` | `public_key` is reused by `key show`; no behaviour change. Add a short comment that headless and window modes both create a key on first start through `Identity::load_or_create`. | Records decision 4 where the start-up code is. |
+| `app/src/runtime_tests.rs` | Add a test: `key import` a known key into a fresh data directory, start headless, and check the peer ID equals the imported key's. Add a test that a fresh directory with no import auto-generates a key at start. | Proves the deploy path from the plan. |
+| `app/src/net/trusted.rs` | Update the comment on `BUILTIN` to say the entry comes from `key show` on the trusted node and that its secret is backed up with `key export`. The value itself is ticket 0008, not this change. | The comment currently names `--print-public-key`. |
+| `README.md` | Add a "Keys" section: the commands, the backup process for the trusted key (export to offline storage), and the effect of a reset. Update the run-a-trusted-peer instructions. | The backup is a written process, not code. |
+| `CLAUDE.md` | Update the "Adding a trusted peer" line and the commands list to use `key show`, and mention the `key` group. | Keeps project guidance current. |
+| `docs/adr/0039-key-management.md` | Replace the open details with the final names, the OpenSSH format, and the decisions in this design (plain key, no passphrase, no permission check on read, headless same CLI, no decrypt command). Link `docs/egm/0043-key-management/`. | ADR 0036: decisions leave the iteration as ADRs. |
+| `docs/spike-s0.md` | Add rows: whether `varaq` refuses a second process on a live data directory; the store file's mode on each OS; that a key written by `key export` is accepted by `ssh-keygen -y -f`. | They are unverified facts, in line with how the project tracks them. |
+| `tickets/0043-key-management.md`, `0009-load-private-key-into-instance.md`, `0003-verify-varaq-key-permissions.md`, `0008-trusted-peer-builtin-key.md` | Update status, ADR and EGM links; close 0009 into 0043; reshape 0003 as a verification-only ticket. | Ticket fields in ADR 0036. |
+| `tickets/README.md` and new tickets | Add small tickets for the Windows check and the running-app guard. | They are the leftover work from this pass. |
+| `docs/egm/0043-key-management/README.md`, `docs/egm/README.md` | Status, rounds and links. | Iteration bookkeeping (ADR 0036). |
+
+Pseudocode of the three file operations (no code is written in this draft):
+
+```
+export(store, path):
+    secret = store.get(identity/secret)  // 32 bytes, create if missing
+    if exists(path): error FileExists
+    write path with mode 0600 (Unix) containing OpenSSH-encode(secret)   // unencrypted ed25519
+    print peer_id
+
+import(store, path, force):
+    key = OpenSSH-decode(read(path))   // error if encrypted, wrong type, or malformed
+    if store has identity/secret and not force: error WouldReplace(old_peer_id, new_peer_id)
+    store.put(identity/secret, key.secret_bytes)   // one write, after all checks
+    print old and new peer ids
+
+reset(store, yes):
+    require confirmation unless yes
+    store.put(identity/secret, new random 32 bytes)   // one write
+    print old and new peer ids, and the warning
+```
+
+### Part 2: encrypted scan export (ticket 0044; after 0039 and 0040)
+
+| File | Change | Why |
+|------|--------|-----|
+| `app/Cargo.toml` | Add `age` with the `ssh` and `armor` features. | The recipient type for ssh-ed25519 keys and ASCII armor. |
+| `app/src/scans/export.rs` (new, inside the module from ticket 0039) | Build an `age` ssh-ed25519 recipient from the 32-byte `BUILTIN[0]`, encrypt the export JSON, emit armored text. Return a typed error if `BUILTIN` is empty. | The only place that does encryption. |
+| `app/src/scans/mod.rs`, `app/src/server/` export route (tickets 0039, 0040) | Call the export module; the route returns the armored file or a typed "no recipient key yet" error. | Wiring owned by those tickets; this design only fixes the format. |
+| `app/src/scans/export_tests.rs` or inline tests | Round trip: encrypt to a test key with the same recipient code; load an identity from an OpenSSH file written by `key export`; decrypt with the `age` library; compare to the original JSON with invented characters. A wrong key fails. Empty `BUILTIN` gives the typed error. | Proves the author's `age -d -i` workflow without a decrypt command in the app. |
+| `docs/adr/0038-scan-log-and-opt-in-export.md` | Amend the 2026-11-21 amendment: the file is `age` armored output, the key tag is age's own, no custom header; the key-loss paragraph points to the backup process in the README. | Removes the custom header the amendment sketched. |
+| `tickets/0044-encrypted-scan-export.md`, `0040-scan-log-export-api.md`, `0041-scan-log-ui.md` | Link the ADR and this iteration; note the order dependency. | Ticket fields. |
+
+### Build order
+
+1.  `keys.rs` with export and import and their tests (a round trip gives the same peer ID; every refusal case).
+2.  `reset` and the CLI restructure in `cli.rs` and `lib.rs`; the headless deploy test in `runtime_tests.rs`.
+3.  Docs, ADR 0039 final text, spike rows and ticket updates.
+4.  Later, after 0039, 0040 and 0008: Part 2.
+
+### Verification
+
+*   `cargo test --lib keys::`, `cargo test --lib cli::`, `cargo test --lib runtime::` and `cargo clippy --all-targets -- -D warnings`, per the project's "only test what you changed".
+*   Manual: `key export`, then `ssh-keygen -y -f <file>` prints a public key whose bytes equal the peer ID; `key import` the file into a second data directory and `key show` prints the same peer ID.
+*   Manual on the trusted node after 0008: backup export taken and stored offline.
+*   Part 2 round trip as above, plus the author decrypts a real export with `age -d -i`.
