@@ -12,16 +12,16 @@ pub mod memnet;
 mod tests;
 
 use crate::code::{self, Character, CodeError};
-use crate::config::{CONFIRM_WINDOW, Settings, WIDEN_STEP};
+use crate::config::{CONFIRM_WINDOW, READY_WINDOW, Settings, WIDEN_STEP};
 use crate::dungeons::{self, Dungeon, Status};
-use crate::engine::state::{Action, Engine, Event, Mode, Profile, TopicSearch, View};
-use crate::engine::{NetError, Network, apply_network};
+use crate::engine::state::{Engine, Event, Mode, Profile, TopicSearch, View};
+use crate::engine::{DropCause, Message, NetError, Network, PartyId, apply_network};
 use crate::identity::PeerId;
 use crate::server::core::*;
 use crate::store::{KEY_CHARACTER, Store, get_json, put_json};
 use axum::http::StatusCode;
 use sha2::{Digest, Sha256};
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::future::Future;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -164,8 +164,6 @@ struct PartyTrack {
     /// The last confirming party, to turn its disappearance into a `dropped` view.
     last_confirming: Option<PartyView>,
     dropped: Option<(PartyView, u64)>,
-    i_declined: bool,
-    banned: bool,
 }
 
 /// How long a dropped party stays on screen.
@@ -216,20 +214,20 @@ fn party_view(
                 } else {
                     None
                 },
-                role: if is_self {
-                    my.map_or(RoleView::Unknown, |c| role_view(c.role))
-                } else {
-                    RoleView::Unknown
+                role: match (is_self, my, m.details) {
+                    (true, Some(c), _) => role_view(c.role),
+                    (_, _, Some(d)) => role_view(Some(d.role)),
+                    _ => RoleView::Unknown,
                 },
-                level: if is_self {
-                    my.map_or(0, |c| c.level)
-                } else {
-                    0
+                level: match (is_self, my, m.details) {
+                    (true, Some(c), _) => c.level,
+                    (_, _, Some(d)) => d.level,
+                    _ => 0,
                 },
-                item_level: if is_self {
-                    my.map_or(0, |c| c.item_level)
-                } else {
-                    0
+                item_level: match (is_self, my, m.details) {
+                    (true, Some(c), _) => c.item_level,
+                    (_, _, Some(d)) => d.item_level,
+                    _ => 0,
                 },
                 is_self,
                 ready: m.ready,
@@ -263,6 +261,7 @@ struct Model {
     started_at: Option<u64>,
     last_stage_clock: Option<u64>,
     track: PartyTrack,
+    hb: Heartbeats,
     net_status: watch::Receiver<NetworkView>,
     published: AppState,
 }
@@ -328,17 +327,22 @@ impl Model {
                 {
                     last.phase = PartyPhase::Dropped;
                     last.confirm_deadline = None;
-                    last.drop_reason = Some(if self.track.i_declined {
-                        DropReason::Declined
-                    } else if self.track.banned {
-                        DropReason::Unreachable
-                    } else {
-                        DropReason::Timeout
+                    let info = view.last_drop;
+                    last.drop_reason = Some(match info.map(|i| i.cause) {
+                        Some(DropCause::Declined) => DropReason::Declined,
+                        Some(DropCause::Unreachable) => DropReason::Unreachable,
+                        _ => DropReason::Timeout,
                     });
+                    if let Some(i) = info
+                        && i.cause == DropCause::Declined
+                        && let Some(p) = i.peer
+                    {
+                        for member in last.members.iter_mut() {
+                            member.declined = member.peer_id == p.to_hex();
+                        }
+                    }
                     self.track.dropped = Some((last, now_ms + DROPPED_SHOWN_MS));
                 }
-                self.track.i_declined = false;
-                self.track.banned = false;
                 self.track.seen = None;
                 if view.mode != Mode::Searching {
                     self.track.dropped = None;
@@ -412,6 +416,11 @@ fn topic_search(c: &Character, d: &Dungeon) -> TopicSearch {
 /// Hand an event to the engine and carry out what it asks.
 async fn feed<N: Network>(m: &mut Model, net: &mut Option<N>, ev: Event) {
     let now = m.now();
+    if let Event::HeartbeatAckReceived { from, party_id } = &ev
+        && m.hb.party == Some(*party_id)
+    {
+        m.hb.outstanding.remove(from);
+    }
     let actions = m.engine.handle(now, ev);
     let rest = match net.as_mut() {
         Some(n) => match apply_network(n, actions).await {
@@ -423,10 +432,68 @@ async fn feed<N: Network>(m: &mut Model, net: &mut Option<N>, ev: Event) {
         },
         None => actions,
     };
-    for a in rest {
-        if let Action::BanLocal(..) = a {
-            m.track.banned = true;
+    // `BanLocal` is already applied inside the engine; nothing else is left for the host.
+    let _ = rest;
+}
+
+/// How often a heartbeat goes to a member that has no outstanding one.
+const HEARTBEAT_EVERY: Duration = Duration::from_secs(1);
+
+/// Heartbeats the host sends while a party is committed (plan: 4 s reply window). A member that
+/// does not answer within `READY_WINDOW` is reported to the engine as `HeartbeatTimeout`, which
+/// drops the party and bans that peer locally for `BAN`. The ban is never gossiped.
+#[derive(Default)]
+struct Heartbeats {
+    party: Option<PartyId>,
+    outstanding: HashMap<PeerId, Duration>,
+    last_sent: Duration,
+    nonce: u64,
+}
+
+async fn heartbeat_tick<N: Network>(m: &mut Model, net: &mut Option<N>) {
+    let now = m.now();
+    let view = m.engine.view(now);
+    let (topic, pid) = match (view.mode, view.committed) {
+        (Mode::Committed, Some(c)) => c,
+        _ => {
+            m.hb = Heartbeats::default();
+            return;
         }
+    };
+    if m.hb.party != Some(pid) {
+        m.hb = Heartbeats {
+            party: Some(pid),
+            ..Heartbeats::default()
+        };
+    }
+    let silent =
+        m.hb.outstanding
+            .iter()
+            .find(|(_, sent)| now.saturating_sub(**sent) >= READY_WINDOW)
+            .map(|(p, _)| *p);
+    if let Some(peer) = silent {
+        m.hb = Heartbeats::default();
+        feed(m, net, Event::HeartbeatTimeout { peer }).await;
+        return;
+    }
+    if now.saturating_sub(m.hb.last_sent) < HEARTBEAT_EVERY {
+        return;
+    }
+    m.hb.last_sent = now;
+    let Some(n) = net.as_mut() else { return };
+    for member in view.party.iter().filter(|x| !x.confirmed && x.peer != m.me) {
+        if m.hb.outstanding.contains_key(&member.peer) {
+            continue;
+        }
+        m.hb.nonce += 1;
+        let msg = Message::Heartbeat {
+            peer: m.me,
+            party_id: pid,
+            nonce: m.hb.nonce,
+        };
+        // A failed send counts as no answer, so the peer times out like a silent one.
+        let _ = n.send_direct(member.peer, topic, msg).await;
+        m.hb.outstanding.insert(member.peer, now);
     }
 }
 
@@ -568,7 +635,6 @@ async fn handle_cmd<N: Network>(
         }
         Cmd::Decline(reply) => {
             let r = if m.engine.mode() == Mode::Committed {
-                m.track.i_declined = true;
                 feed(m, net, Event::UserDecline).await;
                 Ok(())
             } else {
@@ -715,7 +781,10 @@ async fn run<N: Network>(
                     tokio::time::sleep(Duration::from_millis(100)).await;
                 }
             },
-            _ = ticker.tick() => feed(&mut m, &mut net, Event::Tick).await,
+            _ = ticker.tick() => {
+                feed(&mut m, &mut net, Event::Tick).await;
+                heartbeat_tick(&mut m, &mut net).await;
+            }
             r = net_status.changed(), if status_alive => {
                 if r.is_err() {
                     // The status source is gone; keep the last value and stop watching it.
@@ -757,6 +826,7 @@ impl LiveCore {
             started_at: None,
             last_stage_clock: None,
             track: PartyTrack::default(),
+            hb: Heartbeats::default(),
             net_status: deps.net_status,
             published: placeholder_state(),
         };

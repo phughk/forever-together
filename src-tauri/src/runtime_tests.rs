@@ -39,6 +39,8 @@ fn get(port: u16, path: &str, token: Option<&str>) -> String {
 
 #[test]
 fn window_mode_starts_the_server_on_a_free_port_with_the_token_in_the_url() {
+    // No sockets to n0 from a unit test.
+    unsafe { std::env::set_var("WOWFT_NET", "memory") };
     let d = temp("window");
     let assets = Arc::new(MapAssets(
         [("index.html".to_owned(), b"<p>hi</p>".to_vec())]

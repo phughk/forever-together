@@ -268,6 +268,7 @@ fn party_view_maps_the_engine_view() {
         (1..=5u8)
             .map(|i| MemberView {
                 peer: peer(i),
+                details: None,
                 ready: i != 5,
                 confirmed: i == 1 && confirmed_by_me,
                 name: names.then(|| (format!("N{i}"), format!("S{i}"))),
@@ -281,6 +282,8 @@ fn party_view_maps_the_engine_view() {
         next_stage_in: None,
         confirm_prompt,
         party,
+        committed: None,
+        last_drop: None,
     };
     let mut track = PartyTrack::default();
 

@@ -5,6 +5,8 @@ pub mod config;
 pub mod dungeons;
 pub mod engine;
 pub mod identity;
+#[cfg(test)]
+mod integration_tests;
 pub mod net;
 pub mod runtime;
 pub mod server;

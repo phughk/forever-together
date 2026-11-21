@@ -68,6 +68,12 @@ impl FakeHub {
         self.state.lock().unwrap().nodes.clear();
     }
 
+    /// Remove one node, as if its machine lost the network: it hears nothing more and its
+    /// pending `next_event` ends with `NetError::Closed`.
+    pub fn disconnect(&self, peer: PeerId) {
+        self.state.lock().unwrap().nodes.remove(&peer);
+    }
+
     fn deliver(&self, topic: TopicId, bytes: Vec<u8>, except: Option<PeerId>) {
         let st = self.state.lock().unwrap();
         for (peer, node) in &st.nodes {

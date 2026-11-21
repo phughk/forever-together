@@ -123,9 +123,35 @@ pub enum Mode {
     Expired,
 }
 
+/// What a member's ad claimed (self-reported, ADR 0003). Known only for members seen in a sample.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MemberDetails {
+    pub role: Role,
+    pub level: u8,
+    pub item_level: u16,
+}
+
+/// Why the last party fell apart.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DropCause {
+    /// `peer` clicked Decline (it may be this peer).
+    Declined,
+    /// Nobody was unreachable but the party did not finish in time.
+    Timeout,
+    /// `peer` did not answer and is banned locally.
+    Unreachable,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DropInfo {
+    pub cause: DropCause,
+    pub peer: Option<PeerId>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MemberView {
     pub peer: PeerId,
+    pub details: Option<MemberDetails>,
     pub ready: bool,
     pub confirmed: bool,
     /// First name and surname, claimed by the member. Only shown once the party is final.
@@ -142,6 +168,10 @@ pub struct View {
     /// The Confirm prompt is showing and the player has not answered.
     pub confirm_prompt: bool,
     pub party: Vec<MemberView>,
+    /// The topic and id of the party this peer is committed to (the host sends heartbeats on it).
+    pub committed: Option<(TopicId, PartyId)>,
+    /// Why the most recent party was dropped. Kept until the next commit.
+    pub last_drop: Option<DropInfo>,
 }
 
 struct Search {
@@ -176,6 +206,7 @@ struct Commit {
     alive: BTreeSet<PeerId>,
     confirmed: BTreeSet<PeerId>,
     names: BTreeMap<PeerId, (String, String)>,
+    details: BTreeMap<PeerId, MemberDetails>,
     my_confirmed: bool,
 }
 
@@ -190,6 +221,8 @@ pub struct Engine {
     early: Vec<Event>,
     final_names: BTreeMap<PeerId, (String, String)>,
     final_party: Vec<PeerId>,
+    final_details: BTreeMap<PeerId, MemberDetails>,
+    last_drop: Option<DropInfo>,
 }
 
 const MAX_EARLY: usize = 64;
@@ -206,6 +239,8 @@ impl Engine {
             early: Vec::new(),
             final_names: BTreeMap::new(),
             final_party: Vec::new(),
+            final_details: BTreeMap::new(),
+            last_drop: None,
         }
     }
 
@@ -311,7 +346,7 @@ impl Engine {
                     peer != self.me && c.party.contains(&peer) && !c.confirmed.contains(&peer)
                 });
                 if in_party {
-                    self.drop_party(now, Some(peer), out);
+                    self.drop_party(now, DropCause::Unreachable, Some(peer), out);
                 }
             }
             Event::UserConfirm => self.user_confirm(now, out),
@@ -324,7 +359,7 @@ impl Engine {
                             party_id: c.party.id,
                         },
                     ));
-                    self.drop_party(now, None, out);
+                    self.drop_party(now, DropCause::Declined, Some(self.me), out);
                 }
             }
         }
@@ -664,15 +699,18 @@ impl Engine {
     fn commit_to(&mut self, now: Duration, topic: TopicId, party: Party, out: &mut Vec<Action>) {
         let me = self.me;
         let mut names = BTreeMap::new();
+        let mut details = BTreeMap::new();
         {
             let s = self.search.as_mut().unwrap();
             for m in party.members {
                 if let Some(e) = s.samples.get(&topic).and_then(|sm| sm.get(&m)) {
                     names.insert(m, (e.ad.first_name.clone(), e.ad.surname.clone()));
+                    details.insert(m, details_of(&e.ad));
                 }
             }
             if let Some(e) = s.samples.get(&topic).and_then(|sm| sm.get(&me)) {
                 names.insert(me, (e.ad.first_name.clone(), e.ad.surname.clone()));
+                details.insert(me, details_of(&e.ad));
             }
             // Members are taken: drop them from every sample. Stop announcing.
             for sample in s.samples.values_mut() {
@@ -719,8 +757,10 @@ impl Engine {
             alive,
             confirmed: BTreeSet::new(),
             names,
+            details,
             my_confirmed: false,
         });
+        self.last_drop = None;
         // Replay messages that arrived before the commit.
         for e in std::mem::take(&mut self.early) {
             if self.mode == Mode::Committed {
@@ -765,7 +805,7 @@ impl Engine {
                 c.alive.insert(from);
             }
             _ => {
-                self.drop_party(now, None, out);
+                self.drop_party(now, DropCause::Declined, Some(from), out);
                 return;
             }
         }
@@ -809,6 +849,7 @@ impl Engine {
         }
         let c = self.commit.take().unwrap();
         self.final_names = c.names;
+        self.final_details = c.details;
         self.final_party = c.party.members.to_vec();
         if let Some(s) = self.search.take() {
             for t in s.joined {
@@ -830,7 +871,7 @@ impl Engine {
                 .copied()
                 .find(|m| !c.alive.contains(m));
             if let Some(m) = silent {
-                self.drop_party(now, Some(m), out);
+                self.drop_party(now, DropCause::Unreachable, Some(m), out);
                 return;
             }
         }
@@ -843,18 +884,30 @@ impl Engine {
                     party_id: pid,
                 },
             ));
-            self.drop_party(now, None, out);
+            self.drop_party(now, DropCause::Timeout, None, out);
             return;
         }
         // Someone else never answered the human prompt and never sent Decline (crashed after
         // Ready): the party times out without a penalty.
         if age >= CONFIRM_WINDOW + READY_WINDOW {
-            self.drop_party(now, None, out);
+            self.drop_party(now, DropCause::Timeout, None, out);
         }
     }
 
     /// Back to searching. `ban` is set when a member did not answer: a local ban, not sent.
-    fn drop_party(&mut self, now: Duration, ban: Option<PeerId>, out: &mut Vec<Action>) {
+    fn drop_party(
+        &mut self,
+        now: Duration,
+        cause: DropCause,
+        who: Option<PeerId>,
+        out: &mut Vec<Action>,
+    ) {
+        let ban = if cause == DropCause::Unreachable {
+            who
+        } else {
+            None
+        };
+        self.last_drop = Some(DropInfo { cause, peer: who });
         self.commit = None;
         self.early.clear();
         if let Some(p) = ban {
@@ -896,6 +949,8 @@ impl Engine {
             next_stage_in: None,
             confirm_prompt: false,
             party: Vec::new(),
+            committed: None,
+            last_drop: self.last_drop,
         };
         if let Some(s) = &self.search {
             v.stage = s.stage;
@@ -912,6 +967,7 @@ impl Engine {
         }
         if let Some(c) = &self.commit {
             v.confirm_prompt = !c.my_confirmed;
+            v.committed = Some((c.topic, c.party.id));
             v.party = c
                 .party
                 .members
@@ -920,6 +976,7 @@ impl Engine {
                     peer: *m,
                     ready: c.ready.contains(m),
                     confirmed: c.confirmed.contains(m),
+                    details: c.details.get(m).copied(),
                     name: None,
                 })
                 .collect();
@@ -932,11 +989,20 @@ impl Engine {
                     peer: *m,
                     ready: true,
                     confirmed: true,
+                    details: self.final_details.get(m).copied(),
                     name: self.final_names.get(m).cloned(),
                 })
                 .collect();
         }
         v
+    }
+}
+
+fn details_of(ad: &Ad) -> MemberDetails {
+    MemberDetails {
+        role: ad.role,
+        level: ad.level,
+        item_level: ad.item_level,
     }
 }
 

@@ -10,7 +10,10 @@ pub mod state;
 pub mod widen;
 
 pub use ad::{Ad, Faction, Message, PartyId, Role, compatible, event_from_message};
-pub use state::{Action, Engine, Event, MemberView, Mode, Profile, TopicSearch, View};
+pub use state::{
+    Action, DropCause, DropInfo, Engine, Event, MemberDetails, MemberView, Mode, Profile,
+    TopicSearch, View,
+};
 
 use crate::dungeons::TopicId;
 use crate::identity::PeerId;
