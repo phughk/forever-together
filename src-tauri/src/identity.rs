@@ -70,6 +70,11 @@ impl Identity {
         }
     }
 
+    /// The secret key bytes, for building the iroh endpoint key (same ed25519 key). Never log.
+    pub fn secret_bytes(&self) -> [u8; 32] {
+        self.key.to_bytes()
+    }
+
     pub fn generate() -> Self {
         let mut secret = [0u8; 32];
         rand::fill(&mut secret);

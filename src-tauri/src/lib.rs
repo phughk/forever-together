@@ -3,6 +3,7 @@ pub mod config;
 pub mod dungeons;
 pub mod engine;
 pub mod identity;
+pub mod net;
 pub mod store;
 
 #[tauri::command]

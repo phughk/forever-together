@@ -6,7 +6,7 @@
 
 ## Context
 
-`iroh-gossip` delivers a message together with the neighbour that forwarded it, not with its original author (to be confirmed in the spike). Parties are agreed by converging announcements, and each member must know who said what.
+`iroh-gossip` delivers a message together with the neighbour that forwarded it, not with its original author (confirmed from the iroh-gossip 0.103 source on 2026-11-21: `Message` has `delivered_from`, no author, and the docs say to sign in the app; not run live, see `docs/spike-s0.md`). Parties are agreed by converging announcements, and each member must know who said what.
 
 ## Decision
 
