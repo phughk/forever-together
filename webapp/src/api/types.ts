@@ -173,6 +173,38 @@ export interface PairingInfo {
   addresses: string[];
 }
 
+/** Where the addon stands against the app's own copy. See the addon installer brief, "Version rules". */
+export type AddonStatus =
+  | "no_folder"
+  | "folder_invalid"
+  | "not_installed"
+  | "up_to_date"
+  | "update_available"
+  | "files_differ"
+  | "installed_newer"
+  | "unknown_version";
+
+export type AddonFolderSource = "saved" | "detected";
+
+/** What is in the game's AddOns folder. */
+export interface AddonInstalled {
+  state: "missing" | "present" | "unreadable";
+  version: string | null;
+}
+
+/** `GET /api/addon`, and the answer of `PUT /api/addon/folder` and `POST /api/addon/install`. Loopback only. */
+export interface AddonInfo {
+  /** The version of the addon copy inside this app. */
+  bundled_version: string;
+  folder: string | null;
+  /** "detected" folders are not saved until the first confirmed install. */
+  folder_source: AddonFolderSource | null;
+  /** Existing, valid AddOns folders found on this computer. */
+  candidates: string[];
+  installed: AddonInstalled;
+  status: AddonStatus;
+}
+
 export type ApiEvent = { type: "state"; state: AppState } | { type: "heartbeat" };
 
 export type ConnectionStatus = "connecting" | "live" | "reconnecting" | "unauthorized";
@@ -199,4 +231,10 @@ export interface Api {
   resetToken(): Promise<void>;
   /** Deletes the local record of finished searches. Loopback only. */
   clearHistory(): Promise<void>;
+  /** Loopback only: a phone gets 403. */
+  getAddon(): Promise<AddonInfo>;
+  /** Validates and saves the AddOns folder. */
+  setAddonFolder(folder: string): Promise<AddonInfo>;
+  /** Installs the app's copy into the saved folder. Takes no path. */
+  installAddon(): Promise<AddonInfo>;
 }
