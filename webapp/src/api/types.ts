@@ -1,6 +1,6 @@
 // Wire types for the local web API (implementation plan, "Local web API").
 //
-// Assumptions where the plan is silent (to be reconciled with src-tauri/src/server):
+// Assumptions where the plan is silent (to be reconciled with app/src/server):
 //  - JSON is camelCase, except settings keys, which use the plan's names
 //    (`lan_mode`, `trusted_peers`) plus `known_peers_size`.
 //  - Times are absolute server-clock milliseconds; `AppState.serverNow` lets the

@@ -1,6 +1,8 @@
 # forever-together implementation plan
 
-Status: draft. **Do not start steps 1 to 7 until spike S0 (step 0) has reported.** The design is [`forever-together.md`](forever-together.md). Byte layouts and message definitions are in [`../rdf-code-spec.md`](../rdf-code-spec.md). Reasons for each decision are in [`../../adr/`](../../adr/README.md).
+> Paths were reorganised on 2026-11-21: `src-tauri/` is now `app/`, the React app is in `webapp/`, `adr/` is `docs/adr/`, `assets_vc/` is `assets/`.
+
+Status: draft. **Do not start steps 1 to 7 until spike S0 (step 0) has reported.** The design is [`forever-together.md`](forever-together.md). Byte layouts and message definitions are in [`../rdf-code-spec.md`](../rdf-code-spec.md). Reasons for each decision are in [`../adr/`](../adr/README.md).
 
 The project lives in one repository, `forever-together`, started from `template-rust-app` at commit `9048274` (already copied in). It holds the addon, the desktop app and the web app. The `wow-forever-addons` repository (now at `/Users/hughkaznowski/Projects/gitlloop/wow-forever-addons`) keeps all its addons unchanged. Its only change is the test VM additions in item 11.
 
@@ -26,9 +28,9 @@ flowchart TD
 | 0 | spike S0 | every S0 output below is filled in and committed under `docs/spike-s0.md` | none |
 | 1 | 1, 2, 21 (data file) | `docs/rdf-code-vectors.json` exists and the author has committed `dungeons.json` | none |
 | 2 | 3-12 | `mise run test-addon` passes | addon only |
-| 3 | 15, 17-22, 24 | `cargo test --manifest-path src-tauri/Cargo.toml code dungeons engine store config identity` passes, and the D1 simulation meets its floor | `engine` types before `net` |
+| 3 | 15, 17-22, 24 | `cargo test --manifest-path app/Cargo.toml code dungeons engine store config identity` passes, and the D1 simulation meets its floor | `engine` types before `net` |
 | 4 | 23 | `cargo test ... net` passes on the fake network | `engine`, `net` |
-| 5 | 16, 25 | `cargo test ... server` passes, `cargo clippy --all-targets -- -D warnings` clean | all of `src-tauri` |
+| 5 | 16, 25 | `cargo test ... server` passes, `cargo clippy --all-targets -- -D warnings` clean | all of `app/` |
 | 6 | 14, 26 | `pnpm typecheck` and `pnpm build` pass, Storybook builds | web app |
 | 7 | 27, 28 | the integration and manual checks in the Verification Plan | everything |
 
@@ -48,7 +50,7 @@ Owner: the author. Output file: `docs/spike-s0.md`. For each row, record the res
 | iroh-gossip identifies message authors | if yes, drop signatures (ADR 0019 replaced) |
 | iroh address lookup resolves a trusted peer from its public key | list trusted peer addresses in the app |
 | iroh's default hosted components (relays, DNS) are named, and whether they can be self-hosted or switched off | record as a dependency in the risks table |
-| The seeded simulation (D1) reports the commit rate for converging announcements and for the proposer model at 3,000 peers and a sample of 100, with modelled sample divergence | **Done in the engine, result in `docs/spike-s0.md`: neither reached the floor, so the design was reopened and leader invitations ([ADR 0025](../../adr/0025-leader-invitations.md)) were adopted; they reach it within 30 s in the model.** A live run can still change this: if direct messages are lost, add a retry. |
+| The seeded simulation (D1) reports the commit rate for converging announcements and for the proposer model at 3,000 peers and a sample of 100, with modelled sample divergence | **Done in the engine, result in `docs/spike-s0.md`: neither reached the floor, so the design was reopened and leader invitations ([ADR 0025](../adr/0025-leader-invitations.md)) were adopted; they reach it within 30 s in the model.** A live run can still change this: if direct messages are lost, add a retry. |
 
 Floor (revised 2026-11-21, author decision): at least 70% of the peers that a central greedy build over every peer in the swarm could place in a party commit within 30 s (6 rounds of the 5 s epoch of ADR 0025). Peers that no mechanism could place, such as surplus non-tank peers when tanks are scarce, are outside the measure. This replaces the original wording, which counted all peers with a compatible five in their sample and could not be met by any mechanism in tank-scarce or small swarms.
 
@@ -143,25 +145,25 @@ Each path appears once and is marked Create, Modify or Delete.
 ### Part B: app and web app
 
 14. `package.json`, `pnpm-lock.yaml` (Modify). Rename the package to `forever-together`. Add a QR library for the pairing QR (name and version pinned when chosen).
-15. `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock` (Modify). Rename the package. Dependencies `iroh`, `iroh-gossip`, `tokio`, `axum`, `serde`, `postcard`, `serde_json`, `varaq`, `rand`, `sha2`, `data-encoding`, `clap`, `tracing`. **Versions and features are pinned when step 3 starts** (open: a crate for the OS keychain, only needed if S0 chooses it; base45 is hand-written). Check that no OpenSSL dependency is pulled in.
-16. `src-tauri/tauri.conf.json`, `src-tauri/capabilities/default.json` (Modify). Rename the identifier and product. No static windows. The window is created in code, loads the local URL, and has no IPC capabilities.
-17. `src-tauri/src/main.rs`, `src-tauri/src/lib.rs` (Modify). Flags `--headless`, `--print-public-key`, `--data-dir`. Window mode starts the runtime, loads the identity, starts network and server, then opens `http://127.0.0.1:<port>/#token=<token>`. Headless mode starts the network with a large known-peers cache and no server.
-18. `src-tauri/src/config.rs` (Create). The constants and settings above, loading and saving user settings.
-19. `src-tauri/src/identity.rs` (Create). Load or create the secret key once, keep it, expose the peer ID.
-20. `src-tauri/src/code.rs` (Create). Decode and validate per the spec, plus a test-only encoder.
-21. `src-tauri/src/dungeons.rs` (Create) and `src-tauri/data/dungeons.json` (Create, committed by the author before step 3). Recommendation per the spec and `topics_for(character, dungeons) -> Vec<TopicId>`.
-22. `src-tauri/src/engine/` (Create: `mod.rs`, `ad.rs`, `sample.rs`, `rank.rs`, `lead.rs`, `party.rs`, `widen.rs`, `state.rs`, `sim.rs`). `sim.rs` is the seeded simulation used by S0 and kept as a test. A peer leads at most one party per epoch, answers one invitation per epoch and confirms at most one party.
-23. `src-tauri/src/net/` (Create: `mod.rs`, `iroh_net.rs`, `gossip.rs`, `exchange.rs`, `bootstrap.rs`, `known_peers.rs`, `trusted.rs`, `fake.rs`). `known_peers.rs` reserves cache slots for the player's active topics before applying least-recently-used eviction. `bootstrap.rs` never contacts a trusted peer while an earlier step works. `trusted.rs` holds the built-in keys (empty until the author supplies one) and takes a `Vec<PeerId>` so tests pass their own.
-24. `src-tauri/src/store/` (Create: `mod.rs`, `varaq_store.rs`, `mem.rs`). Keys: `identity/secret`, `known_peers/<peerId>`, `settings`, `api/token`, `character`.
-25. `src-tauri/src/server/` (Create: `mod.rs`, `routes.rs`, `auth.rs`, `static_files.rs`, `events.rs`, `pairing.rs`). Serves files from `WOWFT_WEB_DIR` first (path normalized so it cannot leave the folder, `/api` never overridden), then the embedded files. Pairing URL `http://<lan-ip>:<port>/#token=<token>`, with the LAN address chosen as the first private IPv4 address of the active interface.
+15. `app/Cargo.toml`, `app/Cargo.lock` (Modify). Rename the package. Dependencies `iroh`, `iroh-gossip`, `tokio`, `axum`, `serde`, `postcard`, `serde_json`, `varaq`, `rand`, `sha2`, `data-encoding`, `clap`, `tracing`. **Versions and features are pinned when step 3 starts** (open: a crate for the OS keychain, only needed if S0 chooses it; base45 is hand-written). Check that no OpenSSL dependency is pulled in.
+16. `app/tauri.conf.json`, `app/capabilities/default.json` (Modify). Rename the identifier and product. No static windows. The window is created in code, loads the local URL, and has no IPC capabilities.
+17. `app/src/main.rs`, `app/src/lib.rs` (Modify). Flags `--headless`, `--print-public-key`, `--data-dir`. Window mode starts the runtime, loads the identity, starts network and server, then opens `http://127.0.0.1:<port>/#token=<token>`. Headless mode starts the network with a large known-peers cache and no server.
+18. `app/src/config.rs` (Create). The constants and settings above, loading and saving user settings.
+19. `app/src/identity.rs` (Create). Load or create the secret key once, keep it, expose the peer ID.
+20. `app/src/code.rs` (Create). Decode and validate per the spec, plus a test-only encoder.
+21. `app/src/dungeons.rs` (Create) and `app/data/dungeons.json` (Create, committed by the author before step 3). Recommendation per the spec and `topics_for(character, dungeons) -> Vec<TopicId>`.
+22. `app/src/engine/` (Create: `mod.rs`, `ad.rs`, `sample.rs`, `rank.rs`, `lead.rs`, `party.rs`, `widen.rs`, `state.rs`, `sim.rs`). `sim.rs` is the seeded simulation used by S0 and kept as a test. A peer leads at most one party per epoch, answers one invitation per epoch and confirms at most one party.
+23. `app/src/net/` (Create: `mod.rs`, `iroh_net.rs`, `gossip.rs`, `exchange.rs`, `bootstrap.rs`, `known_peers.rs`, `trusted.rs`, `fake.rs`). `known_peers.rs` reserves cache slots for the player's active topics before applying least-recently-used eviction. `bootstrap.rs` never contacts a trusted peer while an earlier step works. `trusted.rs` holds the built-in keys (empty until the author supplies one) and takes a `Vec<PeerId>` so tests pass their own.
+24. `app/src/store/` (Create: `mod.rs`, `varaq_store.rs`, `mem.rs`). Keys: `identity/secret`, `known_peers/<peerId>`, `settings`, `api/token`, `character`.
+25. `app/src/server/` (Create: `mod.rs`, `routes.rs`, `auth.rs`, `static_files.rs`, `events.rs`, `pairing.rs`). Serves files from `WOWFT_WEB_DIR` first (path normalized so it cannot leave the folder, `/api` never overridden), then the embedded files. Pairing URL `http://<lan-ip>:<port>/#token=<token>`, with the LAN address chosen as the first private IPv4 address of the active interface.
 26. `src/` (web app: Create components and stories, Modify `App.tsx`, `main.tsx`, `index.css`), `index.html` (Modify), `vite.config.ts` (Modify only if needed), `.storybook/` (Modify only if needed). Atomic design per `CLAUDE.md`. `src/api/` holds the client, types and the state hook with token handling and the event stream. Page stories cover: first run, a stale code, an unknown code version, an unknown zone, no recommendations, a long first name and surname, a quiet topic at the last stage, a party where one member has not confirmed (Ready received, Confirm not), phone width. The settings page shows only the user settings (LAN mode, token reset, known-peers size, trusted peers).
-27. `src-tauri/tests/` and inline `#[cfg(test)]` modules (Create). See the Verification Plan.
+27. `app/tests/` and inline `#[cfg(test)]` modules (Create). See the Verification Plan.
 28. `CLAUDE.md`, `README.md`, `mise.toml` (Modify). Document module layout, flags, `WOWFT_WEB_DIR`, running two instances on one machine, adding a trusted peer key. Also delete the template placeholder text in `README.md`. `.gitignore` is already copied from the template.
 
 ## Prerequisites outside the code
 
 *   **Trusted peer key.** The author runs the app once with `--print-public-key` on the always-on machine and supplies the public key for `trusted.rs`. The private key is never committed or shared.
-*   **Dungeon table.** The author commits `src-tauri/data/dungeons.json`.
+*   **Dungeon table.** The author commits `app/data/dungeons.json`.
 *   **Spike S0 outputs.** See item 0.
 
 ## Verification plan

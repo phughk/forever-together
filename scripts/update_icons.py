@@ -1,6 +1,6 @@
-"""Regenerate every icon from the master image (default assets_vc/icon_1024.png).
+"""Regenerate every icon from the master image (default assets/icon_1024.png).
 
-- Desktop app: `pnpm tauri icon` writes all sizes and formats into src-tauri/icons/.
+- Desktop app: the Tauri CLI (from webapp/node_modules) writes all sizes and formats into app/icons/.
 - Addon: a 64x64, 32-bit, uncompressed TGA (WoW loads TGA and BLP, not PNG) at addon/ForeverTogether/icon.tga.
 
 Run from anywhere: uv run --project scripts scripts/update_icons.py [master.png]
@@ -13,7 +13,7 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_MASTER = ROOT / "assets_vc" / "icon_1024.png"
+DEFAULT_MASTER = ROOT / "assets" / "icon_1024.png"
 ADDON_ICON = ROOT / "addon" / "ForeverTogether" / "icon.tga"
 ADDON_ICON_SIZE = 64
 MIN_MASTER_SIZE = 1024
@@ -30,7 +30,11 @@ def load_master(path: Path) -> Image.Image:
 
 
 def tauri_icons(master: Path) -> None:
-    subprocess.run(["pnpm", "tauri", "icon", str(master)], cwd=ROOT, check=True)
+    cli = ROOT / "webapp" / "node_modules" / ".bin" / "tauri"
+    if not cli.exists():
+        sys.exit("update_icons: run `mise run setup` first (webapp/node_modules/.bin/tauri is missing)")
+    out = ROOT / "app" / "icons"
+    subprocess.run([str(cli), "icon", str(master), "--output", str(out)], cwd=ROOT / "app", check=True)
 
 
 def addon_icon(img: Image.Image, dst: Path) -> None:

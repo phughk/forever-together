@@ -10,7 +10,7 @@ An earlier draft split the app into several crates (code, core, net, store, serv
 
 ## Decision
 
-Use the template's `src-tauri` crate with modules `code`, `engine`, `net`, `store` and `server` (not `core`, which would clash with Rust's standard `core` crate), plus the Tauri shell and a headless flag. `engine` does no I/O and `net` has a trait with an in-memory fake, so tests can still drive the state machine directly.
+Use the template's `app/` crate (the template's `src-tauri`, renamed) with modules `code`, `engine`, `net`, `store` and `server` (not `core`, which would clash with Rust's standard `core` crate), plus the Tauri shell and a headless flag. `engine` does no I/O and `net` has a trait with an in-memory fake, so tests can still drive the state machine directly.
 
 ## Consequences
 

@@ -67,7 +67,7 @@ The realm value and the region are opaque values from the client, compared as gi
 | Hardcore | not known | **not captured**, deliberately not guessed |
 | any other value | shown as `realm <id>` | mapped when a capture names it |
 
-Still assumed: the RP-PvE and Hardcore IDs, whether the other regions use the same numbering as EU, and that the same ID means the same ruleset in every region. The fallback when the game-mode call is missing, `GetRealmName()` lowercased in ASCII and cut at 24 bytes, is untested on a live client (a realm name is not a ruleset). Two peers on the same ruleset must produce the same topic string. The tables live in `addon/ForeverTogether/Names.lua` and `code::region_name` / `code::realm_name` in `src-tauri/src/code.rs`; the app exposes the names as `realmName` and `regionName` on the character in the API.
+Still assumed: the RP-PvE and Hardcore IDs, whether the other regions use the same numbering as EU, and that the same ID means the same ruleset in every region. The fallback when the game-mode call is missing, `GetRealmName()` lowercased in ASCII and cut at 24 bytes, is untested on a live client (a realm name is not a ruleset). Two peers on the same ruleset must produce the same topic string. The tables live in `addon/ForeverTogether/Names.lua` and `code::region_name` / `code::realm_name` in `app/src/code.rs`; the app exposes the names as `realmName` and `regionName` on the character in the API.
 
 ### Size
 
@@ -140,7 +140,7 @@ Messages are postcard, length-prefixed with a 4-byte big-endian length, at most 
 
 ## 5. Dungeon table
 
-`src-tauri/data/dungeons.json`, committed before step 3. Fields: `slug`, `name`, `levelMin`, `levelMax`, `minLevel`, `factionHint` (`alliance`, `horde`, `both`, `none`), `zone`, `status` (`available`, `coming_soon`). The table has 29 entries, 20 available. **The author commits the file.** Recommendation for level L and zone Z: keep available entries with `minLevel <= L` and `levelMin - 3 <= L <= levelMax + 3`. Sort by: zone equal to Z (ASCII-lowercased compare) first; then the distance of L from the middle of the range; then `factionHint` equal to the character's faction, then `both`, then the other faction, then `none`; then the slug. The function is `recommend(character, table) -> Vec<DungeonSlug>`.
+`app/data/dungeons.json`, committed before step 3. Fields: `slug`, `name`, `levelMin`, `levelMax`, `minLevel`, `factionHint` (`alliance`, `horde`, `both`, `none`), `zone`, `status` (`available`, `coming_soon`). The table has 29 entries, 20 available. **The author commits the file.** Recommendation for level L and zone Z: keep available entries with `minLevel <= L` and `levelMin - 3 <= L <= levelMax + 3`. Sort by: zone equal to Z (ASCII-lowercased compare) first; then the distance of L from the middle of the range; then `factionHint` equal to the character's faction, then `both`, then the other faction, then `none`; then the slug. The function is `recommend(character, table) -> Vec<DungeonSlug>`.
 
 ## 6. Change policy
 

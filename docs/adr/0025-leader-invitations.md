@@ -45,7 +45,7 @@ sequenceDiagram
 
 ## Evidence
 
-Source: `src-tauri/src/engine/sim.rs`, run `cargo test --release --lib -- --ignored --nocapture engine::sim::tests::report`; table and caveats in `docs/spike-s0.md`. Seeded, same population and the same eligible peers as the old rows (the share of peers with a compatible five in their sample that are committed; this is the plan's floor). The leader columns keep samples across epochs the way the engine does (re-drawn at the 45 s keep-alive).
+Source: `app/src/engine/sim.rs`, run `cargo test --release --lib -- --ignored --nocapture engine::sim::tests::report`; table and caveats in `docs/spike-s0.md`. Seeded, same population and the same eligible peers as the old rows (the share of peers with a compatible five in their sample that are committed; this is the plan's floor). The leader columns keep samples across epochs the way the engine does (re-drawn at the 45 s keep-alive).
 
 | Scenario (3,000 peers, sample 100, delivery 0.95 unless stated) | Converging, 3 epochs | Proposer, 3 cycles | Leader, 3 rounds (15 s) | Leader, 6 rounds (30 s) |
 |---|---|---|---|---|
@@ -74,4 +74,4 @@ Source: `src-tauri/src/engine/sim.rs`, run `cargo test --release --lib -- --igno
 * **Converging announcements** ([0010](0010-converging-announcements.md)): measured at 1.9% to 56%. Rejected.
 * **Proposer with response windows**: measured at 8.6% to 25.5%, because a group gains one member per cycle and fails when a cycle adds nobody. Rejected. Leader invitations are its fast form: the party is built in one round from invitations with spares and a global preference order for leases.
 * **Announcements that carry the full member list, with others adopting the lowest-hash announcement; rank-based leader election per compatibility cluster; direct acks with retransmit; ads re-sent when a peer joins.** Considered. Not simulated one by one. The first two need every member to be in the announcer's sample, which the old sample rule made false for two thirds of the peers, and the leader model is their simplified form (one announcement, one author, no election because the tank is the leader). Retransmit is measured above and not built. Re-sending ads on join already exists.
-* **An elected coordinator per shard** ([Alternative J](../docs/designs/forever-together.md#alternative-j-a-proposer-with-per-peer-leases-or-an-elected-coordinator-per-shard)): still rejected, it is a supernode ([0023](0023-no-supernodes.md)). Every tank here is an ordinary peer that leads for one epoch.
+* **An elected coordinator per shard** ([Alternative J](../designs/forever-together.md#alternative-j-a-proposer-with-per-peer-leases-or-an-elected-coordinator-per-shard)): still rejected, it is a supernode ([0023](0023-no-supernodes.md)). Every tank here is an ordinary peer that leads for one epoch.

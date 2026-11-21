@@ -157,3 +157,7 @@ dist
 
 storybook-static/
 mise.local.toml
+
+# outputs
+webapp/dist/
+webapp/storybook-static/

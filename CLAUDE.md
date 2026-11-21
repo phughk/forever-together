@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Always commit, preferably use multiple agents where possible.
 
-Tauri 2 app: Rust backend (`src-tauri`), React/TS frontend (`src`), Storybook, a WoW addon (`addon/`). Tooling is pinned in `mise.toml`; see `README.md` for tasks and layout. The repo started from `template-rust-app` at commit `9048274` (2026-11-21).
+Tauri 2 app: Rust backend (`app/`), React/TS frontend (`webapp/`), Storybook, a WoW addon (`addon/`). Tooling is pinned in `mise.toml`; see `README.md` for tasks and layout. The repo started from `template-rust-app` at commit `9048274` (2026-11-21).
 
 ## Working rules
 
 - **Clean up agent worktrees.** When fanning work out to agents with worktree isolation, remove each worktree once its branch is merged and verified: `git worktree remove --force .claude/worktrees/<name>`, `git branch -D <branch>`, then `git worktree prune`. Never remove a worktree that is locked (a live agent) or has unmerged commits or uncommitted changes.
-- **Don't set `CARGO_TARGET_DIR`.** mbx (mr-boxington) owns target storage and the shared build cache, so a manual override would fight it. If a worktree still grows its own `src-tauri/target` (about 7 GB each in practice), plain `cargo` is bypassing mbx: run `mbx doctor`, and `mbx setup` if it warns that the Cargo shim isn't installed. Delete stray `target/` dirs.
+- **Don't set `CARGO_TARGET_DIR`.** mbx (mr-boxington) owns target storage and the shared build cache, so a manual override would fight it. If a worktree still grows its own `app/target` (about 7 GB each in practice), plain `cargo` is bypassing mbx: run `mbx doctor`, and `mbx setup` if it warns that the Cargo shim isn't installed. Delete stray `target/` dirs.
 - **Only test what you changed.** Run targeted tests and clippy/typecheck for the touched side only; run everything for cross-cutting changes or when asked.
 
 ## Design system
@@ -40,10 +40,10 @@ The frontend follows atomic design. Every level must be covered in Storybook.
 ## Commands
 
 - `mise run dev` desktop app; `mise run web` frontend only; `mise run storybook`; `mise run test` Rust tests; `mise run lint` clippy + rustfmt; `mise run test-addon` addon tests in the headless Lua VM; `mise run install-addon`; `mise run check` runs typecheck, lint, test and test-addon.
-- Rust, from `src-tauri/`: `cargo test <filter>`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt`.
-- Frontend: `pnpm typecheck`, `pnpm build`.
-- Verify a task exists in `mise.toml` before relying on it. If mise shims fail in a worktree, set `MISE_TRUSTED_CONFIG_PATHS=<repo root>`; if `cd` into `src-tauri` is refused, use `cargo ... --manifest-path src-tauri/Cargo.toml`.
-- The Rust suite includes multi-instance integration tests (`src-tauri/src/integration_tests.rs`, about 16 s each, they run a clock faster than real time or at real speed) and a loopback iroh test (no internet needed). `cargo test --release --lib -- --ignored --nocapture engine::sim::tests::report` runs the seeded simulation.
+- Rust, from `app/`: `cargo test <filter>`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt`.
+- Frontend, from the repo root: `pnpm --dir webapp typecheck`, `pnpm --dir webapp build`.
+- Verify a task exists in `mise.toml` before relying on it. If mise shims fail in a worktree, set `MISE_TRUSTED_CONFIG_PATHS=<repo root>`; if `cd` into `app/` is refused, use `cargo ... --manifest-path app/Cargo.toml`.
+- The Rust suite includes multi-instance integration tests (`app/src/integration_tests.rs`, about 16 s each, they run a clock faster than real time or at real speed) and a loopback iroh test (no internet needed). `cargo test --release --lib -- --ignored --nocapture engine::sim::tests::report` runs the seeded simulation.
 
 ## This project: forever-together (short code `wowft`)
 
@@ -56,14 +56,14 @@ The code exists and passes its tests: the addon (`addon/ForeverTogether/`, teste
 What is **not** verified (details and the full table in `docs/spike-s0.md`; treat all of it as unconfirmed):
 
 - **Spike S0 is still unverified against a live client and a live network.** Realm and region calls, `UnitName` returning first name and surname, `GetAverageItemLevel`, a phone scanning the QR, `varaq` key-file permissions, and iroh address lookup through n0's hosted DNS/relays have not been run live. Only loopback iroh and the Lua VM were exercised.
-- **The simulation reopened the agreement mechanism, and a new one passes in the model.** `docs/spike-s0.md` reports that converging announcements (about 2% at delivery 0.95) and the proposer model (9 to 25%) did not reach the 70% floor. Leader invitations ([ADR 0025](adr/0025-leader-invitations.md), implemented in `engine`) reach it within 30 s (mean 78.4%, worst seed 74.6%, 6 rounds of 5 s; 73.0% mean and 69.7% worst at 3 rounds). That is simulation only. The role mix caps any mechanism, so the floor as worded cannot be met when tanks are scarce (the S0 results explain). The engine does not retransmit lost direct messages.
+- **The simulation reopened the agreement mechanism, and a new one passes in the model.** `docs/spike-s0.md` reports that converging announcements (about 2% at delivery 0.95) and the proposer model (9 to 25%) did not reach the 70% floor. Leader invitations ([ADR 0025](docs/adr/0025-leader-invitations.md), implemented in `engine`) reach it within 30 s (mean 78.4%, worst seed 74.6%, 6 rounds of 5 s; 73.0% mean and 69.7% worst at 3 rounds). That is simulation only. The role mix caps any mechanism, so the floor as worded cannot be met when tanks are scarce (the S0 results explain). The engine does not retransmit lost direct messages.
 - No real window, phone, or live game has been tried. The integration tests drive the HTTP API of several in-process instances on an in-memory network.
 - `net::trusted::BUILTIN` is empty until the author supplies a key. A re-audit of the revised design has not been run.
 
 ### Where the truth lives
 
 - `docs/designs/forever-together.md`: the design (overview, CUJs, architecture, risks, alternatives). `docs/designs/forever-together-implementation-plan.md`: build order, spike S0, defaults, API table, file list, test plan. `docs/rdf-code-spec.md`: the code format and wire messages. The first draft is archived at `docs/design-process/archive/p2prdf-draft-2026-11-20.md`.
-- `adr/` (0001-0022, indexed in `adr/README.md`): one decision record per file. **ADRs win over the draft and over `docs/design-process/concepts_brief.md`**, the older brainstorm. `docs/design-process/reconciliation_report.md` lists where the brief is out of date.
+- `docs/adr/` (0001-0025, indexed in `docs/adr/README.md`): one decision record per file. **ADRs win over the draft and over `docs/design-process/concepts_brief.md`**, the older brainstorm. `docs/design-process/reconciliation_report.md` lists where the brief is out of date.
 - `docs/design-process/reviews/`: the review reports. `consolidated_review_report.md` is the summary, `author_decisions.md` records the author's answers to the open questions D1-D9 and the new timing rules, and `goldfish_review_report.md` is the annotated fix list (applied).
 - When a decision changes, add an ADR or revise the existing one and say what it supersedes.
 
@@ -72,7 +72,7 @@ What is **not** verified (details and the full table in `docs/spike-s0.md`; trea
 Three parts in one repo (ADR 0020):
 
 1. **Standalone WoW addon** `addon/ForeverTogether/` (Lua, own TOC and window, no saved variables). It only shows the character as a copyable text code (base45, versioned binary record) and the same data as a QR. No networking, pairing or tokens (0002, 0018).
-2. **Desktop app**: Tauri 2, one Rust crate `src-tauri` (0013). Modules: `code` (decoder), `engine` (pure state machine, no I/O, not named `core`), `net` (`iroh_net` real transport, `live` wrapper that runs bootstrap and publishes status, `bootstrap`, `known_peers`, `exchange`, `trusted`, `gossip` signed envelope, `fake` in-memory hub for tests), `store` (`varaq` store and a memory store), `server` (axum API, auth, pairing, static files), `app` (`LiveCore`: owns the engine, network and character on its own thread; also `memnet`), `runtime` (start-up for window, headless and print-key modes; `build_network` is the one place that picks the network), plus `cli`, `config`, `dungeons`, `identity`. Networking is iroh + iroh-gossip with one gossip swarm per topic. Flags: `--headless`, `--print-public-key`, `--data-dir`. Environment: `WOWFT_WEB_DIR` (web file override), `WOWFT_NET=memory` (in-memory network).
+2. **Desktop app**: Tauri 2, one Rust crate `app/` (0013). Modules: `code` (decoder), `engine` (pure state machine, no I/O, not named `core`), `net` (`iroh_net` real transport, `live` wrapper that runs bootstrap and publishes status, `bootstrap`, `known_peers`, `exchange`, `trusted`, `gossip` signed envelope, `fake` in-memory hub for tests), `store` (`varaq` store and a memory store), `server` (axum API, auth, pairing, static files), `app` (`LiveCore`: owns the engine, network and character on its own thread; also `memnet`), `runtime` (start-up for window, headless and print-key modes; `build_network` is the one place that picks the network), plus `cli`, `config`, `dungeons`, `identity`. Networking is iroh + iroh-gossip with one gossip swarm per topic. Flags: `--headless`, `--print-public-key`, `--data-dir`. Environment: `WOWFT_WEB_DIR` (web file override), `WOWFT_NET=memory` (in-memory network).
 3. **One React/TypeScript web app** (the template's `src/`), embedded in the binary and served over HTTP by the desktop app to its own window and to phones, over one REST + event-stream API. Phones are approved by a per-install token in a pairing QR. An environment variable can point at a folder that overrides embedded files (0012).
 
 The headless WoW Lua test VM lives in the `wow-forever-addons` repo (`/Users/hughkaznowski/Projects/gitlloop/wow-forever-addons`) and is a git submodule at `vendor/wow-forever-addons` (0021). The code spec and test vectors live once under `docs/` (`rdf-code-spec.md`, `rdf-code-vectors.json`) and are read by both the Lua and Rust tests.

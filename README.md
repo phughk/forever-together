@@ -10,7 +10,7 @@ Status: the code is built and tested without a live game. The unverified assumpt
 
 ```sh
 mise install        # node, pnpm, rust, mr-boxington
-mise run setup      # pnpm install
+mise run setup      # pnpm install (in webapp/)
 mise run dev        # desktop app (Tauri + Vite)
 ```
 
@@ -18,7 +18,7 @@ mise run dev        # desktop app (Tauri + Vite)
 
 | Task | What it does |
 |------|--------------|
-| `mise run setup` | `pnpm install` |
+| `mise run setup` | `pnpm --dir webapp install` |
 | `mise run dev` | the desktop app (Tauri + Vite) |
 | `mise run web` | the web app alone in the browser (no backend, so no API) |
 | `mise run storybook` | the component workshop on port 6006 |
@@ -43,9 +43,10 @@ The QR holds the same text. The app has no camera scanner, so on a phone you sca
 ## Layout
 
 - `addon/ForeverTogether/`: the WoW addon (Lua). It shows the character code and has no networking. Tests are in `addon/tests/`.
-- `src-tauri/src/`: the Rust app. Modules: `code` (decode the character code), `engine` (the pure matching state machine), `net` (iroh network, bootstrap, peer exchange, an in-memory fake), `store` (identity, settings, known peers), `server` (the local web server and API), `app` (`LiveCore`, joins engine, network and server), `runtime` (start-up for the three modes), `cli`, `config`, `dungeons`, `identity`.
-- `src/`: the React and TypeScript web app, shown in the app window and on phones. Atomic design, with stories next to each component.
-- `docs/`: the design, the implementation plan, the code format spec (`rdf-code-spec.md`), spike results (`spike-s0.md`) and review reports. `adr/`: one decision record per file.
+- `app/`: the Rust and Tauri app (`app/src/`). Modules: `code` (decode the character code), `engine` (the pure matching state machine), `net` (iroh network, bootstrap, peer exchange, an in-memory fake), `store` (identity, settings, known peers), `server` (the local web server and API), `app` (`LiveCore`, joins engine, network and server), `runtime` (start-up for the three modes), `cli`, `config`, `dungeons`, `identity`.
+- `webapp/`: the React and TypeScript web app (`webapp/src/`), shown in the app window and on phones. Atomic design, with stories next to each component.
+- `docs/`: the design, the implementation plan, the code format spec (`rdf-code-spec.md`), spike results (`spike-s0.md`) and review reports. `docs/adr/`: one decision record per file. `docs/notes/`: loose notes.
+- `assets/`: the icon master and its project file. `scripts/`: Python and shell helpers (icons, code vectors, addon install).
 - `vendor/wow-forever-addons`: git submodule with the headless Lua test VM.
 
 ## Running the app
@@ -64,8 +65,8 @@ Environment variables:
 
 Two instances on one machine: give each its own `--data-dir`. The web server and the network pick random free ports, so nothing else is needed.
 
-Trusted peers (the last-resort way in for a new install): run an always-on copy with `--headless`, print its key with `--print-public-key`, and either add the key to the built-in list in `src-tauri/src/net/trusted.rs` or add it in the settings page of a running app (`trusted_peers`).
+Trusted peers (the last-resort way in for a new install): run an always-on copy with `--headless`, print its key with `--print-public-key`, and either add the key to the built-in list in `app/src/net/trusted.rs` or add it in the settings page of a running app (`trusted_peers`).
 
 ## Mobile
 
-`src-tauri/src/lib.rs` is mobile-ready, but phones in this project use the web app over the local network, not a native build.
+`app/src/lib.rs` is mobile-ready, but phones in this project use the web app over the local network, not a native build.

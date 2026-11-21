@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "identifier": "com.gitlloop.forevertogether",
   "build": {
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": { "script": "pnpm dev", "cwd": "../webapp" },
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build",
-    "frontendDist": "../dist"
+    "beforeBuildCommand": { "script": "pnpm build", "cwd": "../webapp" },
+    "frontendDist": "../webapp/dist"
   },
   "app": {
     "windows": [],
