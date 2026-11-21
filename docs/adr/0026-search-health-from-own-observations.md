@@ -54,7 +54,7 @@ Staging item 6 of the brief. It changes the first slice only by adding to it.
   * Invitations that arrived after the decision time or were dropped for the per-epoch cap.
   * Accepts a leader got for a party it later lost (they stay in `accepts_got`).
   * Rounds as a unit: a round invites the whole sample's party plus spares, so the invitation count is a count of messages, not of epochs.
-* **Unverified.** `MIN_ATTEMPTS = 6` (a little over one small round of 4 to 11 invitations; fewer would call one epoch's silence a pattern) and `TINY_SAMPLE` are guesses until a live run. Because one round can already reach 6, `nobody_answered` can show for the 2 s between an invitation and the first accept in a search that has had no accept yet; it clears at the first accept.
+* **Unverified.** `MIN_ATTEMPTS = 6` (a little over one small round of 4 to 11 invitations; fewer would call one epoch's silence a pattern) and `TINY_SAMPLE` are guesses until a live run. (The 2 s flicker this allowed is fixed in the amendment below.)
 
 ## Amendment 2026-11-21 (later): rounds before `nobody_answered`, and the `outlook` clause
 
