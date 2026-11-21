@@ -1,0 +1,18 @@
+{
+  "seed": 7,
+  "region": 3,
+  "player": {
+    "name": "Thalion Brightwood",
+    "realm": "Mankrik",
+    "class": "Warrior",
+    "race": "Human",
+    "faction": "Alliance",
+    "level": 24,
+    "itemLevel": 412,
+    "role": "TANK",
+    "specID": 73,
+    "zone": "Westfall",
+    "guid": "Player-4400-0000AAAA"
+  },
+  "specs": { "73": { "name": "Protection", "role": "TANK" }, "256": { "name": "Discipline", "role": "HEALER" } }
+}
