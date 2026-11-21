@@ -6,16 +6,19 @@
 
 use crate::app::memnet::MemNetwork;
 use crate::app::{CoreDeps, LiveCore, system_clock};
+use crate::cli::{ExportArgs, KeyCommand};
 use crate::config::Settings;
 use crate::dungeons::TopicId;
 use crate::engine::{Event, Message};
 use crate::engine::{NetError, Network};
 use crate::identity::{Identity, PeerId, Signer};
+use crate::keys::{self, KeyError, OldKey};
 use crate::net::{IrohConfig, IrohNet, KnownPeers, TrustedPeers, live::LiveNet, trusted};
 use crate::server::core::{BootstrapSource, NetworkView};
 use crate::server::static_files::Assets;
 use crate::server::{Server, ServerConfig};
 use crate::store::{DataDirLock, Store, VaraqStore};
+use std::io::Write;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::watch;
@@ -125,10 +128,88 @@ pub fn open_store(data_dir: &Path) -> Result<(DataDirLock, Arc<dyn Store>), AnyE
     Ok((lock, Arc::new(VaraqStore::open(data_dir)?)))
 }
 
-/// `--print-public-key`: the peer ID, created and saved on first use.
-pub fn public_key(data_dir: &Path) -> Result<String, AnyError> {
-    let (_lock, store) = open_store(data_dir)?;
-    Ok(Identity::load_or_create(store.as_ref())?.peer_id().to_hex())
+fn show_old(old: &OldKey) -> String {
+    match old {
+        OldKey::None => "none".to_owned(),
+        OldKey::Id(p) => p.to_hex(),
+        OldKey::Unreadable => "unreadable".to_owned(),
+    }
+}
+
+const CHANGED_WARNING: &str = "Other nodes now see a new peer ID. If this is a trusted peer, its entry in net::trusted::BUILTIN needs a new release.";
+
+/// The `key` subcommands (ADR 0039). Takes the data directory lock first, so it refuses while the
+/// app (or another `key` command) uses the directory. Output goes to `out` (data) and `err`
+/// (notes), and `confirm` answers the reset prompt, so tests can drive it.
+pub fn run_key_command<O: Write, E: Write>(
+    data_dir: &Path,
+    cmd: &KeyCommand,
+    out: &mut O,
+    err: &mut E,
+    confirm: impl FnOnce(&str) -> bool,
+) -> Result<(), AnyError> {
+    let _lock = DataDirLock::acquire(data_dir)?;
+    let store = VaraqStore::open(data_dir)?;
+    let key_error = |e: KeyError| -> AnyError {
+        match e {
+            KeyError::WouldReplace(r) => format!(
+                "a key is already stored (peer {}); the file holds peer {}. Pass --force to replace it",
+                show_old(&r.old),
+                r.new
+            )
+            .into(),
+            other => other.into(),
+        }
+    };
+    match cmd {
+        KeyCommand::Show => {
+            let info = keys::show(&store).map_err(key_error)?;
+            writeln!(out, "{}\n{}", info.peer_id, info.openssh_public)?;
+        }
+        KeyCommand::Export(ExportArgs { stdout: true, .. }) => {
+            let (peer, text) = keys::export_text(&store).map_err(key_error)?;
+            write!(out, "{text}")?;
+            writeln!(err, "peer {peer}")?;
+        }
+        KeyCommand::Export(ExportArgs {
+            file: Some(path), ..
+        }) => {
+            let peer = keys::export_to_file(&store, path).map_err(key_error)?;
+            writeln!(out, "wrote the key for peer {peer} to {}", path.display())?;
+        }
+        KeyCommand::Export(_) => return Err("give a file, or --stdout".into()),
+        KeyCommand::Import { file, force } => {
+            let r = keys::import_from_file(&store, file, *force).map_err(key_error)?;
+            writeln!(
+                out,
+                "imported the key; peer {} -> {}",
+                show_old(&r.old),
+                r.new
+            )?;
+            if r.old != OldKey::None {
+                writeln!(err, "{CHANGED_WARNING}")?;
+            }
+        }
+        KeyCommand::Reset { yes } => {
+            let old = keys::old_key(&store).map_err(key_error)?;
+            if old != OldKey::None && !yes {
+                let q = format!(
+                    "Replace this install's key (peer {}) with a new one? {} [y/N] ",
+                    show_old(&old),
+                    "Other nodes will see a new peer."
+                );
+                if !confirm(&q) {
+                    return Err("not confirmed; nothing changed".into());
+                }
+            }
+            let r = keys::reset(&store).map_err(key_error)?;
+            writeln!(out, "new key; peer {} -> {}", show_old(&r.old), r.new)?;
+            if r.old != OldKey::None {
+                writeln!(err, "{CHANGED_WARNING}")?;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Everything started for window mode. Keep it alive for the life of the app.

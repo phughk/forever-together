@@ -76,7 +76,8 @@ impl From<IdentityError> for KeyError {
     }
 }
 
-fn old_key<S: Store + ?Sized>(store: &S) -> Result<OldKey, KeyError> {
+/// What the store holds now, without creating anything.
+pub fn old_key<S: Store + ?Sized>(store: &S) -> Result<OldKey, KeyError> {
     Ok(match store.get(KEY_IDENTITY_SECRET)? {
         None => OldKey::None,
         Some(b) => match <[u8; 32]>::try_from(b) {

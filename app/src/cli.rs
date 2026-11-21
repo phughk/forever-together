@@ -1,6 +1,6 @@
 //! Command-line flags and the default data directory.
 
-use clap::Parser;
+use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 
 /// forever-together: a peer-to-peer random dungeon finder for World of Warcraft Forever.
@@ -10,27 +10,70 @@ pub struct Cli {
     /// Run without a window or web server: only join the network and relay as a peer.
     #[arg(long)]
     pub headless: bool,
-    /// Print this install's public key (the peer ID) and exit.
-    #[arg(long)]
-    pub print_public_key: bool,
     /// Where to keep the identity, settings and known peers.
-    #[arg(long, value_name = "DIR")]
+    #[arg(long, value_name = "DIR", global = true)]
     pub data_dir: Option<PathBuf>,
+    #[command(subcommand)]
+    pub command: Option<Command>,
+}
+
+#[derive(Subcommand, Debug, Clone, PartialEq, Eq)]
+pub enum Command {
+    /// Show, back up, restore or replace this install's key.
+    #[command(subcommand)]
+    Key(KeyCommand),
+}
+
+#[derive(Subcommand, Debug, Clone, PartialEq, Eq)]
+pub enum KeyCommand {
+    /// Print this install's peer ID and public key. Creates a key if there is none.
+    Show,
+    /// Write the secret key as an unencrypted OpenSSH ed25519 key file (a new file, owner-only),
+    /// or print it with --stdout. Creates a key if there is none.
+    Export(ExportArgs),
+    /// Replace the stored key with the one in an OpenSSH ed25519 key file.
+    Import {
+        /// The key file.
+        file: PathBuf,
+        /// Replace a key that is already stored.
+        #[arg(long)]
+        force: bool,
+    },
+    /// Discard the stored key and make a new one. Other nodes will see a new peer.
+    Reset {
+        /// Do not ask for confirmation.
+        #[arg(long)]
+        yes: bool,
+    },
+}
+
+#[derive(Args, Debug, Clone, PartialEq, Eq)]
+pub struct ExportArgs {
+    /// Where to write the key. The file must not exist.
+    #[arg(
+        value_name = "FILE",
+        conflicts_with = "stdout",
+        required_unless_present = "stdout"
+    )]
+    pub file: Option<PathBuf>,
+    /// Print the key to standard output instead of writing a file.
+    #[arg(long)]
+    pub stdout: bool,
 }
 
 /// What the process should do, decided from the flags alone.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Mode {
-    PrintPublicKey,
+    Key(KeyCommand),
     Headless,
     Window,
 }
 
 impl Cli {
-    /// `--print-public-key` wins over `--headless`.
+    /// A subcommand wins over `--headless`.
     pub fn mode(&self) -> Mode {
-        if self.print_public_key {
-            Mode::PrintPublicKey
+        if let Some(Command::Key(k)) = &self.command {
+            Mode::Key(k.clone())
         } else if self.headless {
             Mode::Headless
         } else {
@@ -92,9 +135,74 @@ mod tests {
     }
 
     #[test]
-    fn print_public_key_wins() {
-        let c = parse(&["--print-public-key", "--headless"]).unwrap();
-        assert_eq!(c.mode(), Mode::PrintPublicKey);
+    fn the_old_print_public_key_flag_is_gone() {
+        assert!(parse(&["--print-public-key"]).is_err());
+    }
+
+    #[test]
+    fn key_subcommands_parse() {
+        let mode = |a: &[&str]| parse(a).unwrap().mode();
+        assert_eq!(mode(&["key", "show"]), Mode::Key(KeyCommand::Show));
+        assert_eq!(
+            mode(&["key", "export", "/tmp/k"]),
+            Mode::Key(KeyCommand::Export(ExportArgs {
+                file: Some(PathBuf::from("/tmp/k")),
+                stdout: false
+            }))
+        );
+        assert_eq!(
+            mode(&["key", "export", "--stdout"]),
+            Mode::Key(KeyCommand::Export(ExportArgs {
+                file: None,
+                stdout: true
+            }))
+        );
+        assert_eq!(
+            mode(&["key", "import", "k"]),
+            Mode::Key(KeyCommand::Import {
+                file: PathBuf::from("k"),
+                force: false
+            })
+        );
+        assert_eq!(
+            mode(&["key", "import", "--force", "k"]),
+            Mode::Key(KeyCommand::Import {
+                file: PathBuf::from("k"),
+                force: true
+            })
+        );
+        assert_eq!(
+            mode(&["key", "reset"]),
+            Mode::Key(KeyCommand::Reset { yes: false })
+        );
+        assert_eq!(
+            mode(&["key", "reset", "--yes"]),
+            Mode::Key(KeyCommand::Reset { yes: true })
+        );
+    }
+
+    #[test]
+    fn export_needs_exactly_one_of_a_file_and_stdout() {
+        assert!(parse(&["key", "export"]).is_err());
+        assert!(parse(&["key", "export", "--stdout", "k"]).is_err());
+    }
+
+    #[test]
+    fn key_commands_need_their_arguments_and_reject_unknowns() {
+        assert!(parse(&["key"]).is_err());
+        assert!(parse(&["key", "import"]).is_err());
+        assert!(parse(&["key", "nope"]).is_err());
+        assert!(parse(&["key", "reset", "--force"]).is_err());
+        assert!(parse(&["key", "show", "extra"]).is_err());
+    }
+
+    #[test]
+    fn data_dir_works_after_the_subcommand_and_a_subcommand_wins_over_headless() {
+        let c = parse(&["key", "show", "--data-dir", "/tmp/d"]).unwrap();
+        assert_eq!(c.resolve_data_dir(), PathBuf::from("/tmp/d"));
+        assert_eq!(c.mode(), Mode::Key(KeyCommand::Show));
+        let c = parse(&["--headless", "key", "show"]).unwrap();
+        assert_eq!(c.mode(), Mode::Key(KeyCommand::Show));
     }
 
     #[test]

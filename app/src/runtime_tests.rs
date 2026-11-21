@@ -1,4 +1,5 @@
 use super::*;
+use crate::cli::{ExportArgs, KeyCommand};
 use crate::server::static_files::MapAssets;
 use std::io::{Read, Write};
 
@@ -8,18 +9,186 @@ fn temp(name: &str) -> std::path::PathBuf {
     d
 }
 
+/// Run a key command against `d`, returning (stdout, stderr) or the error message.
+fn key(d: &std::path::Path, cmd: KeyCommand, confirm: bool) -> Result<(String, String), String> {
+    let (mut out, mut err) = (Vec::new(), Vec::new());
+    run_key_command(d, &cmd, &mut out, &mut err, |_| confirm).map_err(|e| e.to_string())?;
+    Ok((
+        String::from_utf8(out).unwrap(),
+        String::from_utf8(err).unwrap(),
+    ))
+}
+
+fn peer_of(show_output: &str) -> String {
+    show_output.lines().next().unwrap().to_owned()
+}
+
 #[test]
-fn public_key_is_created_once_and_stable() {
-    let d = temp("key");
-    let a = public_key(&d).unwrap();
-    let b = public_key(&d).unwrap();
+fn key_show_creates_a_key_once_and_prints_the_peer_id_then_the_public_line() {
+    let d = temp("show");
+    let (a, _) = key(&d, KeyCommand::Show, false).unwrap();
+    let (b, _) = key(&d, KeyCommand::Show, false).unwrap();
     assert_eq!(a, b);
-    assert_eq!(a.len(), 64);
-    assert!(PeerId::from_hex(&a).is_some());
-    let other = temp("key2");
-    assert_ne!(a, public_key(&other).unwrap());
+    let mut lines = a.lines();
+    let peer = lines.next().unwrap();
+    assert_eq!(peer.len(), 64);
+    assert!(PeerId::from_hex(peer).is_some());
+    assert!(lines.next().unwrap().starts_with("ssh-ed25519 AAAA"));
+    assert!(lines.next().is_none());
+    let other = temp("show2");
+    assert_ne!(a, key(&other, KeyCommand::Show, false).unwrap().0);
     let _ = std::fs::remove_dir_all(d);
     let _ = std::fs::remove_dir_all(other);
+}
+
+#[test]
+fn import_before_first_start_gives_the_node_that_identity() {
+    // The deploy path: a cloud node gets its key by `key import`, then starts.
+    let src = temp("deploy-src");
+    let dst = temp("deploy-dst");
+    let file = std::env::temp_dir().join(format!("wowft-deploy-{}.key", std::process::id()));
+    let _ = std::fs::remove_file(&file);
+    let wanted = peer_of(&key(&src, KeyCommand::Show, false).unwrap().0);
+    key(
+        &src,
+        KeyCommand::Export(ExportArgs {
+            file: Some(file.clone()),
+            stdout: false,
+        }),
+        false,
+    )
+    .unwrap();
+    key(
+        &dst,
+        KeyCommand::Import {
+            file: file.clone(),
+            force: false,
+        },
+        false,
+    )
+    .unwrap();
+    // What the app loads at start is that key.
+    let (lock, store) = open_store(&dst).unwrap();
+    let me = Identity::load_or_create(store.as_ref()).unwrap().peer_id();
+    assert_eq!(me.to_hex(), wanted);
+    drop((lock, store));
+    assert_eq!(
+        peer_of(&key(&dst, KeyCommand::Show, false).unwrap().0),
+        wanted
+    );
+    let _ = std::fs::remove_file(file);
+    let _ = std::fs::remove_dir_all(src);
+    let _ = std::fs::remove_dir_all(dst);
+}
+
+#[test]
+fn a_key_made_by_show_needs_force_before_import_replaces_it() {
+    let d = temp("force");
+    let file = std::env::temp_dir().join(format!("wowft-force-{}.key", std::process::id()));
+    let _ = std::fs::remove_file(&file);
+    let other = temp("force-src");
+    key(
+        &other,
+        KeyCommand::Export(ExportArgs {
+            file: Some(file.clone()),
+            stdout: false,
+        }),
+        false,
+    )
+    .unwrap();
+    let first = peer_of(&key(&d, KeyCommand::Show, false).unwrap().0);
+    let import = |force| KeyCommand::Import {
+        file: file.clone(),
+        force,
+    };
+    let e = key(&d, import(false), false).unwrap_err();
+    assert!(e.contains("--force") && e.contains(&first), "{e}");
+    assert_eq!(peer_of(&key(&d, KeyCommand::Show, false).unwrap().0), first);
+    let (out, err) = key(&d, import(true), false).unwrap();
+    assert!(out.contains(&first));
+    assert!(err.contains("BUILTIN"));
+    assert_ne!(peer_of(&key(&d, KeyCommand::Show, false).unwrap().0), first);
+    let _ = std::fs::remove_file(file);
+    let _ = std::fs::remove_dir_all(d);
+    let _ = std::fs::remove_dir_all(other);
+}
+
+#[test]
+fn export_to_stdout_prints_the_key_and_notes_the_peer_on_stderr() {
+    let d = temp("stdout");
+    let peer = peer_of(&key(&d, KeyCommand::Show, false).unwrap().0);
+    let (out, err) = key(
+        &d,
+        KeyCommand::Export(ExportArgs {
+            file: None,
+            stdout: true,
+        }),
+        false,
+    )
+    .unwrap();
+    assert!(out.starts_with("-----BEGIN OPENSSH PRIVATE KEY-----"));
+    assert!(!err.contains("BEGIN"));
+    assert!(err.contains(&peer));
+    let _ = std::fs::remove_dir_all(d);
+}
+
+#[test]
+fn reset_asks_first_and_only_a_yes_changes_the_key() {
+    let d = temp("reset");
+    let first = peer_of(&key(&d, KeyCommand::Show, false).unwrap().0);
+    let e = key(&d, KeyCommand::Reset { yes: false }, false).unwrap_err();
+    assert!(e.contains("nothing changed"), "{e}");
+    assert_eq!(peer_of(&key(&d, KeyCommand::Show, false).unwrap().0), first);
+    // Answering yes at the prompt, or passing --yes, replaces the key.
+    key(&d, KeyCommand::Reset { yes: false }, true).unwrap();
+    let second = peer_of(&key(&d, KeyCommand::Show, false).unwrap().0);
+    assert_ne!(second, first);
+    let (out, err) = key(&d, KeyCommand::Reset { yes: true }, false).unwrap();
+    assert!(out.contains(&second));
+    assert!(err.contains("new peer ID"));
+    let _ = std::fs::remove_dir_all(d);
+}
+
+#[test]
+fn reset_on_an_empty_directory_needs_no_confirmation() {
+    let d = temp("reset-empty");
+    let (out, err) = key(&d, KeyCommand::Reset { yes: false }, false).unwrap();
+    assert!(out.contains("none ->"));
+    assert!(err.is_empty());
+    let _ = std::fs::remove_dir_all(d);
+}
+
+#[test]
+fn key_commands_are_refused_while_another_process_holds_the_data_directory() {
+    let d = temp("locked");
+    let held = DataDirLock::acquire(&d).unwrap();
+    for cmd in [
+        KeyCommand::Show,
+        KeyCommand::Reset { yes: true },
+        KeyCommand::Export(ExportArgs {
+            file: None,
+            stdout: true,
+        }),
+    ] {
+        let e = key(&d, cmd, true).unwrap_err();
+        assert!(e.contains("another forever-together process"), "{e}");
+    }
+    drop(held);
+    key(&d, KeyCommand::Show, false).unwrap();
+    let _ = std::fs::remove_dir_all(d);
+}
+
+#[test]
+fn the_running_app_holds_the_directory_so_key_commands_wait_for_it() {
+    unsafe { std::env::set_var("WOWFT_NET", "memory") };
+    let d = temp("app-lock");
+    let running = start_window(&d, Arc::new(MapAssets::default())).unwrap();
+    assert!(key(&d, KeyCommand::Reset { yes: true }, true).is_err());
+    // A second app on the same directory is refused too.
+    assert!(start_window(&d, Arc::new(MapAssets::default())).is_err());
+    drop(running);
+    key(&d, KeyCommand::Show, false).unwrap();
+    let _ = std::fs::remove_dir_all(d);
 }
 
 fn get(port: u16, path: &str, token: Option<&str>) -> String {

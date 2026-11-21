@@ -45,10 +45,25 @@ pub fn run() {
     let cli = Cli::parse();
     let data_dir = cli.resolve_data_dir();
     match cli.mode() {
-        Mode::PrintPublicKey => match runtime::public_key(&data_dir) {
-            Ok(k) => println!("{k}"),
-            Err(e) => fail(e),
-        },
+        Mode::Key(cmd) => {
+            let confirm = |question: &str| {
+                use std::io::{BufRead, Write};
+                eprint!("{question}");
+                let _ = std::io::stderr().flush();
+                let mut line = String::new();
+                std::io::stdin().lock().read_line(&mut line).is_ok()
+                    && matches!(line.trim().to_ascii_lowercase().as_str(), "y" | "yes")
+            };
+            if let Err(e) = runtime::run_key_command(
+                &data_dir,
+                &cmd,
+                &mut std::io::stdout(),
+                &mut std::io::stderr(),
+                confirm,
+            ) {
+                fail(e);
+            }
+        }
         Mode::Headless => {
             if let Err(e) = runtime::run_headless(&data_dir) {
                 fail(e);
