@@ -7,6 +7,8 @@
 
 :root {
   font-family: var(--font);
+  color-scheme: dark;
+  background: var(--bg);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -16,7 +18,10 @@ body {
   color: var(--text);
   background: var(--bg);
   line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
 }
+
+.ft-entity { font-family: var(--font-entity); }
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }

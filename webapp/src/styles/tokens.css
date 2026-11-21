@@ -1,7 +1,11 @@
 :root {
-  color-scheme: light dark;
-  --font: "Lora", Georgia, system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+  /* Overpass for UI text where legibility is crucial: numbers, labels, buttons, notices, diagnosis text. */
+  --font: "Overpass", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Lora for game entities: character, dungeon, class, race, realm and zone names. */
+  --font-entity: "Lora", Georgia, "Times New Roman", serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-mono: var(--mono);
 
   /* Brand palette (raw). Semantic tokens below are built from these. */
   --p-orange: #ffae67;
@@ -17,29 +21,32 @@
   --p-navy: #042d5b;
   --p-aqua: #38e6c8;
 
-  --bg: color-mix(in srgb, var(--p-orchid) 14%, white);
-  --surface: #ffffff;
-  --surface-2: color-mix(in srgb, var(--p-orchid) 30%, white);
-  --border: color-mix(in srgb, var(--p-lavender) 40%, white);
-  --text: var(--p-ink);
-  --text-muted: color-mix(in srgb, var(--p-ink) 72%, white);
-  --accent: var(--p-violet);
-  --accent-bg: color-mix(in srgb, var(--p-lavender) 22%, white);
-  --on-accent: #ffffff;
-  --accent-solid: var(--p-violet);
-  --good: color-mix(in srgb, var(--p-teal) 75%, var(--p-navy));
-  --good-bg: var(--p-mint);
-  --warn: color-mix(in srgb, var(--p-orange) 35%, var(--p-ink));
-  --warn-bg: color-mix(in srgb, var(--p-orange) 38%, white);
-  --bad: color-mix(in srgb, var(--p-pink) 35%, var(--p-purple));
-  --bad-bg: color-mix(in srgb, var(--p-pink) 16%, white);
-  --info: var(--p-navy);
-  --info-bg: color-mix(in srgb, var(--p-aqua) 25%, white);
-  --focus: var(--p-violet);
-  --overlay: color-mix(in srgb, var(--p-ink) 60%, transparent);
+  /* Dark only. Layers step up from a near-black ink: bg < surface < surface-2 < surface-3. */
+  --bg: color-mix(in srgb, var(--p-ink) 55%, black);
+  --surface: color-mix(in srgb, var(--p-lavender) 7%, var(--bg));
+  --surface-2: color-mix(in srgb, var(--p-lavender) 14%, var(--bg));
+  --surface-3: color-mix(in srgb, var(--p-lavender) 21%, var(--bg));
+  --border: color-mix(in srgb, var(--p-lavender) 26%, var(--bg));
+  --border-strong: color-mix(in srgb, var(--p-lavender) 82%, var(--bg));
+  --text: color-mix(in srgb, var(--p-orchid) 12%, white);
+  --text-muted: color-mix(in srgb, var(--p-orchid) 80%, var(--bg));
+  --accent: var(--p-orchid);
+  --accent-bg: color-mix(in srgb, var(--p-violet) 40%, var(--bg));
+  --on-accent: var(--p-ink);
+  --accent-solid: var(--p-orchid);
+  --good: var(--p-green);
+  --good-bg: color-mix(in srgb, var(--p-green) 15%, var(--bg));
+  --warn: var(--p-orange);
+  --warn-bg: color-mix(in srgb, var(--p-orange) 17%, var(--bg));
+  --bad: var(--p-pink);
+  --bad-bg: color-mix(in srgb, var(--p-pink) 18%, var(--bg));
+  --info: var(--p-aqua);
+  --info-bg: color-mix(in srgb, var(--p-teal) 26%, var(--bg));
+  --focus: var(--p-aqua);
+  --overlay: color-mix(in srgb, black 70%, transparent);
 
-  --alliance: var(--p-navy);
-  --horde: var(--bad);
+  --alliance: color-mix(in srgb, var(--p-lavender) 80%, white);
+  --horde: var(--p-orange);
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -50,31 +57,4 @@
   --radius: 8px;
   --radius-sm: 4px;
   --tap: 44px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: var(--p-ink);
-    --surface: color-mix(in srgb, var(--p-violet) 12%, var(--p-ink));
-    --surface-2: color-mix(in srgb, var(--p-violet) 24%, var(--p-ink));
-    --border: color-mix(in srgb, var(--p-lavender) 32%, var(--p-ink));
-    --text: color-mix(in srgb, var(--p-orchid) 15%, white);
-    --text-muted: color-mix(in srgb, var(--p-orchid) 65%, var(--p-ink));
-    --accent: var(--p-orchid);
-    --accent-bg: color-mix(in srgb, var(--p-violet) 38%, var(--p-ink));
-    --on-accent: var(--p-ink);
-    --accent-solid: var(--p-orchid);
-    --good: var(--p-green);
-    --good-bg: color-mix(in srgb, var(--p-green) 16%, var(--p-ink));
-    --warn: var(--p-orange);
-    --warn-bg: color-mix(in srgb, var(--p-orange) 20%, var(--p-ink));
-    --bad: var(--p-pink);
-    --bad-bg: color-mix(in srgb, var(--p-pink) 20%, var(--p-ink));
-    --info: var(--p-aqua);
-    --info-bg: color-mix(in srgb, var(--p-teal) 28%, var(--p-ink));
-    --focus: var(--p-aqua);
-    --overlay: color-mix(in srgb, black 65%, transparent);
-    --alliance: var(--p-lavender);
-    --horde: var(--p-orange);
-  }
 }
