@@ -8,6 +8,7 @@ import { Button } from "../atoms/Button";
 import { Card } from "../atoms/Card";
 import { CopyChip } from "../atoms/CopyChip";
 import { Notice } from "../atoms/Notice";
+import { Entity } from "../atoms/Typography";
 import { CharacterSummary } from "../molecules/CharacterSummary";
 import { CodePasteForm } from "../molecules/CodePasteForm";
 import { Details } from "../molecules/Details";
@@ -25,7 +26,7 @@ export interface CharacterPanelProps {
   error?: string | null;
   /** Where "Get the addon" points. Defaults to ADDON_URL; null renders plain text. */
   addonUrl?: string | null;
-  /** Only the part behind "Edit": details, update and remove, without the card or the one-line summary (the strip shows those). */
+  /** Only the secondary part: details and Remove, without the card, the summary or the update form (the strip shows those). */
   embedded?: boolean;
 }
 
@@ -59,17 +60,24 @@ export function CharacterPanel({ character, now, onSubmitCode, onForget, busy, e
 
   const ageS = (now - character.createdAt) / 1000;
   const stale = ageS > STALE_CODE_AFTER_S;
-  const showForm = replacing || !!error;
+  const showForm = !embedded && (replacing || !!error);
 
   const body = (
     <>
       {!embedded && <CharacterSummary character={character} stale={stale} />}
       {!embedded && stale && <Notice tone="warn">Code is {formatAge(ageS)} old. Refresh in the addon.</Notice>}
-      <Details summary="Details" defaultOpen={embedded}>
-        <Field label="Realm">{character.realmName}</Field>
-        <Field label="Region">{character.regionName}</Field>
-        <Field label="Zone">{character.zone || "Unknown"}</Field>
+      <Details summary="Details">
+        <Field label="Realm"><Entity>{character.realmName}</Entity></Field>
+        <Field label="Region"><Entity>{character.regionName}</Entity></Field>
+        <Field label="Zone">{character.zone ? <Entity>{character.zone}</Entity> : "Unknown"}</Field>
         <Field label="Updated">{formatAge(ageS)} ago</Field>
+        {embedded && (
+          <div className="ft-actions">
+            <Button size="small" variant="ghost" onClick={() => void onForget()}>
+              Remove character
+            </Button>
+          </div>
+        )}
       </Details>
       {showForm && (
         <CodePasteForm
@@ -81,10 +89,11 @@ export function CharacterPanel({ character, now, onSubmitCode, onForget, busy, e
           error={error}
         />
       )}
+      {!embedded && (
       <div className="ft-actions">
         {!showForm && (
-          <Button size="small" onClick={() => setReplacing(true)}>
-            Update character
+          <Button size="small" variant={stale ? "primary" : "default"} onClick={() => setReplacing(true)}>
+            {stale ? "Update" : "Change character"}
           </Button>
         )}
         {showForm && !error && (
@@ -96,6 +105,7 @@ export function CharacterPanel({ character, now, onSubmitCode, onForget, busy, e
           Remove character
         </Button>
       </div>
+      )}
     </>
   );
   if (embedded) return <div className="ft-charedit">{body}</div>;

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import { ApiError, describeCodeError } from "../../api/errors";
 import {
   MIN,
@@ -99,6 +100,30 @@ export const LongFirstNameAndSurname: Story = {
   args: { state: makeState({ character: makeCharacter({ firstName: "Bartholomewmaximilianx", surname: "Featherstonehaughcholmo" }) }) },
 };
 export const LongNamesOnPhone: Story = { ...phone, args: { ...LongFirstNameAndSurname.args } };
+
+// ----------------------------------------------------------- change character
+
+/** Out of date: the strip shows "Update" as the highlighted action. */
+export const IdleOutOfDateUpdate: Story = { args: { state: makeState({ character: makeCharacter({ createdAt: NOW - 95 * MIN }) }) } };
+/** "Change character" opens the paste form right in the strip. */
+export const ChangeCharacterFormOpen: Story = {
+  play: async ({ canvasElement }) => {
+    const c = within(canvasElement);
+    await userEvent.click(c.getByRole("button", { name: "Change character" }));
+    await expect(c.getByLabelText("Character code from the addon")).toBeVisible();
+  },
+};
+export const ChangeCharacterRefusedCode: Story = {
+  args: { codeError: describeCodeError(new ApiError(422, "UnknownVersion", "unknown version 2")) },
+};
+/** While a search runs the control is disabled with a short reason. */
+export const ChangeCharacterDisabledWhileSearching: Story = {
+  args: { state: makeState({ search: searchingFor(50) }) },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole("button", { name: "Change character" })).toBeDisabled();
+  },
+};
+export const ChangeCharacterOnPhone: Story = { ...phone, args: { state: makeState({ character: makeCharacter({ createdAt: NOW - 95 * MIN }) }) } };
 
 // ---------------------------------------------------------------- searching
 

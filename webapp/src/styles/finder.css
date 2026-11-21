@@ -22,17 +22,26 @@
 
 /* Dungeon option as a button */
 button.ft-dungeon { width: 100%; font: inherit; color: inherit; text-align: left; grid-template-columns: 1fr auto; }
-button.ft-dungeon:hover:not(:disabled) { border-color: var(--accent-solid); }
+button.ft-dungeon:hover:not(:disabled) { border-color: var(--accent-solid); background: var(--surface-2); }
+button.ft-dungeon:active:not(:disabled) { background: var(--surface-3); }
 button.ft-dungeon:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 button.ft-dungeon:disabled { opacity: 0.6; cursor: not-allowed; }
 .ft-dungeon__go { color: var(--text-muted); font-size: 1.1rem; }
 
-/* Character strip (organism): the idle screen's compact character line */
-.ft-strip { display: grid; gap: var(--space-2); padding: var(--space-2) var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; }
-.ft-strip__row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-width: 0; }
+/* Character strip (organism): the compact character block on every finder screen */
+.ft-strip { display: grid; gap: var(--space-2); padding: var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; container-type: inline-size; }
+.ft-strip__row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-width: 0; }
 .ft-strip__row > .ft-charline { flex: 1 1 auto; }
-.ft-strip__stale { margin: 0; font-size: 0.88rem; color: var(--warn); }
-.ft-charedit { display: grid; gap: var(--space-3); padding-top: var(--space-2); border-top: 1px solid var(--border); min-width: 0; }
+.ft-strip__change { flex: none; white-space: nowrap; }
+.ft-button__icon { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ft-strip__stale, .ft-strip__note { margin: 0; font-size: 0.9rem; color: var(--text-muted); }
+.ft-strip__stale { color: var(--warn); }
+.ft-strip__form { display: grid; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border); min-width: 0; }
+.ft-charedit { display: grid; gap: var(--space-3); min-width: 0; }
+@container (max-width: 34rem) {
+  .ft-strip__row { flex-direction: column; align-items: stretch; }
+  .ft-strip__change { width: 100%; }
+}
 
 /* Idle screen: the page is exactly one viewport tall and the dungeon list takes what is left, scrolling inside itself. */
 .ft-page:has(.ft-picker__region) { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
@@ -52,3 +61,4 @@ button.ft-dungeon:disabled { opacity: 0.6; cursor: not-allowed; }
 .ft-picker .ft-section-label:first-child { margin-top: 0; }
 .ft-picker .ft-dungeon__meta { gap: var(--space-1) var(--space-3); }
 .ft-picker__bar { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; background: var(--surface); border-top: 1px solid var(--border); }
+.ft-strip .ft-details > summary { min-height: 32px; padding: var(--space-1) 0; }

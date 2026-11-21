@@ -1,7 +1,5 @@
-import { STALE_CODE_AFTER_S } from "../../api/constants";
 import type { AppState, ConnectionStatus, DungeonsResponse } from "../../api/types";
 import { finderScreen } from "../../lib/screen";
-import { CharacterSummary } from "../molecules/CharacterSummary";
 import { AppHeader, type View } from "../organisms/AppHeader";
 import { CharacterPanel } from "../organisms/CharacterPanel";
 import { CharacterStrip } from "../organisms/CharacterStrip";
@@ -97,20 +95,24 @@ export function FinderPage({ state, dungeons, now, status, codeError, busy, ...a
       );
   }
 
-  // The strip: idle shows the one-line summary with an Edit button (update and remove live behind it); the other screens only the one-line reminder.
-  const strip =
-    screen === "idle" && character ? (
-      <CharacterStrip
-        character={character}
-        now={now}
-        onSubmitCode={actions.onSubmitCode}
-        onForget={actions.onForgetCharacter}
-        busy={busy}
-        error={codeError}
-      />
-    ) : character && screen !== "first_run" ? (
-      <CharacterSummary character={character} stale={(now - character.createdAt) / 1000 > STALE_CODE_AFTER_S} />
-    ) : undefined;
+  // The strip: on every screen but first run, with "Change character" always visible. It is disabled while a search or party is running.
+  const lockedReason =
+    screen === "searching"
+      ? "Stop the search to change character."
+      : screen === "party_found" || screen === "party_final"
+        ? "Leave the party to change character."
+        : undefined;
+  const strip = character && screen !== "first_run" ? (
+    <CharacterStrip
+      character={character}
+      now={now}
+      onSubmitCode={actions.onSubmitCode}
+      onForget={actions.onForgetCharacter}
+      busy={busy}
+      error={codeError}
+      lockedReason={lockedReason}
+    />
+  ) : undefined;
 
   return (
     <FinderTemplate

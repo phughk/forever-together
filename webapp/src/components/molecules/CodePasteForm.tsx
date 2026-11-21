@@ -10,10 +10,14 @@ export interface CodePasteFormProps {
   /** Plain-language reason the last code was refused. */
   error?: string | null;
   initialValue?: string;
+  /** Focus the text area on mount (the form was opened on purpose). */
+  autoFocus?: boolean;
+  /** When set, a Cancel button sits next to the submit button. */
+  onCancel?: () => void;
 }
 
 /** Label, text area and button for pasting the addon's character code. Inner spaces are kept (base45 uses them). */
-export function CodePasteForm({ onSubmit, busy, error, initialValue = "" }: CodePasteFormProps) {
+export function CodePasteForm({ onSubmit, busy, error, initialValue = "", autoFocus, onCancel }: CodePasteFormProps) {
   const id = useId();
   const [value, setValue] = useState(initialValue);
   const submit = (e: FormEvent) => {
@@ -32,6 +36,7 @@ export function CodePasteForm({ onSubmit, busy, error, initialValue = "" }: Code
           value={value}
           invalid={!!error}
           placeholder="WFT1:..."
+          autoFocus={autoFocus}
           spellCheck={false}
           autoCapitalize="off"
           autoComplete="off"
@@ -39,9 +44,16 @@ export function CodePasteForm({ onSubmit, busy, error, initialValue = "" }: Code
         />
       </div>
       {error && <Notice tone="bad">{error}</Notice>}
-      <Button type="submit" variant="primary" disabled={busy || value.trim() === ""}>
-        {busy ? "Reading..." : "Use this code"}
-      </Button>
+      <div className="ft-actions">
+        <Button type="submit" variant="primary" disabled={busy || value.trim() === ""}>
+          {busy ? "Reading..." : "Use this code"}
+        </Button>
+        {onCancel && (
+          <Button variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
+      </div>
     </form>
   );
 }
