@@ -30,6 +30,16 @@ mise run dev        # desktop app (Tauri + Vite)
 | `mise run check` | typecheck, lint, test and test-addon: everything CI should run |
 | `mise run build` | bundle the app for this platform |
 
+## Getting your character code and QR in game
+
+1. Set `WOW_ADDONS_DIR` (see `mise.local.toml`; it must end in `AddOns`) and run `mise run install-addon`.
+2. In game, type `/reload` so the client loads the addon (a full client restart also works).
+3. Type `/wowft`. A window opens showing the code as text, the QR, the fields it understood, how old the code is and a Refresh button. Escape closes it. `/wowft code` prints the code in chat instead, and `/wowft help` lists the commands.
+4. Click the text box (it selects all) and press Ctrl+C, then paste it into the app's "Character code from the addon" box.
+5. The code is a snapshot. After a level up, a gear change or a zone change, press Refresh in the window and paste again.
+
+The QR holds the same text. The app has no camera scanner, so on a phone you scan it with the camera app, copy the text it shows and paste it into the app's page. If the QR is missing, the window says why: the code was too long to draw (the text still works) or a field could not be read (no code is built).
+
 ## Layout
 
 - `addon/ForeverTogether/`: the WoW addon (Lua). It shows the character code and has no networking. Tests are in `addon/tests/`.
