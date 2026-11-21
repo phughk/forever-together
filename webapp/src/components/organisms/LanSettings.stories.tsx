@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LanSettings, type PairingState } from "./LanSettings";
 
 const URL = "http://192.168.1.23:41873/#token=3f9a1c0be27d44a8b6d15e90c7a2f8e14b0d9c63a5e7f1280b4d6c9a1e3f5072";
@@ -26,6 +26,18 @@ export const SignOutFailed: Story = { args: { lanMode: true, pairing: ONE, reset
 /** Phone: the switch and buttons are disabled with a lock icon. */
 export const ViewedOnPhone: Story = { args: { lanMode: true, remote: true, pairing: { kind: "forbidden" } } };
 export const ViewedOnPhoneOff: Story = { args: { lanMode: false, remote: true, pairing: { kind: "forbidden" } } };
+export const EscapeClosesQr: Story = {
+  args: { lanMode: true, pairing: ONE, defaultShowQr: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("dialog", { name: "Add a phone" })).toBeVisible();
+    // The key handler is attached in an effect after the first render, so press again until it has been.
+    await waitFor(async () => {
+      await userEvent.keyboard("{Escape}");
+      await expect(canvas.queryByRole("dialog")).toBeNull();
+    });
+  },
+};
 export const AddAPhoneRevealsQr: Story = {
   args: { lanMode: true, pairing: ONE },
   play: async ({ canvasElement }) => {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "../atoms/Badge";
 import { Button } from "../atoms/Button";
 import { Card } from "../atoms/Card";
@@ -41,6 +41,12 @@ export interface LanSettingsProps {
 export function LanSettings({ lanMode, onChange, pairing, remote, onAddressChange, onResetToken, resetError, defaultShowQr }: LanSettingsProps) {
   const [showQr, setShowQr] = useState(defaultShowQr ?? false);
   const open = lanMode && showQr && !remote;
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setShowQr(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
   return (
     <Card>
       <SettingRow
@@ -65,28 +71,34 @@ export function LanSettings({ lanMode, onChange, pairing, remote, onAddressChang
         </Locked>
       )}
       {open && (
-        <div className="ft-phonelink__reveal">
-          {pairing.kind === "loading" && <Text muted>Preparing the QR...</Text>}
-          {pairing.kind === "ready" && (
-            <>
-              <PairingQr url={pairing.url} />
-              <p className="ft-phonelink__value">
-                Phones connect to <code>{pairing.address}</code>
-              </p>
-              {pairing.addresses.length > 1 && (
-                <SettingRow title="Network" hint="This PC is on more than one network. Pick the one your phone is on, usually the same Wi-Fi.">
-                  <Select
-                    mono
-                    aria-label="Network address"
-                    value={pairing.address}
-                    options={pairing.addresses.map((a) => ({ value: a, label: a }))}
-                    onChange={(e) => onAddressChange?.(e.target.value)}
-                  />
-                </SettingRow>
+        <div className="ft-sheet">
+          <div className="ft-phonelink__reveal" role="dialog" aria-label="Add a phone">
+            <div className="ft-phonelink__scroll">
+              {pairing.kind === "loading" && <Text muted>Preparing the QR...</Text>}
+              {pairing.kind === "ready" && (
+                <>
+                  <PairingQr url={pairing.url} />
+                  <p className="ft-phonelink__value">
+                    Phones connect to <code>{pairing.address}</code>
+                  </p>
+                  {pairing.addresses.length > 1 && (
+                    <SettingRow title="Network" hint="This PC is on more than one network. Pick the one your phone is on, usually the same Wi-Fi.">
+                      <Select
+                        mono
+                        aria-label="Network address"
+                        value={pairing.address}
+                        options={pairing.addresses.map((a) => ({ value: a, label: a }))}
+                        onChange={(e) => onAddressChange?.(e.target.value)}
+                      />
+                    </SettingRow>
+                  )}
+                </>
               )}
-            </>
-          )}
-          <Button onClick={() => setShowQr(false)}>Done</Button>
+            </div>
+            <Button variant="primary" onClick={() => setShowQr(false)}>
+              Done
+            </Button>
+          </div>
         </div>
       )}
       {lanMode && pairing.kind === "error" && <Notice tone="bad">{pairing.message}</Notice>}
