@@ -42,21 +42,30 @@ export function LanSettings({ lanMode, onChange, pairing, remote, onAddressChang
         </Notice>
       )}
       {pairing.kind === "loading" && <Text muted>Preparing the pairing code...</Text>}
-      {pairing.kind === "ready" && pairing.addresses.length > 1 && (
-        <SettingRow
-          title="Network address"
-          description="This computer is on more than one network. Pick the one your phone is on (usually the same Wi-Fi)."
-        >
-          <Select
-            mono
-            aria-label="Network address"
-            value={pairing.address}
-            options={pairing.addresses.map((a) => ({ value: a, label: a }))}
-            onChange={(e) => onAddressChange?.(e.target.value)}
-          />
-        </SettingRow>
-      )}
       {pairing.kind === "ready" && <PairingQr url={pairing.url} />}
+      {pairing.kind === "ready" && (
+        <details className="ft-details">
+          <summary>
+            Phones connect to <code>{pairing.address}</code>. Not working? Change address
+          </summary>
+          {pairing.addresses.length > 1 ? (
+            <SettingRow
+              title="Network address"
+              description="This computer is on more than one network. Pick the one your phone is on (usually the same Wi-Fi)."
+            >
+              <Select
+                mono
+                aria-label="Network address"
+                value={pairing.address}
+                options={pairing.addresses.map((a) => ({ value: a, label: a }))}
+                onChange={(e) => onAddressChange?.(e.target.value)}
+              />
+            </SettingRow>
+          ) : (
+            <Text muted>Only one network address was found on this computer, so there is nothing else to pick.</Text>
+          )}
+        </details>
+      )}
       {pairing.kind === "forbidden" && (
         <Notice tone="info">The pairing code is shown only in the desktop app, so a phone cannot pair another phone.</Notice>
       )}
