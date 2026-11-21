@@ -1,0 +1,263 @@
+[
+  {
+    "slug": "hall-of-thanes",
+    "name": "Hall of Thanes",
+    "levelMin": 13,
+    "levelMax": 18,
+    "minLevel": null,
+    "zone": "Ironforge",
+    "status": "coming_soon"
+  },
+  {
+    "slug": "ragefire-chasm",
+    "name": "Ragefire Chasm",
+    "levelMin": 13,
+    "levelMax": 18,
+    "minLevel": 10,
+    "zone": "Orgrimmar",
+    "status": "available"
+  },
+  {
+    "slug": "ruins-of-lordaeron",
+    "name": "Ruins of Lordaeron",
+    "levelMin": 15,
+    "levelMax": 20,
+    "minLevel": null,
+    "zone": "Tirisfal Glades",
+    "status": "coming_soon"
+  },
+  {
+    "slug": "wailing-caverns",
+    "name": "Wailing Caverns",
+    "levelMin": 15,
+    "levelMax": 25,
+    "minLevel": 10,
+    "zone": "The Barrens",
+    "status": "available"
+  },
+  {
+    "slug": "the-deadmines",
+    "name": "The Deadmines",
+    "levelMin": 18,
+    "levelMax": 23,
+    "minLevel": 10,
+    "zone": "Westfall",
+    "status": "available"
+  },
+  {
+    "slug": "shadowfang-keep",
+    "name": "Shadowfang Keep",
+    "levelMin": 22,
+    "levelMax": 30,
+    "minLevel": 14,
+    "zone": "Silverpine Forest",
+    "status": "available"
+  },
+  {
+    "slug": "the-stockade",
+    "name": "The Stockade",
+    "levelMin": 22,
+    "levelMax": 30,
+    "minLevel": 15,
+    "zone": "Stormwind City",
+    "status": "available"
+  },
+  {
+    "slug": "excavation-site",
+    "name": "Excavation Site",
+    "levelMin": 24,
+    "levelMax": 29,
+    "minLevel": null,
+    "zone": "Wetlands",
+    "status": "coming_soon"
+  },
+  {
+    "slug": "blackfathom-deeps",
+    "name": "Blackfathom Deeps",
+    "levelMin": 24,
+    "levelMax": 32,
+    "minLevel": 15,
+    "zone": "Ashenvale",
+    "status": "available"
+  },
+  {
+    "slug": "city-of-dalaran",
+    "name": "City of Dalaran",
+    "levelMin": 28,
+    "levelMax": 33,
+    "minLevel": null,
+    "zone": "Alterac Mountains",
+    "status": "coming_soon"
+  },
+  {
+    "slug": "scarlet-monastery",
+    "name": "Scarlet Monastery",
+    "levelMin": 28,
+    "levelMax": 45,
+    "minLevel": 21,
+    "zone": "Tirisfal Glades",
+    "status": "available"
+  },
+  {
+    "slug": "gnomeregan",
+    "name": "Gnomeregan",
+    "levelMin": 29,
+    "levelMax": 38,
+    "minLevel": 19,
+    "zone": "Dun Morogh",
+    "status": "available"
+  },
+  {
+    "slug": "razorfen-kraul",
+    "name": "Razorfen Kraul",
+    "levelMin": 30,
+    "levelMax": 40,
+    "minLevel": 25,
+    "zone": "The Barrens",
+    "status": "available"
+  },
+  {
+    "slug": "the-drowned-city",
+    "name": "The Drowned City",
+    "levelMin": 35,
+    "levelMax": 40,
+    "minLevel": null,
+    "zone": "Stranglethorn Vale",
+    "status": "coming_soon"
+  },
+  {
+    "slug": "kroldok-stronghold",
+    "name": "Krol'dok Stronghold",
+    "levelMin": 40,
+    "levelMax": 45,
+    "minLevel": null,
+    "zone": "Riverglades",
+    "status": "coming_soon"
+  },
+  {
+    "slug": "razorfen-downs",
+    "name": "Razorfen Downs",
+    "levelMin": 40,
+    "levelMax": 50,
+    "minLevel": 35,
+    "zone": "The Barrens",
+    "status": "available"
+  },
+  {
+    "slug": "uldaman",
+    "name": "Uldaman",
+    "levelMin": 42,
+    "levelMax": 52,
+    "minLevel": 30,
+    "zone": "Badlands",
+    "status": "available"
+  },
+  {
+    "slug": "zulfarrak",
+    "name": "Zul'Farrak",
+    "levelMin": 44,
+    "levelMax": 54,
+    "minLevel": 39,
+    "zone": "Tanaris",
+    "status": "available"
+  },
+  {
+    "slug": "maraudon",
+    "name": "Maraudon",
+    "levelMin": 45,
+    "levelMax": 57,
+    "minLevel": 30,
+    "zone": "Desolace",
+    "status": "available"
+  },
+  {
+    "slug": "alcaz-prison",
+    "name": "Alcaz Prison",
+    "levelMin": 48,
+    "levelMax": 53,
+    "minLevel": null,
+    "zone": "Dustwallow Marsh",
+    "status": "coming_soon"
+  },
+  {
+    "slug": "temple-of-atalhakkar",
+    "name": "Temple of Atal'Hakkar",
+    "levelMin": 50,
+    "levelMax": 60,
+    "minLevel": 45,
+    "zone": "Swamp of Sorrows",
+    "status": "available"
+  },
+  {
+    "slug": "blackrock-depths",
+    "name": "Blackrock Depths",
+    "levelMin": 52,
+    "levelMax": 60,
+    "minLevel": 48,
+    "zone": "Searing Gorge",
+    "status": "available"
+  },
+  {
+    "slug": "blackmaw-hold",
+    "name": "Blackmaw Hold",
+    "levelMin": 55,
+    "levelMax": 60,
+    "minLevel": null,
+    "zone": "Azshara",
+    "status": "coming_soon"
+  },
+  {
+    "slug": "lower-blackrock-spire",
+    "name": "Lower Blackrock Spire",
+    "levelMin": 55,
+    "levelMax": 60,
+    "minLevel": 48,
+    "zone": "Searing Gorge",
+    "status": "available"
+  },
+  {
+    "slug": "shapers-terrace",
+    "name": "Shaper's Terrace",
+    "levelMin": 58,
+    "levelMax": 60,
+    "minLevel": null,
+    "zone": "Un'Goro Crater",
+    "status": "coming_soon"
+  },
+  {
+    "slug": "upper-blackrock-spire",
+    "name": "Upper Blackrock Spire",
+    "levelMin": 58,
+    "levelMax": 60,
+    "minLevel": 48,
+    "zone": "Searing Gorge",
+    "status": "available"
+  },
+  {
+    "slug": "dire-maul",
+    "name": "Dire Maul",
+    "levelMin": 58,
+    "levelMax": 60,
+    "minLevel": 48,
+    "zone": "Feralas",
+    "status": "available"
+  },
+  {
+    "slug": "scholomance",
+    "name": "Scholomance",
+    "levelMin": 58,
+    "levelMax": 60,
+    "minLevel": 48,
+    "zone": "Western Plaguelands",
+    "status": "available"
+  },
+  {
+    "slug": "stratholme",
+    "name": "Stratholme",
+    "levelMin": 58,
+    "levelMax": 60,
+    "minLevel": 48,
+    "zone": "Eastern Plaguelands",
+    "status": "available"
+  }
+]
