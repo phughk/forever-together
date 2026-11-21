@@ -48,3 +48,7 @@ flowchart LR
 * The history is the first behavioural log on disk. The clear action and the link to `ClearCharacter` are part of the decision, not extras.
 * Adds one key prefix to the store and one loopback route to the API, and nothing else to the API or `AppState`.
 * The engine gains one action (`SearchEnded`) that hosts other than the app ignore. The checkpoint rule and the counting rule are part of what `rules_version` describes, so changing either is a version bump.
+
+## Amendment 2026-11-21: three attempt counters per entry
+
+`Entry` gains `invites_sent`, `accepts_got` and `taken_seen` (u32, the counters of [0026](0026-search-health-from-own-observations.md) at the terminal event, from `SearchFacts`). They are additive with `#[serde(default)]`: entries written before decode with 0. `schema_version` stays 1. `rules_version` is not bumped: no existing field changed meaning. An estimator must not read a 0 in an old entry as "no invitations": it cannot tell an old entry from a quiet search, so it should only use these fields for entries whose `rules_version` and write time it trusts (stage 8b's concern). `invites_got`, `drops` and `declines` are not repeated: `drops` and `declines` already exist, and `invites_got` is not needed to tell the situations apart.

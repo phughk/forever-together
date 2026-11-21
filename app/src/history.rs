@@ -128,6 +128,16 @@ pub struct Entry {
     pub declines: u32,
     /// Seconds from the start to the first commit, if a party ever formed.
     pub first_formed_at: Option<u64>,
+    /// Invitations this node sent as a leader (one per invited peer). Added to schema 1 without
+    /// a bump: entries written before it read as 0.
+    #[serde(default)]
+    pub invites_sent: u32,
+    /// Accepts received for them.
+    #[serde(default)]
+    pub accepts_got: u32,
+    /// Distinct peers whose ads left the sample because a party-taken notice named them.
+    #[serde(default)]
+    pub taken_seen: u32,
 }
 
 impl Entry {
@@ -194,6 +204,9 @@ pub fn entry_from_facts(facts: &SearchFacts, ctx: &Context) -> Option<Entry> {
         drops: facts.drops,
         declines: facts.declines,
         first_formed_at: facts.first_formed_at.map(|d| d.as_secs()),
+        invites_sent: facts.invites_sent,
+        accepts_got: facts.accepts_got,
+        taken_seen: facts.taken_seen,
     })
 }
 
@@ -309,6 +322,9 @@ pub(crate) mod tests {
             drops: 0,
             declines: 0,
             first_formed_at: None,
+            invites_sent: 0,
+            accepts_got: 0,
+            taken_seen: 0,
         }
     }
 
@@ -335,6 +351,9 @@ pub(crate) mod tests {
             declines: 0,
             checkpoint_1: None,
             checkpoint_2: None,
+            invites_sent: 0,
+            accepts_got: 0,
+            taken_seen: 0,
         }
     }
 
@@ -398,6 +417,27 @@ pub(crate) mod tests {
         assert_eq!(e.topic_count, 2);
         assert_eq!(e.peak.damage, 2);
         assert_eq!(e.rules_version, RULES_VERSION);
+    }
+
+    #[test]
+    fn entry_carries_the_attempt_counters_and_old_entries_still_decode() {
+        let s = MemStore::new();
+        let mut f = facts(SearchOutcome::Expired, 600);
+        (f.invites_sent, f.accepts_got, f.taken_seen) = (14, 2, 5);
+        assert!(record_facts(&s, &f, &ctx(1_800_000_600)));
+        let (_, e) = load(&s).unwrap().remove(0);
+        assert_eq!((e.invites_sent, e.accepts_got, e.taken_seen), (14, 2, 5));
+        // An entry written before the counters existed has no such keys: schema 1 still reads.
+        let mut v: serde_json::Value = serde_json::to_value(&e).unwrap();
+        for k in ["invites_sent", "accepts_got", "taken_seen"] {
+            v.as_object_mut().unwrap().remove(k);
+        }
+        let old: Entry = serde_json::from_value(v).unwrap();
+        assert_eq!(
+            (old.invites_sent, old.accepts_got, old.taken_seen),
+            (0, 0, 0)
+        );
+        assert_eq!(old.schema_version, SCHEMA_VERSION);
     }
 
     #[test]

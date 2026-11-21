@@ -213,6 +213,27 @@ pub struct SearchStats {
     pub stage_reached: u8,
     /// Time since the search began (frozen at the limit in the end snapshot).
     pub elapsed: Duration,
+    /// Attempt counters (ADR 0026), counts only. Frozen with the rest in the end snapshot.
+    pub attempts: Attempts,
+}
+
+/// What this node did and received while looking for a party. Everything here is something the
+/// engine really sent or received; a silent peer and a peer that preferred a better-ranked
+/// leader look the same and are not told apart. No peer id is kept.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Attempts {
+    /// Invitations this node sent as a leader (one per invited peer).
+    pub invites_sent: u32,
+    /// Accepts received for those invitations (once per peer and epoch).
+    pub accepts_got: u32,
+    /// Invitations this node received as an invitee and kept.
+    pub invites_got: u32,
+    /// Distinct peers whose ads left the sample because a party-taken notice named them.
+    pub taken_seen: u32,
+    /// Parties that fell apart because a member did not answer.
+    pub drops: u32,
+    /// Parties declined or left unconfirmed (not a failure).
+    pub declines: u32,
 }
 
 /// How a search ended, as the engine knows it (ADR 0027). The host maps `Stopped` to `Ignored`
@@ -262,6 +283,10 @@ pub struct SearchFacts {
     /// `None` when the search ended before the checkpoint, never zeros.
     pub checkpoint_1: Option<Checkpoint>,
     pub checkpoint_2: Option<Checkpoint>,
+    /// Invitations sent as a leader, accepts got for them, and distinct peers seen as taken.
+    pub invites_sent: u32,
+    pub accepts_got: u32,
+    pub taken_seen: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -320,6 +345,11 @@ struct Search {
     first_formed_at: Option<Duration>,
     drops: u32,
     declines: u32,
+    invites_sent: u32,
+    accepts_got: u32,
+    invites_got: u32,
+    /// Peers whose ads a taken notice removed (counted once each; only the count leaves).
+    taken_seen: BTreeSet<PeerId>,
     checkpoint_1: Option<Checkpoint>,
     checkpoint_2: Option<Checkpoint>,
 }
@@ -437,10 +467,13 @@ impl Engine {
                 peer,
                 counter,
             } => {
+                let me = self.me;
                 if let Some(s) = self.search.as_mut()
                     && let Some(sample) = s.samples.get_mut(&topic)
+                    && sample.mark_taken(peer, counter)
+                    && peer != me
                 {
-                    sample.mark_taken(peer, counter);
+                    s.taken_seen.insert(peer);
                 }
             }
             Event::AnnounceReceived {
@@ -574,6 +607,10 @@ impl Engine {
             first_formed_at: None,
             drops: 0,
             declines: 0,
+            invites_sent: 0,
+            accepts_got: 0,
+            invites_got: 0,
+            taken_seen: BTreeSet::new(),
             checkpoint_1: None,
             checkpoint_2: None,
         });
@@ -801,6 +838,7 @@ impl Engine {
         let Some((topic, invited)) = found else {
             return;
         };
+        self.search.as_mut().unwrap().invites_sent += invited.len() as u32;
         for peer in invited.keys() {
             out.push(Action::SendMessage {
                 topic,
@@ -850,8 +888,12 @@ impl Engine {
             return;
         }
         let group = s.inbox.entry(epoch).or_default();
-        if group.len() < MAX_INVITES_PER_EPOCH || group.contains_key(&from) {
+        let fresh = !group.contains_key(&from);
+        if group.len() < MAX_INVITES_PER_EPOCH || !fresh {
             group.insert(from, (topic, ad));
+            if fresh {
+                s.invites_got += 1;
+            }
         }
     }
 
@@ -912,7 +954,10 @@ impl Engine {
         if lead.topic != topic || lead.epoch != epoch || !lead.invited.contains_key(&from) {
             return;
         }
-        lead.accepted.insert(from);
+        if lead.accepted.insert(from) {
+            s.accepts_got += 1;
+        }
+        let lead = s.lead.as_mut().expect("checked above");
         let acc: Vec<&Ad> = lead.accepted.iter().map(|p| &lead.invited[p]).collect();
         let Some(party) = choose_party(&topic, epoch, &own, &acc, min_level) else {
             return;
@@ -1332,6 +1377,9 @@ impl Engine {
             declines: s.declines,
             checkpoint_1: s.checkpoint_1,
             checkpoint_2: s.checkpoint_2,
+            invites_sent: s.invites_sent,
+            accepts_got: s.accepts_got,
+            taken_seen: s.taken_seen.len() as u32,
         }));
     }
 
@@ -1348,6 +1396,14 @@ impl Engine {
             own_role: s.profile.role,
             stage_reached: s.peak_stage.max(s.stage),
             elapsed: now.saturating_sub(s.search_start),
+            attempts: Attempts {
+                invites_sent: s.invites_sent,
+                accepts_got: s.accepts_got,
+                invites_got: s.invites_got,
+                taken_seen: s.taken_seen.len() as u32,
+                drops: s.drops,
+                declines: s.declines,
+            },
         })
     }
 

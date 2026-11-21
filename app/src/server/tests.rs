@@ -341,6 +341,14 @@ async fn search_diagnosis_has_the_contract_shape() {
         own_role: Some("damage".into()),
         sample_full: false,
         network_peers: 4,
+        attempts: AttemptsView {
+            invites_sent: 9,
+            accepts_got: 0,
+            invites_got: 2,
+            taken_seen: 3,
+            drops: 1,
+            declines: 1,
+        },
     });
     let v = serde_json::to_value(&state).unwrap();
     assert_eq!(
@@ -351,8 +359,23 @@ async fn search_diagnosis_has_the_contract_shape() {
             "seen": {"players": 8, "tanks": 0, "healers": 3, "damage": 5},
             "ownRole": "damage",
             "sampleFull": false,
-            "networkPeers": 4
+            "networkPeers": 4,
+            "attempts": {
+                "invitesSent": 9, "acceptsGot": 0, "invitesGot": 2,
+                "takenSeen": 3, "drops": 1, "declines": 1
+            }
         })
+    );
+    // A diagnosis from before the counters parses with zeros.
+    let mut older = v.clone();
+    older["search"]["diagnosis"]
+        .as_object_mut()
+        .unwrap()
+        .remove("attempts");
+    let back: AppState = serde_json::from_value(older).unwrap();
+    assert_eq!(
+        back.search.diagnosis.unwrap().attempts,
+        AttemptsView::default()
     );
     // An old client payload without the field still parses.
     let mut old = serde_json::to_value(sample_state()).unwrap();

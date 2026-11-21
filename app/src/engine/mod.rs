@@ -15,8 +15,8 @@ pub mod widen;
 
 pub use ad::{Ad, Faction, Message, PartyId, Role, compatible, event_from_message};
 pub use state::{
-    Action, Checkpoint, DropCause, DropInfo, Engine, Event, MemberDetails, MemberView, Mode,
-    Profile, RoleCounts, SearchFacts, SearchOutcome, SearchStats, TopicSearch, View,
+    Action, Attempts, Checkpoint, DropCause, DropInfo, Engine, Event, MemberDetails, MemberView,
+    Mode, Profile, RoleCounts, SearchFacts, SearchOutcome, SearchStats, TopicSearch, View,
 };
 
 use crate::dungeons::TopicId;
