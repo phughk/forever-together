@@ -1,7 +1,6 @@
 import { STALE_CODE_AFTER_S } from "../../api/constants";
 import type { AppState, ConnectionStatus, DungeonsResponse } from "../../api/types";
 import { finderScreen } from "../../lib/screen";
-import { Notice } from "../atoms/Notice";
 import { CharacterSummary } from "../molecules/CharacterSummary";
 import { AppHeader, type View } from "../organisms/AppHeader";
 import { CharacterPanel } from "../organisms/CharacterPanel";
@@ -116,11 +115,7 @@ export function FinderPage({ state, dungeons, now, status, codeError, busy, ...a
   return (
     <FinderTemplate
       header={<AppHeader view="finder" onNavigate={actions.onNavigate} status={status} />}
-      notices={
-        status === "reconnecting" ? (
-          <Notice tone="warn">The connection to the app was lost. Showing the last known state while reconnecting.</Notice>
-        ) : undefined
-      }
+      layout={screen === "idle" ? "list" : "focus"}
       strip={strip}
       main={main}
     />

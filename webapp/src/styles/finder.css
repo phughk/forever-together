@@ -43,5 +43,12 @@ button.ft-dungeon:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* Dungeon picker list region */
 .ft-picker__head { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: space-between; }
-.ft-picker__region { display: grid; gap: var(--space-2); align-content: start; min-height: 8rem; overflow-y: auto; overscroll-behavior: contain; padding-right: var(--space-1); }
+.ft-picker__region { display: grid; gap: var(--space-2); align-content: start; min-height: 8rem; overflow-y: auto; overscroll-behavior: contain; padding: 3px var(--space-1) 3px 3px; margin: -3px; }
+/* The dungeons are a grid of compact cards: one column on a phone, two at about 1280px, three on wide screens. Tab order follows the rows. */
+.ft-picker .ft-list { grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr)); gap: var(--space-3); }
+.ft-picker .ft-list > li { display: flex; min-width: 0; }
+.ft-picker .ft-dungeon { flex: 1 1 auto; padding: var(--space-2) var(--space-3); min-height: 3.5rem; }
+.ft-picker .ft-section-label { margin-top: var(--space-3); }
+.ft-picker .ft-section-label:first-child { margin-top: 0; }
+.ft-picker .ft-dungeon__meta { gap: var(--space-1) var(--space-3); }
 .ft-picker__bar { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; background: var(--surface); border-top: 1px solid var(--border); }

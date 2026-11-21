@@ -8,6 +8,7 @@ import "../../styles/settings.css";
 export function NotPairedPage() {
   return (
     <SettingsTemplate
+      narrow
       sections={
         <Card title="This phone isn't linked yet">
           <ol className="ft-steps">

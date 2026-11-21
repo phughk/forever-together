@@ -1,8 +1,30 @@
 /* Templates: page layouts. Content arrives through slots. */
 
-.ft-page { box-sizing: border-box; width: 100%; max-width: 72rem; margin: 0 auto; padding: max(var(--space-3), env(safe-area-inset-top)) max(var(--space-4), env(safe-area-inset-right)) max(var(--space-5), env(safe-area-inset-bottom)) max(var(--space-4), env(safe-area-inset-left)); }
+.ft-page { box-sizing: border-box; width: 100%; max-width: 88rem; margin: 0 auto; padding: max(var(--space-3), env(safe-area-inset-top)) max(var(--space-4), env(safe-area-inset-right)) max(var(--space-4), env(safe-area-inset-bottom)) max(var(--space-4), env(safe-area-inset-left)); }
 .ft-page__notices { display: grid; gap: var(--space-2); margin-bottom: var(--space-3); }
-.ft-page__strip, .ft-page__main { display: grid; gap: var(--space-3); width: 100%; max-width: 44rem; margin: 0 auto; min-width: 0; align-content: start; }
-.ft-page__strip { margin-bottom: var(--space-3); }
 
-.ft-page__narrow { display: grid; gap: var(--space-4); max-width: 40rem; }
+/* Finder: a slim top row (strip left, header right), then the main area. */
+.ft-page__top { display: flex; align-items: flex-start; gap: var(--space-3); margin-bottom: var(--space-3); min-width: 0; }
+.ft-page__strip { flex: 1 1 auto; min-width: 0; align-self: center; }
+.ft-page__main { display: grid; gap: var(--space-3); width: 100%; min-width: 0; align-content: start; }
+
+/* Focus screens: one card at a readable width, centred. */
+.ft-page--focus .ft-page__main { max-width: 46rem; margin: 0 auto; }
+.ft-page--focus .ft-page__top { max-width: 46rem; margin-left: auto; margin-right: auto; }
+
+/* Wide focus screens: the card on the left, the character in a side column, the header above it. */
+@media (min-width: 1100px) {
+  .ft-page--focus { display: grid; grid-template-columns: minmax(0, 46rem) minmax(16rem, 20rem); justify-content: center; column-gap: var(--space-5); align-content: start; }
+  .ft-page--focus .ft-page__top { display: contents; }
+  .ft-page--focus .ft-page__notices { grid-column: 1 / -1; }
+  .ft-page--focus .ft-page__main { grid-column: 1; grid-row: 2 / span 3; max-width: none; margin: 0; }
+  .ft-page--focus .ft-header--finder { grid-column: 2; grid-row: 2; justify-self: end; margin-bottom: var(--space-3); }
+  .ft-page--focus .ft-page__strip { grid-column: 2; grid-row: 3; align-self: start; padding: var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+}
+
+/* Settings: a responsive grid of section cards. */
+.ft-page--settings > .ft-page__notices { max-width: 72rem; margin-left: auto; margin-right: auto; }
+.ft-page--settings > .ft-header { max-width: 72rem; margin-left: auto; margin-right: auto; }
+.ft-page__sections { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: var(--space-4); align-items: start; width: 100%; max-width: 72rem; margin: 0 auto; }
+.ft-page__sections > .ft-advanced, .ft-page__sections > .ft-reportlink { grid-column: 1 / -1; }
+.ft-page__narrow { display: grid; gap: var(--space-4); width: 100%; max-width: 32rem; margin: 0 auto; padding-top: var(--space-5); }
