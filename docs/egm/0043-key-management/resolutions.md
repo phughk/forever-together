@@ -12,4 +12,4 @@ The author's answers to the open decisions in `reviews/r1-consolidated_review_re
 | A6 | Windows GUI subsystem has no console for the key commands. | The author first asked for the functionality in Settings, then, shown that it puts key operations on the web API, chose to **drop it for now and create a ticket** (0046). Windows key commands stay unsupported until then. |
 | A7 | Keep the new-code-without-`dyn` exception? | **Keep it**; existing `dyn Store` code is converted later (ticket 0045). |
 
-Applied to `design_draft.md` as decisions 7 to 12 and the matching edits. The remaining review action items (section B: risks section, CLI spec, `keys.rs` contract, tests, stale rows, dependencies, comprehension fixes) are not yet applied.
+Applied to `design_draft.md` as decisions 7 to 12 and the matching edits. Review action items B1 to B17 were applied by rewriting `design_draft.md` on 2026-11-21 (Risks section, complete CLI spec, `keys.rs` contract, corrupt-key behaviour, enumerated tests, corrected file rows, dependency decision, comprehension and structure fixes). Part 2 is described as an interface only because it cannot be built yet.

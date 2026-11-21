@@ -17,4 +17,4 @@ Copy `_template/README.md` when starting. Nothing else goes in a folder, and not
 
 | Iteration | Ticket | Status | ADRs |
 |-----------|--------|--------|------|
-| [0043-key-management](0043-key-management/README.md) | [0043](../../tickets/0043-key-management.md) | open (round 1 review done) | 0039, 0038 |
+| [0043-key-management](0043-key-management/README.md) | [0043](../../tickets/0043-key-management.md) | open (Part 1 built, round 2 not run) | 0039, 0038 |

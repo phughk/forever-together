@@ -84,7 +84,7 @@ Every install has one permanent ed25519 key. Its public half is the peer ID. Hea
 
 **Trusted-node key backup (the author's process).** Stop the always-on node, run `key export` to a file on an offline disk, and start it again. Keep every historical `BUILTIN[0]` secret: players on older releases keep encrypting scan exports to the key compiled into their build. The private key that decrypts exports is the same file.
 
-A cloud node gets its key by `forever-together key import ./node.key --data-dir <dir>` before its first start. If a start has already created a random key, add `--force`.
+A cloud node gets its key by `forever-together key import ./node.key --data-dir <dir>` before its first start. If a start has already created a random key, add `--force`. After a deploy, stop the node and run `key show` to check its peer ID is the one in `BUILTIN` (a headless node prints nothing at start).
 
 ## Mobile
 
