@@ -32,14 +32,14 @@ Five tickets describe parts of this (0003, 0008, 0009, 0043, 0044). They overlap
 *   **Import** a secret key from a file, so a node starts with a chosen identity and prints the same public key every time.
 *   **Reset** the key: discard it and generate a new one, with a clear warning of what changes.
 *   The secret key is never reachable from the web app, the HTTP API, logs or standard output by default.
-*   A key file is written and read with owner-only permissions, refusing anything weaker, on macOS, Linux and Windows (Windows may be ticketed if its model needs its own design).
+*   A key file is a standard key that other software, such as ssh, can read. The app creates it owner-only on Unix and does not check permissions when reading one (decided by the author).
 *   `BUILTIN` can be filled in with the author's trusted key, with a written process for keeping its private half backed up offline.
 *   The scan-log export (ADR 0038) is encrypted to `BUILTIN[0]`, and the author can decrypt it from the command line with the matching private key.
 *   The five tickets collapse into one tracked piece of work, with the small items that remain as their own tickets.
 
 ## Non-Goals
 
-*   Passphrase-protecting the key in the store, or using the operating system keychain, in this pass. Ticket 0003 asks whether the `varaq` store is good enough; the keychain stays the fallback named in ADR 0008.
+*   Passphrase-protecting the key in the store or in an exported file, or using the operating system keychain. Decided by the author: the key is a plain key, and securing the file is the user's job. The keychain stays the fallback named in ADR 0008 if `varaq` proves unfit (ticket 0003).
 *   Rotating the trusted key without a release. `BUILTIN` is compiled in; changing it is a release.
 *   Any key operation from the web app or over HTTP.
 *   Multi-key identities, delegated or sub-keys, or key revocation lists.
@@ -48,9 +48,80 @@ Five tickets describe parts of this (0003, 0008, 0009, 0043, 0044). They overlap
 
 ## Open Questions
 
-*   **Reuse the trusted peer's iroh key for decrypting exports, or ship a separate intake key?** The iroh key is a signing key. Using it for encryption works through a standard conversion but mixes two uses of one key. To be decided by the author (Technical Plan).
-*   **Key file format**: raw bytes, hex, or a self-describing text format; and whether a passphrase is allowed.
-*   **Command names and where they live**: subcommands of the app binary or flags next to `--print-public-key`.
-*   **How a cloud node receives its key**: an import step at deploy time, a path flag, or an environment variable.
-*   **Windows**: what "owner-only" means and how the check works.
-*   **What happens to remembered peers and history on reset**: the design assumes they stay (they hold no secrets), to be confirmed.
+*   **Does a second process get refused while the app runs?** The commands change the stored key, so they must not run against a data directory a running app has open. Whether `varaq` refuses a second opener is not verified.
+*   **Which crate reads and writes the OpenSSH key file**: `ssh-key` (RustCrypto) or the parser inside `age`. Neither is in `app/Cargo.toml` today (only `ed25519-dalek` is).
+*   **Is the `age` crate good enough?** It is marked beta, and its `ssh` feature pulls in `rsa` and other ciphers the app does not need.
+*   **Does `key export` also write a `.pub` file** (an OpenSSH public key line) next to the private file?
+*   **Windows**: no permission step; the file gets the directory's default access rules. To be confirmed with a test on Windows (ticket).
+
+## Decisions by the author (2026-11-21)
+
+1.  **The key file is a plain key.** Export writes what is in the store as a standard, unencrypted key file that ssh and similar tools can read. No passphrase, no encryption layer. The user decides how to protect the file. The app does not treat this as a security risk to solve.
+2.  **The scan-log export is encrypted to the public half of `BUILTIN[0]`.** The author owns that trusted peer, holds its secret, and decrypts. Players expose no characters or codes. Rejected: a separate decryption key, or sealing to two keys.
+3.  **The command line gets a `key` subcommand group** (`key export`, `key import`, `key reset`, `key show`, `key decrypt`). `--print-public-key` stays as an alias for `key show`. Running with no subcommand still opens the window. Rejected: top-level flags.
+4.  **Headless is the same binary and the same command line.** It generates a key at first start and takes the same `key` commands. A cloud node gets its key by `key import` before its first start. Rejected: a key file path or environment variable read at every start.
+
+## Technical Plan
+
+### What changes
+
+The key itself does not change. It stays 32 bytes under `KEY_IDENTITY_SECRET` in the store, as `app/src/identity.rs` keeps it today. New code reads and writes it in a standard file format and exposes it through the command line.
+
+```mermaid
+flowchart TD
+    subgraph CLI
+        S[key show]
+        E[key export]
+        I[key import]
+        R[key reset]
+        D[key decrypt]
+    end
+    ST[(Store: identity secret)]
+    F[OpenSSH ed25519 key file]
+    S --> ST
+    E --> ST --> F
+    I --> F --> ST
+    R --> ST
+    PL[Player: scan log] -->|age, to BUILTIN 0| X[.age file on a GitHub issue]
+    X --> D
+    F --> D
+```
+
+### Commands
+
+*   **`key show`**: prints the peer ID (hex, the form used in `trusted_peers` and `BUILTIN`) and the OpenSSH public key line. Same output as today's `--print-public-key`, which stays as an alias.
+*   **`key export <file>`**: writes the stored secret as an OpenSSH ed25519 private key file, unencrypted. Created owner-only on Unix. Refuses to overwrite an existing file. Prints the peer ID so the operator can note which key it is. `--public` also writes `<file>.pub` (open question).
+*   **`key import <file>`**: reads an unencrypted OpenSSH ed25519 private key. Parses and checks it fully before touching the store, then replaces the stored secret in one write. Refuses to replace an existing key unless `--force`. Rejects an encrypted file or another key type with a plain message. Prints the old and new peer IDs.
+*   **`key reset`**: discards the stored secret and generates a new one. Asks for confirmation unless `--yes`. Prints old and new peer IDs and one warning: other nodes see a new peer, and a changed trusted-peer key needs a release.
+*   **`key decrypt <file> --key <keyfile> [-o <out>]`**: decrypts a scan export with a private key file. The author can also use the standard `age` tool with the same key; this command exists so the project needs no extra install.
+*   **Where they live**: a `Key` subcommand in `app/src/cli.rs`; `Mode` gains a variant that carries it; `runtime` dispatches before any network or window start-up, and exits without starting the app.
+*   **Running app**: the commands open the store directly. If another process holds it they must fail with a clear message. Whether `varaq` guarantees that is unverified (open question); until verified the commands print a warning not to run against a live data directory.
+
+### Key file format
+
+OpenSSH private key (`-----BEGIN OPENSSH PRIVATE KEY-----`), ed25519, unencrypted. It is a standard file, so the same file works for `ssh-keygen -y -f`, for `age -d -i`, and for a key backup in any password manager. The public half is derivable. An iroh endpoint key and an ssh ed25519 key are both ed25519, so the 32 secret bytes convert without any change to the stored format or to the peer ID.
+
+### Scan-log encryption (ticket 0044)
+
+*   The export module takes `BUILTIN[0]` (32 bytes), forms an `age` ssh-ed25519 recipient from it, and encrypts the JSON. The `age` ssh-ed25519 recipient converts the Ed25519 key to X25519 internally, so no custom cryptography is written in the project.
+*   Output is `age` ASCII armor, so it can be pasted into an issue as text or attached as a file: `scans-<date>.wowft-scans.age`. The `age` header already carries a short key tag, so the author can tell which key to use after a rotation. This replaces the custom header sketched in the ADR 0038 amendment.
+*   Only `BUILTIN[0]` is ever a recipient. If `BUILTIN` is empty, export is disabled and the card says why.
+*   The app never holds a decrypting identity for exports.
+
+### BUILTIN and the trusted key
+
+*   **Filling it in**: on the always-on node, `key show`, paste the peer ID into `net::trusted::BUILTIN` (ticket 0008).
+*   **Backup**: `key export` from that node, stored offline by the author. This is a written process in `README.md`, not code.
+*   **Losing the key**: a new key, a new `BUILTIN` entry and a release, and old exports can no longer be read. The process says so.
+
+### Permissions (ticket 0003)
+
+The app sets owner-only on files it creates (Unix). It does not verify permissions when reading a key file, and it does not change the permissions of the store files. Ticket 0003 shrinks to recording what the `varaq` store's file mode is on each operating system, so the author knows what exists, not to enforce anything.
+
+### Tickets after this design
+
+*   0043 stays as the umbrella and is implemented as: CLI restructure, identity export and import, reset, decrypt, docs.
+*   0009 is closed into 0043 (delivery is `key import`).
+*   0044 depends on 0008 (a `BUILTIN` key) and on the export module in 0040.
+*   0003 becomes a documentation and verification ticket.
+*   New small tickets: Windows check, running-app guard.
