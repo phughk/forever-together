@@ -101,6 +101,14 @@ async fn delete_character<C: AppCore>(State(s): S<C>) -> Response {
     }
 }
 
+/// Delete all search history (ADR 0027). Loopback only: a phone cannot erase it.
+async fn delete_history<C: AppCore>(State(s): S<C>) -> Response {
+    match s.core.clear_history().await {
+        Ok(()) => no_content(),
+        Err(e) => core_err(e),
+    }
+}
+
 async fn get_dungeons<C: AppCore>(State(s): S<C>) -> Response {
     json(&s.core.dungeons().await)
 }
@@ -242,6 +250,10 @@ pub fn build_router<C: AppCore>(shared: Arc<Shared<C>>) -> Router {
         .route(
             "/character",
             post(post_character::<C>).delete(delete_character::<C>),
+        )
+        .route(
+            "/history",
+            delete(delete_history::<C>).route_layer(from_fn(require_loopback)),
         )
         .route("/dungeons", get(get_dungeons::<C>))
         .route("/search", post(post_search::<C>))

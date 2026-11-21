@@ -4,6 +4,7 @@ pub mod code;
 pub mod config;
 pub mod dungeons;
 pub mod engine;
+pub mod history;
 pub mod identity;
 #[cfg(test)]
 mod integration_tests;

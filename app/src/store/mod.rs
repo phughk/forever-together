@@ -18,6 +18,8 @@ pub const KEY_SETTINGS: &str = "settings";
 pub const KEY_API_TOKEN: &str = "api/token";
 pub const KEY_CHARACTER: &str = "character";
 pub const PREFIX_KNOWN_PEERS: &str = "known_peers/";
+/// Search history, one key per entry: `history/<start UTC seconds, 12 digits>` (ADR 0027).
+pub const PREFIX_HISTORY: &str = "history/";
 
 pub fn known_peer_key(peer_hex: &str) -> String {
     format!("{PREFIX_KNOWN_PEERS}{peer_hex}")

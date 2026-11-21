@@ -31,6 +31,7 @@ struct Instance {
     server: Server,
     token: String,
     _core: Arc<LiveCore>,
+    store: Arc<dyn crate::store::Store>,
     _status: watch::Sender<NetworkView>,
 }
 
@@ -85,7 +86,7 @@ async fn spawn_instance(
     ));
     let server = Server::start(
         core.clone(),
-        store,
+        store.clone(),
         Arc::new(MapAssets::default()),
         ServerConfig {
             web_dir: None,
@@ -110,6 +111,7 @@ async fn spawn_instance(
             peer: id.peer_id(),
             server,
             token,
+            store,
             _core: core,
             _status: tx,
         },
@@ -307,4 +309,27 @@ async fn a_member_that_goes_silent_is_dropped_by_heartbeat() {
         reasons.iter().all(|r| *r == Some(DropReason::Unreachable)),
         "{dead_name} went silent but the drop reasons were {reasons:?}"
     );
+}
+
+/// A search that runs to the limit leaves one history entry, and `DELETE /api/history` removes it
+/// (ADR 0027). The clock runs 60 times faster than the real one.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_expired_search_is_recorded_and_delete_history_clears_it() {
+    let (hub, clock) = world(60);
+    let (i, code) = spawn_instance(&hub, clock, "Testa", Role::Tank, Faction::Alliance, 120).await;
+    let body = serde_json::json!({ "code": code }).to_string();
+    assert_eq!(call(&i, "POST", "/api/character", Some(&body)).await.0, 200);
+    let body = serde_json::json!({ "dungeons": [DUNGEON] }).to_string();
+    assert_eq!(call(&i, "POST", "/api/search", Some(&body)).await.0, 204);
+    let deadline = Instant::now() + Duration::from_secs(40);
+    while state(&i).await.search.status != SearchStatus::LimitReached {
+        assert!(Instant::now() < deadline, "the search never expired");
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    let rows = crate::history::load(i.store.as_ref()).unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].1.outcome, crate::history::Outcome::Expired);
+    assert_eq!(rows[0].1.dungeon, DUNGEON);
+    assert_eq!(call(&i, "DELETE", "/api/history", None).await.0, 204);
+    assert!(crate::history::load(i.store.as_ref()).unwrap().is_empty());
 }

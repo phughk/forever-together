@@ -112,7 +112,8 @@ Every route except the static files needs `Authorization: Bearer <token>`. The t
 | `GET /api/state` | snapshot: character, search, stage, counts, party, settings summary. `search` gains an optional `diagnosis` (situation code, `ended`, seen role counts, `ownRole`, `sampleFull`, `networkPeers`), ADR 0026 |
 | `GET /api/events` | live updates, read with `fetch` streaming so the token travels in a header, with a heartbeat line every 15 s and automatic reconnect by the client |
 | `POST /api/character` `{code}` | parse and store a code, return what was understood or a typed error |
-| `DELETE /api/character` | forget the code |
+| `DELETE /api/character` | forget the code (also deletes the search history) |
+| `DELETE /api/history` (loopback) | delete every search-history entry, 204 (ADR 0027) |
 | `GET /api/dungeons` | table and recommendations |
 | `POST /api/search` `{dungeons[]}` / `DELETE /api/search` | start or stop |
 | `POST /api/party/confirm` / `POST /api/party/decline` | answer a committed party |
@@ -120,7 +121,7 @@ Every route except the static files needs `Authorization: Bearer <token>`. The t
 | `GET /api/pairing` (loopback) | the pairing URL |
 | `POST /api/token/reset` (loopback) | new token, un-pairs every phone. The desktop window reloads and receives the new token. |
 
-Loopback-only routes: `GET /api/pairing`, `POST /api/token/reset`, and writes to `lan_mode` and `trusted_peers`. Loopback is decided by the socket's peer address. Changing `lan_mode` restarts the listener. Embedded files are served through Tauri's asset resolver.
+Loopback-only routes: `GET /api/pairing`, `POST /api/token/reset`, `DELETE /api/history`, and writes to `lan_mode` and `trusted_peers`. Loopback is decided by the socket's peer address. Changing `lan_mode` restarts the listener. Embedded files are served through Tauri's asset resolver.
 
 ## Target files
 
@@ -154,7 +155,8 @@ Each path appears once and is marked Create, Modify or Delete.
 21. `app/src/dungeons.rs` (Create) and `app/data/dungeons.json` (Create, committed by the author before step 3). Recommendation per the spec and `topics_for(character, dungeons) -> Vec<TopicId>`.
 22. `app/src/engine/` (Create: `mod.rs`, `ad.rs`, `sample.rs`, `rank.rs`, `lead.rs`, `party.rs`, `widen.rs`, `state.rs`, `sim.rs`). `sim.rs` is the seeded simulation used by S0 and kept as a test. A peer leads at most one party per epoch, answers one invitation per epoch and confirms at most one party.
 23. `app/src/net/` (Create: `mod.rs`, `iroh_net.rs`, `gossip.rs`, `exchange.rs`, `bootstrap.rs`, `known_peers.rs`, `trusted.rs`, `fake.rs`). `known_peers.rs` reserves cache slots for the player's active topics before applying least-recently-used eviction. `bootstrap.rs` never contacts a trusted peer while an earlier step works. `trusted.rs` holds the built-in keys (empty until the author supplies one) and takes a `Vec<PeerId>` so tests pass their own.
-24. `app/src/store/` (Create: `mod.rs`, `varaq_store.rs`, `mem.rs`). Keys: `identity/secret`, `known_peers/<peerId>`, `settings`, `api/token`, `character`.
+24. `app/src/store/` (Create: `mod.rs`, `varaq_store.rs`, `mem.rs`). Keys: `identity/secret`, `known_peers/<peerId>`, `settings`, `api/token`, `character`, `history/<start UTC seconds>` (ADR 0027).
+24a. `app/src/history.rs` (Create). Search history entries over the store: `record`, `prune` (180 days, 100 per dungeon, 500 total), `clear`, with the checkpoint and outcome rules of ADR 0027. The engine emits `SearchFacts`; the app layer records them.
 25. `app/src/server/` (Create: `mod.rs`, `routes.rs`, `auth.rs`, `static_files.rs`, `events.rs`, `pairing.rs`). Serves files from `WOWFT_WEB_DIR` first (path normalized so it cannot leave the folder, `/api` never overridden), then the embedded files. Pairing URL `http://<lan-ip>:<port>/#token=<token>`, with the LAN address chosen as the first private IPv4 address of the active interface.
 26. `src/` (web app: Create components and stories, Modify `App.tsx`, `main.tsx`, `index.css`), `index.html` (Modify), `vite.config.ts` (Modify only if needed), `.storybook/` (Modify only if needed). Atomic design per `CLAUDE.md`. `src/api/` holds the client, types and the state hook with token handling and the event stream. Page stories cover: first run, a stale code, an unknown code version, an unknown zone, no recommendations, a long first name and surname, a quiet topic at the last stage, a party where one member has not confirmed (Ready received, Confirm not), phone width. The settings page shows only the user settings (LAN mode, token reset, known-peers size, trusted peers).
 27. `app/tests/` and inline `#[cfg(test)]` modules (Create). See the Verification Plan.

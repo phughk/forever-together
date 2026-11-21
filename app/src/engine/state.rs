@@ -8,8 +8,8 @@ use super::party::{PARTY_SIZE, Party, party_id};
 use super::sample::Sample;
 use super::widen;
 use crate::config::{
-    AD_CUTOFF, AD_EXPIRY, AD_KEEPALIVE, BAN, CONFIRM_WINDOW, EPOCH, INVITE_WINDOW, READY_WINDOW,
-    SAMPLE_SIZE,
+    AD_CUTOFF, AD_EXPIRY, AD_KEEPALIVE, BAN, CHECKPOINT_1, CHECKPOINT_2, CONFIRM_WINDOW, EPOCH,
+    INVITE_WINDOW, READY_WINDOW, SAMPLE_SIZE,
 };
 use crate::dungeons::TopicId;
 use crate::identity::PeerId;
@@ -127,6 +127,8 @@ pub enum Action {
     ShowState(View),
     /// Ban the peer locally. Never gossiped.
     BanLocal(PeerId, Duration),
+    /// A search ended (ADR 0027). For the host to record; the engine keeps nothing of it.
+    SearchEnded(SearchFacts),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -213,6 +215,55 @@ pub struct SearchStats {
     pub elapsed: Duration,
 }
 
+/// How a search ended, as the engine knows it (ADR 0027). The host maps `Stopped` to `Ignored`
+/// when the stop was not the player's choice (character change, clearing the character).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SearchOutcome {
+    /// Every member confirmed (`Mode::Final`).
+    Formed,
+    /// The time limit passed.
+    Expired,
+    /// The player stopped the search.
+    Stopped,
+    /// Ended by a restart or something that is not a result.
+    Ignored,
+}
+
+/// What the role counts looked like at a checkpoint (`CHECKPOINT_1`, `CHECKPOINT_2`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Checkpoint {
+    /// Compatible players seen at that tick (not the peak).
+    pub counts: RoleCounts,
+    /// The widening stage in force.
+    pub stage: u8,
+    pub sample_full: bool,
+}
+
+/// A plain record of one finished search. Self-reported counts only (ADR 0003): no peer id,
+/// no name and no zone.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SearchFacts {
+    pub outcome: SearchOutcome,
+    /// From the engine's own `now` values, never below zero.
+    pub elapsed: Duration,
+    pub stage_reached: u8,
+    pub own_role: Role,
+    pub level: u8,
+    /// Topics chosen at the start (one per dungeon), extra widening topics not counted.
+    pub topic_count: usize,
+    /// Each role's own maximum over the search (not the roles at one moment).
+    pub peak: RoleCounts,
+    /// Offset from the search start of the first commit, if a party ever formed.
+    pub first_formed_at: Option<Duration>,
+    /// Parties that fell apart for a reason other than a decline or a Confirm timeout.
+    pub drops: u32,
+    /// Parties declined or left unconfirmed: the player's choice, not a failure.
+    pub declines: u32,
+    /// `None` when the search ended before the checkpoint, never zeros.
+    pub checkpoint_1: Option<Checkpoint>,
+    pub checkpoint_2: Option<Checkpoint>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MemberView {
     pub peer: PeerId,
@@ -266,6 +317,11 @@ struct Search {
     peak: RoleCounts,
     peak_full: bool,
     peak_stage: u8,
+    first_formed_at: Option<Duration>,
+    drops: u32,
+    declines: u32,
+    checkpoint_1: Option<Checkpoint>,
+    checkpoint_2: Option<Checkpoint>,
 }
 
 /// A leader's open invitations for one epoch.
@@ -367,6 +423,7 @@ impl Engine {
                 extra,
             } => self.start(now, profile, topics, extra, out),
             Event::UserStop => {
+                self.end_search(now, SearchOutcome::Stopped, out);
                 self.stop(out);
                 // A stop by the player shows no end summary.
                 self.snapshot = None;
@@ -480,6 +537,7 @@ impl Engine {
         extra: Vec<TopicSearch>,
         out: &mut Vec<Action>,
     ) {
+        self.end_search(now, SearchOutcome::Ignored, out);
         self.stop(out);
         self.snapshot = None;
         let mut samples = BTreeMap::new();
@@ -513,6 +571,11 @@ impl Engine {
             peak: RoleCounts::default(),
             peak_full: false,
             peak_stage: 0,
+            first_formed_at: None,
+            drops: 0,
+            declines: 0,
+            checkpoint_1: None,
+            checkpoint_2: None,
         });
         self.mode = Mode::Searching;
         self.send_ads(now, out);
@@ -613,6 +676,7 @@ impl Engine {
     fn tick(&mut self, now: Duration, out: &mut Vec<Action>) {
         self.bans.retain(|_, until| now < *until);
         self.record_peak(now);
+        self.record_checkpoints(now);
         match self.mode {
             Mode::Searching => self.tick_searching(now, out),
             Mode::Committed => self.tick_committed(now, out),
@@ -634,6 +698,7 @@ impl Engine {
                 st.current = st.peak;
                 st
             });
+            self.end_search(now, SearchOutcome::Expired, out);
             self.stop(out);
             self.snapshot = snapshot;
             self.mode = Mode::Expired;
@@ -913,6 +978,8 @@ impl Engine {
         let mut details = BTreeMap::new();
         {
             let s = self.search.as_mut().unwrap();
+            s.first_formed_at
+                .get_or_insert(now.saturating_sub(s.search_start));
             for m in party.members {
                 if let Some(e) = s.samples.get(&topic).and_then(|sm| sm.get(&m)) {
                     names.insert(m, (e.ad.first_name.clone(), e.ad.surname.clone()));
@@ -1077,6 +1144,7 @@ impl Engine {
         self.final_names = c.names;
         self.final_details = c.details;
         self.final_party = c.party.members.to_vec();
+        self.end_search(now, SearchOutcome::Formed, out);
         if let Some(s) = self.search.take() {
             for t in s.joined {
                 out.push(Action::Leave(t));
@@ -1134,6 +1202,12 @@ impl Engine {
             None
         };
         self.last_drop = Some(DropInfo { cause, peer: who });
+        if let Some(s) = self.search.as_mut() {
+            match cause {
+                DropCause::Unreachable => s.drops += 1,
+                DropCause::Declined | DropCause::Timeout => s.declines += 1,
+            }
+        }
         self.commit = None;
         self.early.clear();
         if let Some(p) = ban {
@@ -1207,6 +1281,58 @@ impl Engine {
         s.peak.peak_with(&current);
         s.peak_full |= full;
         s.peak_stage = s.peak_stage.max(s.stage);
+    }
+
+    /// Take the checkpoint counts on the first searching tick at or after each offset from the
+    /// search start. Not while a party is committed: the members are out of the samples then, so
+    /// the counts would not describe an open search. A search that ends first keeps `None`.
+    fn record_checkpoints(&mut self, now: Duration) {
+        if self.mode != Mode::Searching {
+            return;
+        }
+        let Some(s) = self.search.as_ref() else {
+            return;
+        };
+        let elapsed = now.saturating_sub(s.search_start);
+        let want1 = s.checkpoint_1.is_none() && elapsed >= CHECKPOINT_1;
+        let want2 = s.checkpoint_2.is_none() && elapsed >= CHECKPOINT_2;
+        if !want1 && !want2 {
+            return;
+        }
+        let (counts, full) = self.observe(s, now);
+        let cp = Checkpoint {
+            counts,
+            stage: s.stage,
+            sample_full: full,
+        };
+        let s = self.search.as_mut().expect("checked");
+        if want1 {
+            s.checkpoint_1 = Some(cp);
+        }
+        if want2 {
+            s.checkpoint_2 = Some(cp);
+        }
+    }
+
+    /// Emit the facts of the running search, if any. Call before the search is dropped.
+    fn end_search(&self, now: Duration, outcome: SearchOutcome, out: &mut Vec<Action>) {
+        let (Some(s), Some(st)) = (self.search.as_ref(), self.stats(now)) else {
+            return;
+        };
+        out.push(Action::SearchEnded(SearchFacts {
+            outcome,
+            elapsed: st.elapsed,
+            stage_reached: st.stage_reached,
+            own_role: st.own_role,
+            level: s.profile.level,
+            topic_count: s.topics.len(),
+            peak: st.peak,
+            first_formed_at: s.first_formed_at,
+            drops: s.drops,
+            declines: s.declines,
+            checkpoint_1: s.checkpoint_1,
+            checkpoint_2: s.checkpoint_2,
+        }));
     }
 
     /// The stats of the running search, with the peak raised to the current counts.

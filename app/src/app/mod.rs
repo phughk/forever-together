@@ -9,13 +9,18 @@
 pub mod memnet;
 
 #[cfg(test)]
+mod history_tests;
+#[cfg(test)]
 mod tests;
 
 use crate::code::{self, Character, CodeError};
 use crate::config::{CONFIRM_WINDOW, READY_WINDOW, Settings, WIDEN_STEP};
 use crate::dungeons::{self, Dungeon};
-use crate::engine::state::{Engine, Event, Mode, Profile, TopicSearch, View};
+use crate::engine::state::{
+    Action, Engine, Event, Mode, Profile, SearchFacts, SearchOutcome, TopicSearch, View,
+};
 use crate::engine::{DropCause, Message, NetError, Network, PartyId, apply_network, diagnose};
+use crate::history;
 use crate::identity::PeerId;
 use crate::server::core::*;
 use crate::store::{KEY_CHARACTER, Store, get_json, put_json};
@@ -42,6 +47,7 @@ type Reply<T> = oneshot::Sender<Result<T, CoreError>>;
 enum Cmd {
     SetCharacter(String, Reply<CharacterView>),
     ClearCharacter(Reply<()>),
+    ClearHistory(Reply<()>),
     Dungeons(oneshot::Sender<DungeonsResponse>),
     Start(Vec<String>, Reply<()>),
     Stop(Reply<()>),
@@ -267,6 +273,9 @@ struct Model {
     hb: Heartbeats,
     net_status: watch::Receiver<NetworkView>,
     published: AppState,
+    /// Set while the host ends a search for its own reasons (character change), so the engine's
+    /// `Stopped` is not a result and is not recorded.
+    stop_is_not_a_result: bool,
 }
 
 impl Model {
@@ -470,6 +479,11 @@ async fn feed<N: Network>(m: &mut Model, net: &mut Option<N>, ev: Event) {
         m.hb.outstanding.remove(from);
     }
     let actions = m.engine.handle(now, ev);
+    for a in &actions {
+        if let Action::SearchEnded(facts) = a {
+            record_search(m, now, facts);
+        }
+    }
     let rest = match net.as_mut() {
         Some(n) => match apply_network(n, actions).await {
             Ok(rest) => rest,
@@ -482,6 +496,34 @@ async fn feed<N: Network>(m: &mut Model, net: &mut Option<N>, ev: Event) {
     };
     // `BanLocal` is already applied inside the engine; nothing else is left for the host.
     let _ = rest;
+}
+
+/// The local offset from UTC in seconds. The standard library cannot tell, and a date-time
+/// dependency is not worth it for a field nothing reads yet, so this is 0. TODO: the browser
+/// knows the offset and could send it with a command (ADR 0027).
+fn local_utc_offset_secs() -> i32 {
+    0
+}
+
+/// Write the history entry for a finished search (ADR 0027). Never fails or stops a search: a
+/// store error is logged by `history::record_facts`.
+fn record_search(m: &Model, now: Duration, facts: &SearchFacts) {
+    let mut facts = facts.clone();
+    if m.stop_is_not_a_result && facts.outcome == SearchOutcome::Stopped {
+        facts.outcome = SearchOutcome::Ignored;
+    }
+    let (Some(c), Some(dungeon)) = (m.character.as_ref(), m.slugs.first()) else {
+        return;
+    };
+    let ctx = history::Context {
+        end_utc: now.as_secs(),
+        utc_offset_secs: local_utc_offset_secs(),
+        region: c.region,
+        realm: c.realm.clone(),
+        faction: c.faction,
+        dungeon: dungeon.clone(),
+    };
+    history::record_facts(m.store.as_ref(), &facts, &ctx);
 }
 
 /// How often a heartbeat goes to a member that has no outstanding one.
@@ -626,7 +668,7 @@ async fn handle_cmd<N: Network>(
             let r = async {
                 let c = code::decode(&text).map_err(code_error)?;
                 if m.engine.mode() != Mode::Idle {
-                    stop_search(m, net).await;
+                    stop_search(m, net, false).await;
                 }
                 put_json(m.store.as_ref(), KEY_CHARACTER, &c)
                     .map_err(|e| CoreError::internal(e.to_string()))?;
@@ -638,13 +680,21 @@ async fn handle_cmd<N: Network>(
             finish(m, state, reply, r);
         }
         Cmd::ClearCharacter(reply) => {
-            stop_search(m, net).await;
+            stop_search(m, net, false).await;
             m.character = None;
+            // A cleared character's history must not survive (ADR 0027).
+            let h = history::clear(m.store.as_ref());
             let r = m
                 .store
                 .delete(KEY_CHARACTER)
                 .map(|_| ())
+                .and(h)
                 .map_err(|e| CoreError::internal(e.to_string()));
+            finish(m, state, reply, r);
+        }
+        Cmd::ClearHistory(reply) => {
+            let r =
+                history::clear(m.store.as_ref()).map_err(|e| CoreError::internal(e.to_string()));
             finish(m, state, reply, r);
         }
         Cmd::Dungeons(reply) => {
@@ -672,7 +722,7 @@ async fn handle_cmd<N: Network>(
             finish(m, state, reply, r);
         }
         Cmd::Stop(reply) => {
-            stop_search(m, net).await;
+            stop_search(m, net, true).await;
             finish(m, state, reply, Ok(()));
         }
         Cmd::Confirm(reply) => {
@@ -711,9 +761,12 @@ async fn handle_cmd<N: Network>(
     }
 }
 
-async fn stop_search<N: Network>(m: &mut Model, net: &mut Option<N>) {
+/// End the search. `by_player` is false when the host does it for its own reasons.
+async fn stop_search<N: Network>(m: &mut Model, net: &mut Option<N>, by_player: bool) {
     if m.engine.mode() != Mode::Idle {
+        m.stop_is_not_a_result = !by_player;
         feed(m, net, Event::UserStop).await;
+        m.stop_is_not_a_result = false;
     }
     m.slugs.clear();
     m.started_at = None;
@@ -883,6 +936,7 @@ impl LiveCore {
             hb: Heartbeats::default(),
             net_status: deps.net_status,
             published: placeholder_state(),
+            stop_is_not_a_result: false,
         };
         let first = model.app_state();
         model.published = first.clone();
@@ -964,6 +1018,9 @@ impl AppCore for LiveCore {
     }
     async fn clear_character(&self) -> Result<(), CoreError> {
         self.ask_result(Cmd::ClearCharacter).await
+    }
+    async fn clear_history(&self) -> Result<(), CoreError> {
+        self.ask_result(Cmd::ClearHistory).await
     }
     async fn dungeons(&self) -> DungeonsResponse {
         self.ask(Cmd::Dungeons).await.unwrap_or(DungeonsResponse {

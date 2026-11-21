@@ -31,6 +31,14 @@ pub const BAN: Duration = Duration::from_secs(60);
 pub const SEARCH_LIMIT: Duration = Duration::from_secs(600);
 /// Widening step.
 pub const WIDEN_STEP: Duration = Duration::from_secs(60);
+/// Search-history checkpoints (ADR 0027), measured from the search start. Each sits just before
+/// a widening step so the counts describe the rules still in force, not the next stage's:
+/// 55 s is before the 60 s step (`WIDEN_STEP`), 115 s before the 120 s step, which is also the
+/// ad lifetime (`AD_EXPIRY`), so counts taken later would already be dropping stale ads.
+pub const CHECKPOINT_1: Duration = Duration::from_secs(55);
+pub const CHECKPOINT_2: Duration = Duration::from_secs(115);
+/// A player stop shorter than this is not recorded in the search history (ADR 0027).
+pub const MIN_RECORDED_STOP: Duration = Duration::from_secs(60);
 /// Peer exchange: at most one request per this long per peer.
 pub const PEER_EXCHANGE_MIN_INTERVAL: Duration = Duration::from_secs(10);
 /// Trusted peer retry backoff: first delay and cap.

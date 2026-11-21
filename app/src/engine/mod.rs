@@ -3,6 +3,8 @@
 
 pub mod ad;
 pub mod diagnose;
+#[cfg(test)]
+mod facts_tests;
 pub mod lead;
 pub mod party;
 pub mod rank;
@@ -13,8 +15,8 @@ pub mod widen;
 
 pub use ad::{Ad, Faction, Message, PartyId, Role, compatible, event_from_message};
 pub use state::{
-    Action, DropCause, DropInfo, Engine, Event, MemberDetails, MemberView, Mode, Profile,
-    RoleCounts, SearchStats, TopicSearch, View,
+    Action, Checkpoint, DropCause, DropInfo, Engine, Event, MemberDetails, MemberView, Mode,
+    Profile, RoleCounts, SearchFacts, SearchOutcome, SearchStats, TopicSearch, View,
 };
 
 use crate::dungeons::TopicId;
@@ -99,6 +101,7 @@ pub(crate) mod testkit {
         pub alive: bool,
         pub shown: Vec<View>,
         pub bans: Vec<PeerId>,
+        pub ended: Vec<SearchFacts>,
         /// Distinct parties this node announced, by epoch.
         pub announces_by_epoch: std::collections::BTreeMap<u64, BTreeSet<PartyId>>,
     }
@@ -127,6 +130,7 @@ pub(crate) mod testkit {
                     alive: true,
                     shown: Vec::new(),
                     bans: Vec::new(),
+                    ended: Vec::new(),
                     announces_by_epoch: Default::default(),
                 })
                 .collect();
@@ -170,6 +174,7 @@ pub(crate) mod testkit {
                 }
                 Action::ShowState(v) => self.nodes[from].shown.push(v),
                 Action::BanLocal(p, _) => self.nodes[from].bans.push(p),
+                Action::SearchEnded(f) => self.nodes[from].ended.push(f),
                 Action::SendAd { topic, ad } => {
                     self.deliver(from, me, topic, None, Message::Ad(ad), queue)
                 }
