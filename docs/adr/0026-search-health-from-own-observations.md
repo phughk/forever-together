@@ -14,7 +14,7 @@ A search can run for ten minutes and end with nothing. The player cannot tell wh
 * **Hedged situations, closed list.** One code per search: `warming_up` (under 30 s, live only), `not_connected` (no peers), `alone` (none seen), `no_tank`, `no_healer`, `short_on_damage` (the party needs 1 tank, 1 healer, 3 damage, counting the player in their own role), `healthy`. First match wins in that order. `healthy` means the roles seen could fill a party, nothing more. There is no score and no "a group will form". The classifier is the pure function `engine::diagnose::diagnose`: no clock, no I/O, same observations give the same code.
 * **In-memory retention of the end snapshot.** The engine keeps the peak count per role, whether a sample hit its cap, the highest stage reached and the elapsed time. When a search expires the engine freezes these before `stop()` and keeps them until the next `start` or a stop by the player. A stop by the player maps to Idle and shows nothing. The snapshot holds counts only: no peer id, no name. Nothing is persisted by this decision (persisted history is a later, separate ADR that extends [0008](0008-iroh-and-local-storage.md)).
 * **Engine and UI split.** The backend sends a situation code plus counts in one optional `SearchView.diagnosis` (`situation`, `ended`, `seen {players, tanks, healers, damage}`, `ownRole`, `sampleFull`, `networkPeers`); `situation` is a string so a newer server can add codes and an older web bundle falls back to its previous copy. The frontend owns every sentence, which must say what was seen and not what exists. While ended, the counts are the peak over the search, not live.
-* **Not in this slice:** attempt counters (invitations, accepts, drops by cause), hysteresis, and any use of history.
+* **Not in the first slice:** attempt counters (added by the amendment below), hysteresis, and any use of history.
 
 ```mermaid
 flowchart LR
@@ -34,3 +34,24 @@ flowchart LR
 * The counts are rough: a full sample is a slice (`sampleFull`), per-role peaks need not come from one moment, and a burst of commits (`Taken`) can empty the sample and look like a quiet network.
 * Thresholds (30 s warm-up, the party mix) and the compatibility rule are unverified against a live network. Changing the counting rule later changes what any stored data would mean.
 * Adds no store key, schema or message. Adds one field to the local API, which the webapp types and fixtures mirror.
+
+## Amendment 2026-11-21: attempt counters, two more situations
+
+Staging item 6 of the brief. It changes the first slice only by adding to it.
+
+* **Counters** (`SearchStats.attempts`, per search, reset on `start`, frozen in the end snapshot before `stop()` like the peak, counts only, no peer id or name):
+  * `invites_sent`: invitations this node sent as a leader, one per invited peer, counted where the engine emits them.
+  * `accepts_got`: accepts that matched the open invitations (once per peer and epoch).
+  * `invites_got`: invitations this node kept as an invitee (valid, compatible, once per leader and epoch).
+  * `taken_seen`: distinct peers whose ads were in a sample and were removed because a party-taken notice ([0024](0024-liveness-and-decline.md)) named them. Own party members and this node itself are not counted.
+  * `drops` and `declines`: the same two counters the history facts use ([0027](0027-search-history.md)): a member that did not answer, and a declined or unconfirmed party. Not double-counted: each cause adds to one of them.
+* **Situations**, still one code, first match wins: `warming_up`, `not_connected`, `others_grouping`, `alone`, `no_tank`, `no_healer`, `short_on_damage`, `nobody_answered`, `healthy`.
+  * `others_grouping`: `taken_seen > 0` and fewer than `TINY_SAMPLE` (4, the other players a party needs) compatible others seen. The empty-looking sample is explained by parties forming now. Checked before `alone` and after `not_connected`, so it never hides a dead connection.
+  * `nobody_answered`: this node sent at least `MIN_ATTEMPTS` (6) invitations and got no accept, and the role checks passed. It sits before `healthy`, so `healthy` is no longer said when invitations went unanswered. It is not said while a role is missing: that gap is the better explanation.
+* **Wire:** `diagnosis.attempts { invitesSent, acceptsGot, invitesGot, takenSeen, drops, declines }` (all numbers, `#[serde(default)]` so an older payload parses with zeros); `situation` may be the two new strings. The web app owns the wording and falls back for codes it does not know.
+* **Deliberately not counted:**
+  * Why an invitee did not accept. A silent peer, a lost message ([0025](0025-leader-invitations.md): the engine does not retransmit direct messages), an invitee that chose a better-ranked leader, and a peer that left all look the same to the leader. `nobody_answered` therefore says "nobody answered", never "nobody wants you". Invitees do not tell a leader they ignored it, and no message is added for this.
+  * Invitations that arrived after the decision time or were dropped for the per-epoch cap.
+  * Accepts a leader got for a party it later lost (they stay in `accepts_got`).
+  * Rounds as a unit: a round invites the whole sample's party plus spares, so the invitation count is a count of messages, not of epochs.
+* **Unverified.** `MIN_ATTEMPTS = 6` (a little over one small round of 4 to 11 invitations; fewer would call one epoch's silence a pattern) and `TINY_SAMPLE` are guesses until a live run. Because one round can already reach 6, `nobody_answered` can show for the 2 s between an invitation and the first accept in a search that has had no accept yet; it clears at the first accept.
