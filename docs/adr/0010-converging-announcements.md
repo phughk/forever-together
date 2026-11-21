@@ -23,7 +23,7 @@ A late-seen commit can waste work for four players, because the one-party guaran
 
 ## Revision 2026-11-21
 
-Decided by the author (decisions D2 and D6 in `docs/design-process/reviews/author_decisions.md`):
+Decided by the author (decisions D2 and D6 in `docs/design-process/archive/reviews/author_decisions.md`):
 
 * A proposer model with short response windows is a second candidate. A partial group advertises the roles it needs, responders reply, and the proposer decides within a few seconds. A responder accepts one proposer at a time, which is a lease. Spike S0 simulates both mechanisms and the better commit rate wins. This record stays Accepted until then.
 * A party that forms broadcasts `Taken` for its members, so others drop them from their candidate lists.

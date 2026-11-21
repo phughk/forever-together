@@ -36,3 +36,6 @@ Decisions for forever-together (short code `wowft`, working name `p2prdf` in old
 | 0030 | [The web app is dark-only, with palette tokens and two fonts](0030-dark-only-theme-and-fonts.md) | Accepted |
 | 0031 | [The finder shows one screen per state, and a tap on a dungeon starts the search](0031-one-screen-per-state-and-click-to-search.md) | Accepted (amends 0011, 0026 presentation) |
 | 0032 | [Settings group phone access in one card, put expert settings behind Advanced, and lock them on a phone](0032-settings-phone-link-and-advanced.md) | Accepted |
+| 0033 | [The header shows only a gear and Back, and the character strip always offers Change character](0033-header-and-character-strip.md) | Accepted |
+| 0034 | [System overview, goals, user journeys, non-functional requirements and risks](0034-system-overview-goals-and-risks.md) | Accepted (contains the archived design doc) |
+| 0035 | [Protocol constants, widening schedule, engine contract and local API](0035-protocol-constants-engine-contract-and-api.md) | Accepted (contains the archived implementation plan) |

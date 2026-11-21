@@ -10,4 +10,4 @@ A re-audit of the design after the revisions has not been run.
 
 ## Done when
 
-Review reports added under `docs/design-process/reviews/`.
+Review reports added under `docs/design-process/archive/reviews/`.

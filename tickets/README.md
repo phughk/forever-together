@@ -41,3 +41,4 @@ One file per ticket, named `NNNN-slug.md`. Status is `open` unless it says other
 | 0035 | [Run the web app against the real API in a real window and on a phone](0035-web-app-only-mock-tested.md) | verification |
 | 0036 | [Document the submodule clone failure for test-addon](0036-mise-test-addon-submodule.md) | chore |
 | 0037 | [Mark old names in ADRs and the design doc](0037-adrs-mention-old-names.md) | chore |
+| 0038 | [Decide whether to self-host iroh relay and address lookup](0038-self-host-iroh-relay.md) | decision |

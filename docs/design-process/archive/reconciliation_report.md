@@ -1,3 +1,5 @@
+> **Archived 2026-11-21.** Its decisions are contained in ADRs, mainly 0034 and 0035. History only; the ADRs win.
+
 # Reconciliation: concepts_brief.md against design_draft.md
 
 Compared on 2026-11-21. The brief is the predecessor context (Step 1). The draft is the document being finalized. Contradictions come first, then additions.

@@ -1,3 +1,5 @@
+> **Archived 2026-11-21.** Its decisions are contained in ADRs, mainly 0034 and 0035. History only; the ADRs win.
+
 # forever-together (`wowft`): peer-to-peer random dungeon finder
 
 *   **Author:** Hugh Kaznowski

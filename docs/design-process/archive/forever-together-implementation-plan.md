@@ -1,3 +1,5 @@
+> **Archived 2026-11-21.** Its decisions are contained in ADRs, mainly 0034 and 0035. History only; the ADRs win.
+
 # forever-together implementation plan
 
 > Paths were reorganised on 2026-11-21: `src-tauri/` is now `app/`, the React app is in `webapp/`, `adr/` is `docs/adr/`, `assets_vc/` is `assets/`.
