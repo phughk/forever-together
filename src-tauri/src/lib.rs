@@ -1,3 +1,10 @@
+pub mod code;
+pub mod config;
+pub mod dungeons;
+pub mod engine;
+pub mod identity;
+pub mod store;
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {name}! Greeted from Rust.")
