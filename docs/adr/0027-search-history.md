@@ -52,3 +52,18 @@ flowchart LR
 ## Amendment 2026-11-21: three attempt counters per entry
 
 `Entry` gains `invites_sent`, `accepts_got` and `taken_seen` (u32, the counters of [0026](0026-search-health-from-own-observations.md) at the terminal event, from `SearchFacts`). They are additive with `#[serde(default)]`: entries written before decode with 0. `schema_version` stays 1. `rules_version` is not bumped: no existing field changed meaning. An estimator must not read a 0 in an old entry as "no invitations": it cannot tell an old entry from a quiet search, so it should only use these fields for entries whose `rules_version` and write time it trusts (stage 8b's concern). `invites_got`, `drops` and `declines` are not repeated: `drops` and `declines` already exist, and `invites_got` is not needed to tell the situations apart.
+
+## Amendment 2026-11-21 (later): the estimator (stage 8b)
+
+`history::estimate` is a pure function over the entries and one observation. It gives at most one banded `Band` for the running search and nothing else leaves the module. **Unverified:** no real entries exist yet, every constant below is a starting value, and the gate defaults to silence.
+
+* **Observation.** The counts at the 55 s checkpoint of the current search (`SearchStats::checkpoint`) and the player's own role. An estimate is only asked for once the search has reached that checkpoint, so before 55 s there is none. A search that is then still unformed is only comparable to entries that were also unformed at 55 s, so entries that ended earlier (`checkpoint_1 == None`) are excluded on purpose.
+* **Bin.** The bottleneck role: the one with the lowest seen-to-need ratio against the party mix 1 tank, 1 healer, 3 damage, counting this player in their own role, bins `tank | healer | damage | none` (ties go tank, healer, damage). `engine::diagnose::bottleneck` computes it with the same constants and counting convention as the situations, so they cannot disagree.
+* **Pool.** Entries with the same bin and own role, across dungeons, with this build's `schema_version` and `rules_version` (others are skipped). The same dungeon alone is used instead only when it passes the same gate by itself.
+* **Outcome mapping.** `Formed` is a success, `Expired` a failure. `Stopped` is incomplete data: in neither count. A drop followed by a re-form is judged by the entry's final outcome.
+* **Statistic and gate.** The success share with a 95% Wilson score interval. Dependable means at least 3 successes and 3 failures (`NotEnoughHistory` otherwise) and an interval no wider than 0.40 (`Unreliable` otherwise). Constants: `MIN_SUCCESSES`, `MIN_FAILURES`, `MAX_WIDTH`.
+* **Bands.** `UsuallyFound` if the interval's lower end is at least 0.60, `RarelyFound` if its upper end is at most 0.35, else `SometimesFound`.
+* **Emission.** Wired as `diagnosis.outlook` with the rules in [0026](0026-search-health-from-own-observations.md): never when ended, warming up or not connected, and `usually_found` never next to a live problem.
+* **Cache.** `Model` loads the readable entries once, refreshes them after each recorded entry and empties them on a history clear or `ClearCharacter`. The 1 s tick never reads the store, and a failed read means no estimate.
+* **Deferred.** A typical wait among the successes (with `Stopped` searches as "at least this long") is not part of this cut, so there is no wait-time band yet.
+
