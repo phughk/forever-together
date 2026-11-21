@@ -342,14 +342,16 @@ Still unverified until a live run on a real install: the Forever folder layout b
 
 ## Implementation status
 
-Updated by the integrator. Build order from above:
+Built and merged 2026-11-21 (stage 1, the smallest slice). Not yet run on a real install.
 
 | Step | Work | Status |
 | --- | --- | --- |
-| 1 | ADR 0028 and the contract | done (docs) |
-| 2 | Pure module and bundle (`app/build.rs`, `app/src/addon_install.rs`, tests) | pending |
-| 3 | Routes, settings field, core wiring | pending |
-| 4 | Webapp (molecules, organism, API client, mock API, stories) | pending |
-| 5 | Docs and script note | done (docs, script comment) |
-| 6 | Manual run on the real install | pending |
-| 7 | Stage 2: native dialog route, extra candidates, first-run integration | pending |
+| 1 | ADR 0028 and the contract | done |
+| 2 | Pure module and bundle (`app/build.rs`, `app/src/addon_install.rs`, tests) | done: 17 tests, bundle-equals-source test included |
+| 3 | Routes, settings field, core wiring (`app/src/server/addon_routes.rs`, `addon_dir`) | done: route and settings tests pass; the full Rust suite passes (282) |
+| 4 | Webapp (molecules, organism, API client, mock API, stories) | done: typecheck, build, Storybook build pass; every addon story and play function ran clean in Firefox against the mock; Settings fits 1280x720 and 390x844 |
+| 5 | Docs and script note | done |
+| 6 | Manual run on the real install | pending, for the author (checklist in "Test plan") |
+| 7 | Stage 2: native folder dialog route, Linux detection, first-run integration | not started |
+
+Not checked: the webapp has only run against the mock API, and field names were cross-checked by reading the Rust and TypeScript sides. No real window, no real WoW install, no Windows or Linux machine.
