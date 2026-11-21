@@ -1,7 +1,7 @@
 # 0043-key-management: Key management
 
 * **Status:** open (drafting)
-* **Ticket:** [NNNN](../../../tickets/0043-key-management.md)
+* **Ticket:** [0043](../../../tickets/0043-key-management.md)
 * **ADRs:** [0039](../../adr/0039-key-management.md), [0038](../../adr/0038-scan-log-and-opt-in-export.md)
 * **Rounds:** none yet
 
