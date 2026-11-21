@@ -1,0 +1,33 @@
+/* Finder entry: dungeon list, character line, first-run steps. Owned by the finder-entry work. */
+
+/* Copy chip (atom) */
+.ft-copychip { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 32px; padding: 0 var(--space-3); font: inherit; font-family: var(--mono); font-size: 0.9rem; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; }
+.ft-copychip:hover { border-color: var(--text-muted); }
+.ft-copychip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.ft-copychip__state { font-family: var(--font); font-size: 0.75rem; color: var(--text-muted); }
+
+/* First-run step (molecule) */
+.ft-firststep { display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); gap: var(--space-1) var(--space-3); align-items: start; }
+.ft-firststep__num { display: inline-flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; font-size: 0.85rem; font-weight: 700; color: var(--on-accent); background: var(--accent-solid); border-radius: 50%; }
+.ft-firststep__title { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; min-height: 1.75rem; font-weight: 600; }
+.ft-firststep__body { grid-column: 2; min-width: 0; }
+.ft-firststep--pending { opacity: 0.5; }
+.ft-firststep--pending .ft-firststep__num { color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); }
+.ft-firststeps { display: grid; gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
+
+/* Character one-line summary (molecule) */
+.ft-charline { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; min-width: 0; }
+.ft-charline__name { font-weight: 700; overflow-wrap: anywhere; }
+.ft-charline__fact { color: var(--text-muted); font-size: 0.92rem; }
+
+/* Dungeon option as a button */
+button.ft-dungeon { width: 100%; font: inherit; color: inherit; text-align: left; grid-template-columns: 1fr auto; }
+button.ft-dungeon:hover:not(:disabled) { border-color: var(--accent-solid); }
+button.ft-dungeon:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+button.ft-dungeon:disabled { opacity: 0.6; cursor: not-allowed; }
+.ft-dungeon__go { color: var(--text-muted); font-size: 1.1rem; }
+
+/* Dungeon picker list region */
+.ft-picker__head { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: space-between; }
+.ft-picker__region { display: grid; gap: var(--space-2); max-height: min(60vh, 34rem); overflow-y: auto; overscroll-behavior: contain; padding-right: var(--space-1); }
+.ft-picker__bar { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; background: var(--surface); border-top: 1px solid var(--border); }
