@@ -47,7 +47,7 @@ The frontend follows atomic design. Every level must be covered in Storybook.
 - `mise run dev` and `mise run build` run the Tauri CLI from `app/` (the CLI only finds `tauri.conf.json` from its working directory); `webapp/node_modules/.bin` is put on PATH by `mise.toml`.
 - The submodule URL is a local path, so `mise run test-addon` may fail to clone with "transport 'file' not allowed". Run `git -c protocol.file.allow=always submodule update --init vendor/wow-forever-addons` once in your own shell.
 - Verify a task exists in `mise.toml` before relying on it. If mise shims fail in a worktree, set `MISE_TRUSTED_CONFIG_PATHS=<repo root>`; if `cd` into `app/` is refused, use `cargo ... --manifest-path app/Cargo.toml`.
-- The Rust suite includes multi-instance integration tests (`app/src/integration_tests.rs`, about 16 s each, they run a clock faster than real time or at real speed) and a loopback iroh test (no internet needed). `cargo test --release --lib -- --ignored --nocapture engine::sim::tests::report` runs the seeded simulation.
+- The Rust suite includes multi-instance integration tests (`app/src/integration_tests.rs`, about 16 s each, they run a clock faster than real time or at real speed) and a loopback iroh test (no internet needed). The seeded simulation has fast regression tests in `engine::sim::tests`; the table of numbers in `docs/spike-s0.md` came from a report test that has since been removed (see that file to restore it).
 
 ## This project: forever-together (short code `wowft`)
 

@@ -30,7 +30,7 @@ Only the rows filled in so far are listed. The other S0 outputs (see the impleme
 
 ## Seeded simulation (D1)
 
-Source: `app/src/engine/sim.rs`. Run: `cargo test --release --lib -- --ignored --nocapture engine::sim::tests::report` from `app/` (about 3 minutes, the 10,000 peer row is most of it). Seed 1 unless stated, one topic, same faction, stage 0. Model and assumptions are in the module comment.
+Source: `app/src/engine/sim.rs`. The table below came from a report test that printed these numbers (release build, about 3 minutes). That test was removed because it asserted nothing: restore it with `git show 67c9f5f:app/src/engine/sim.rs`. The 70% floor within 30 s is still guarded by the fast test `engine::sim::tests::leader_mechanism_reaches_the_floor_in_thirty_seconds`. Seed 1 unless stated, one topic, same faction, stage 0. Model and assumptions are in the module comment.
 
 Metric (the plan's floor): of the peers that have a compatible five in their own sample at the start (the old sample rule's view), the share committed within the time shown. Floor: 70%, "within 3 epochs" of 10 s, which is 30 s. A round is one 10 s epoch for converging announcements, one 8 s proposal cycle for the proposer model (3 cycles, 24 s) and one 5 s epoch for leader invitations (ADR 0025), so 30 s is 6 leader rounds and 15 s is 3. The leader columns keep each tank's sample across rounds the way the engine does (the ads are re-sent every 45 s); a committed peer leaves a sample when its `Taken` arrives (probability = delivery). "Capacity" is the number of peers committed as a share of what one central greedy build over all peers commits (the oracle), which separates the mechanism from the cap that the role mix puts on every mechanism.
 
@@ -72,7 +72,7 @@ Reading:
 
 ## Simulation re-run under the revised floor (2026-11-21)
 
-The floor is now measured against what a central greedy build over the whole swarm could place (the `capacity` figure in the report). Re-run of `engine::sim::tests::report` (release, seeded):
+The floor is now measured against what a central greedy build over the whole swarm could place (the `capacity` figure in the report). Re-run of the report (release, seeded):
 
 | Scenario | Leader, 6 rounds (30 s), share of central-build capacity |
 |---|---|
