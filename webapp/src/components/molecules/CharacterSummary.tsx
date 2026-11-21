@@ -4,6 +4,7 @@ import "../../styles/finder.css";
 import { Badge } from "../atoms/Badge";
 import { InfoTip } from "../atoms/InfoTip";
 import { RoleIcon } from "../atoms/RoleIcon";
+import { Entity } from "../atoms/Typography";
 
 export interface CharacterSummaryProps {
   character: CharacterView;
@@ -15,12 +16,13 @@ export interface CharacterSummaryProps {
 export function CharacterSummary({ character, stale }: CharacterSummaryProps) {
   return (
     <div className="ft-charline">
-      <span className="ft-charline__name" title={`${character.firstName} ${character.surname}`}>
+      <Entity className="ft-charline__name" title={`${character.firstName} ${character.surname}`}>
         {character.firstName} {character.surname}
-      </span>
+      </Entity>
       <Badge tone={character.faction}>{FACTION_LABEL[character.faction]}</Badge>
       <span className="ft-charline__fact">
-        {[character.className, `level ${character.level}`].filter(Boolean).join(", ")}
+        {character.className && <Entity>{character.className}</Entity>}
+        {character.className && ", "}level {character.level}
       </span>
       <RoleIcon role={character.role} />
       {character.itemLevel > 0 && <span className="ft-charline__fact">item level {character.itemLevel}</span>}

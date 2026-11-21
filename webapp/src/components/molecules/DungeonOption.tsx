@@ -2,6 +2,7 @@ import type { DungeonEntry } from "../../api/types";
 import "../../styles/finder.css";
 import { Badge } from "../atoms/Badge";
 import { Checkbox } from "../atoms/Toggle";
+import { Entity } from "../atoms/Typography";
 
 export interface DungeonOptionProps {
   dungeon: DungeonEntry;
@@ -24,7 +25,7 @@ function Meta({ dungeon, inZone }: { dungeon: DungeonEntry; inZone?: boolean }) 
       <span>
         Levels {dungeon.levelMin} to {dungeon.levelMax}
       </span>
-      <span>{dungeon.zone}</span>
+      <Entity>{dungeon.zone}</Entity>
       {inZone && <Badge tone="info">You are here</Badge>}
     </span>
   );
@@ -42,7 +43,7 @@ export function DungeonOption({ dungeon, multi, selected = false, onToggle, onSt
         onClick={() => onStart?.(dungeon.slug)}
       >
         <span className="ft-dungeon__body">
-          <span className="ft-dungeon__name">{dungeon.name}</span>
+          <Entity className="ft-dungeon__name">{dungeon.name}</Entity>
           <Meta dungeon={dungeon} inZone={inZone} />
         </span>
         <span className="ft-dungeon__go" aria-hidden="true">
@@ -60,7 +61,7 @@ export function DungeonOption({ dungeon, multi, selected = false, onToggle, onSt
         onChange={(checked) => onToggle?.(dungeon.slug, checked)}
       />
       <span className="ft-dungeon__body">
-        <span className="ft-dungeon__name">{dungeon.name}</span>
+        <Entity className="ft-dungeon__name">{dungeon.name}</Entity>
         <Meta dungeon={dungeon} inZone={inZone} />
       </span>
     </label>

@@ -5,6 +5,7 @@ import "../../styles/party.css";
 import { Badge } from "../atoms/Badge";
 import { Button } from "../atoms/Button";
 import { RoleIcon } from "../atoms/RoleIcon";
+import { Entity } from "../atoms/Typography";
 
 export interface MemberRowProps {
   member: PartyMember;
@@ -44,7 +45,7 @@ export function MemberRow({ member, revealName, onCopyName }: MemberRowProps) {
       <RoleIcon role={member.role} />
       <div className="ft-member__main">
         <span className="ft-member__name" title={revealName && name && !member.self ? name : undefined}>
-          {member.self ? "You" : revealName && name ? name : ROLE_LABEL[member.role]}
+          {member.self ? "You" : revealName && name ? <Entity>{name}</Entity> : ROLE_LABEL[member.role]}
         </span>
         <span className="ft-member__meta">
           Level {member.level}
