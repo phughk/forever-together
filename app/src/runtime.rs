@@ -15,7 +15,7 @@ use crate::net::{IrohConfig, IrohNet, KnownPeers, TrustedPeers, live::LiveNet, t
 use crate::server::core::{BootstrapSource, NetworkView};
 use crate::server::static_files::Assets;
 use crate::server::{Server, ServerConfig};
-use crate::store::{Store, VaraqStore};
+use crate::store::{DataDirLock, Store, VaraqStore};
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::watch;
@@ -118,14 +118,16 @@ pub async fn build_network(ctx: NetContext) -> Result<AnyNet, NetError> {
     ))))
 }
 
-pub fn open_store(data_dir: &Path) -> Result<Arc<dyn Store>, AnyError> {
-    std::fs::create_dir_all(data_dir)?;
-    Ok(Arc::new(VaraqStore::open(data_dir)?))
+/// Take the data directory lock, then open the store. The lock must outlive the store: keep it
+/// for as long as the process uses the directory (ADR 0039, decision 9).
+pub fn open_store(data_dir: &Path) -> Result<(DataDirLock, Arc<dyn Store>), AnyError> {
+    let lock = DataDirLock::acquire(data_dir)?;
+    Ok((lock, Arc::new(VaraqStore::open(data_dir)?)))
 }
 
 /// `--print-public-key`: the peer ID, created and saved on first use.
 pub fn public_key(data_dir: &Path) -> Result<String, AnyError> {
-    let store = open_store(data_dir)?;
+    let (_lock, store) = open_store(data_dir)?;
     Ok(Identity::load_or_create(store.as_ref())?.peer_id().to_hex())
 }
 
@@ -135,10 +137,13 @@ pub struct Running {
     pub server: Server,
     pub core: Arc<LiveCore>,
     pub window_url: String,
+    /// Held so no other process (a second app, a `key` command) uses this data directory.
+    /// Declared last so it is released after everything that uses the store.
+    pub _lock: DataDirLock,
 }
 
 pub fn start_window(data_dir: &Path, assets: Arc<dyn Assets>) -> Result<Running, AnyError> {
-    let store = open_store(data_dir)?;
+    let (lock, store) = open_store(data_dir)?;
     let me = Identity::load_or_create(store.as_ref())?.peer_id();
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(2)
@@ -180,6 +185,7 @@ pub fn start_window(data_dir: &Path, assets: Arc<dyn Assets>) -> Result<Running,
         server.port()
     );
     Ok(Running {
+        _lock: lock,
         runtime,
         server,
         core,
@@ -189,7 +195,7 @@ pub fn start_window(data_dir: &Path, assets: Arc<dyn Assets>) -> Result<Running,
 
 /// `--headless`: join the network and relay until interrupted. No web server, no window.
 pub fn run_headless(data_dir: &Path) -> Result<(), AnyError> {
-    let store = open_store(data_dir)?;
+    let (_lock, store) = open_store(data_dir)?;
     let me = Identity::load_or_create(store.as_ref())?.peer_id();
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
