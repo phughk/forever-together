@@ -1,6 +1,7 @@
 import type {
   AppState,
   CharacterView,
+  DiagnosisView,
   DungeonEntry,
   DungeonsResponse,
   PartyMember,
@@ -73,10 +74,41 @@ export function idleSearch(): SearchView {
   return { status: "idle", dungeons: [], startedAt: null, stage: 0, stageClockStartedAt: null, searching: null, topics: 0 };
 }
 
+/** A diagnosis for stories and the mock. Counts default to a plausible mix for the situation. */
+export function makeDiagnosis(situation: string, over: Partial<DiagnosisView> = {}): DiagnosisView {
+  const seen = (
+    {
+      warming_up: { players: 0, tanks: 0, healers: 0, damage: 0 },
+      not_connected: { players: 0, tanks: 0, healers: 0, damage: 0 },
+      alone: { players: 0, tanks: 0, healers: 0, damage: 0 },
+      no_tank: { players: 8, tanks: 0, healers: 2, damage: 6 },
+      no_healer: { players: 7, tanks: 2, healers: 0, damage: 5 },
+      short_on_damage: { players: 4, tanks: 1, healers: 2, damage: 1 },
+      healthy: { players: 13, tanks: 2, healers: 2, damage: 9 },
+    } as Record<string, DiagnosisView["seen"]>
+  )[situation] ?? { players: 6, tanks: 1, healers: 1, damage: 4 };
+  return {
+    situation,
+    ended: false,
+    seen,
+    ownRole: "damage",
+    sampleFull: false,
+    networkPeers: situation === "not_connected" ? 0 : 5,
+    ...over,
+  };
+}
+
+function derived(view: SearchView): DiagnosisView {
+  const ended = view.status === "limit_reached";
+  if (view.searching === null) return makeDiagnosis("warming_up", { ended });
+  if (view.searching <= 1) return makeDiagnosis("alone", { ended });
+  return makeDiagnosis("healthy", { ended, seen: { players: view.searching, tanks: 2, healers: 2, damage: Math.max(0, view.searching - 4) } });
+}
+
 /** A search that began `elapsedS` seconds ago on the shared 60 s schedule. */
 export function searchingFor(elapsedS: number, over: Partial<SearchView> = {}): SearchView {
   const stage = Math.min(4, Math.floor(elapsedS / 60)) as SearchView["stage"];
-  return {
+  const view: SearchView = {
     status: "searching",
     dungeons: ["the-deadmines"],
     startedAt: NOW - elapsedS * 1000,
@@ -84,8 +116,10 @@ export function searchingFor(elapsedS: number, over: Partial<SearchView> = {}): 
     stageClockStartedAt: NOW - elapsedS * 1000,
     searching: 14,
     topics: 1,
+    diagnosis: null,
     ...over,
   };
+  return { ...view, diagnosis: "diagnosis" in over ? over.diagnosis : derived(view) };
 }
 
 const ROLES: Role[] = ["tank", "healer", "damage", "damage", "damage"];

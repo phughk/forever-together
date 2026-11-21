@@ -60,6 +60,26 @@ export interface DungeonsResponse {
 
 export type SearchStatus = "idle" | "searching" | "limit_reached";
 
+/** Roles a diagnosis can name. */
+export type DiagnosisRole = "tank" | "healer" | "damage";
+
+/** What this computer can see while searching, as counts. The webapp writes the sentences. */
+export interface DiagnosisView {
+  /**
+   * Known codes: "warming_up", "not_connected", "alone", "no_tank", "no_healer", "short_on_damage", "healthy".
+   * Any other string must be tolerated.
+   */
+  situation: string;
+  /** True when the search expired: the numbers are the frozen peak over the search, not live. */
+  ended: boolean;
+  /** Other compatible players seen (the peak at the end). Never includes the player. */
+  seen: { players: number; tanks: number; healers: number; damage: number };
+  ownRole: DiagnosisRole | null;
+  /** The counts are a slice of a capped sample, so they are "at least" or "about". */
+  sampleFull: boolean;
+  networkPeers: number;
+}
+
 export interface SearchView {
   status: SearchStatus;
   dungeons: string[];
@@ -70,6 +90,8 @@ export interface SearchView {
   /** Players searching on the joined topics, as far as this peer can see. Null until known. */
   searching: number | null;
   topics: number;
+  /** Absent from an older server: render the search as before. */
+  diagnosis?: DiagnosisView | null;
 }
 
 export type PartyPhase = "confirming" | "final" | "dropped";

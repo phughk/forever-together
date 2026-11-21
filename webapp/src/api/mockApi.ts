@@ -1,5 +1,5 @@
 import { ApiError } from "./errors";
-import { dungeonsFor, idleSearch, makeCharacter, makeState } from "./fixtures";
+import { dungeonsFor, idleSearch, makeCharacter, makeDiagnosis, makeState } from "./fixtures";
 import type { Api, AppState, ConnectionStatus, Settings } from "./types";
 
 export interface MockApiOptions {
@@ -68,7 +68,7 @@ export function createMockApi(opts: MockApiOptions = {}): MockApi {
       await delay();
       push({
         ...state,
-        search: { ...idleSearch(), status: "searching", dungeons, startedAt: state.serverNow, stageClockStartedAt: state.serverNow, searching: 1, topics: dungeons.length },
+        search: { ...idleSearch(), status: "searching", dungeons, startedAt: state.serverNow, stageClockStartedAt: state.serverNow, searching: null, topics: dungeons.length, diagnosis: makeDiagnosis("warming_up") },
       });
     },
     async stopSearch() {

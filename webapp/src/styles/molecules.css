@@ -57,3 +57,8 @@
   .ft-member__status { grid-column: 1 / -1; justify-content: flex-start; }
   .ft-setting { flex-direction: column; align-items: flex-start; }
 }
+
+.ft-diagnosis { display: grid; gap: var(--space-3); }
+.ft-diagnosis__detail { margin-top: var(--space-1); }
+.ft-diagnosis__seen { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-1); padding: 0; list-style: none; font-size: 0.85rem; color: var(--text-muted); }
+.ft-diagnosis__seen li { display: inline-flex; align-items: center; gap: var(--space-1); }
