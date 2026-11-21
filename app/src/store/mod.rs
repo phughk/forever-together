@@ -4,9 +4,11 @@
 //! Key layout (plan item 24): `identity/secret`, `known_peers/<peerId hex>`, `settings`,
 //! `api/token`, `character`.
 
+mod dir_lock;
 mod mem;
 mod varaq_store;
 
+pub use dir_lock::{DataDirLock, LockError};
 pub use mem::MemStore;
 pub use varaq_store::VaraqStore;
 

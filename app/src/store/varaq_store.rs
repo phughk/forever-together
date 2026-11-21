@@ -137,4 +137,21 @@ mod tests {
         drop(s);
         let _ = std::fs::remove_dir_all(d);
     }
+
+    /// Step 0 of ticket 0043 (ADR 0039): `varaq` does not refuse a second opener, and the first
+    /// handle never sees the second's writes. That is why the app and the `key` commands take a
+    /// `DataDirLock`. If this test fails after a `varaq` upgrade, `varaq` now locks or shares
+    /// state: revisit decision 9.
+    #[test]
+    fn varaq_does_not_refuse_a_second_opener() {
+        let d = tmp("varaq-two");
+        let first = VaraqStore::open(&d).unwrap();
+        first.put("k", b"one").unwrap();
+        let second = VaraqStore::open(&d).expect("a second opener is not refused");
+        second.put("k", b"two").unwrap();
+        assert_eq!(first.get("k").unwrap(), Some(b"one".to_vec()));
+        drop(first);
+        drop(second);
+        let _ = std::fs::remove_dir_all(d);
+    }
 }
