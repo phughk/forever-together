@@ -42,3 +42,7 @@ One file per ticket, named `NNNN-slug.md`. Status is `open` unless it says other
 | 0036 | [Document the submodule clone failure for test-addon](0036-mise-test-addon-submodule.md) | chore |
 | 0037 | [Mark old names in ADRs and the design doc](0037-adrs-mention-old-names.md) | chore |
 | 0038 | [Decide whether to self-host iroh relay and address lookup](0038-self-host-iroh-relay.md) | decision |
+| 0039 | [Scan log: store module](0039-scan-log-store.md) | feature |
+| 0040 | [Scan log: export and clear API](0040-scan-log-export-api.md) | feature |
+| 0041 | [Scan log: Settings card and export flow](0041-scan-log-ui.md) | feature |
+| 0042 | [Collect region and realm values from players](0042-collect-region-and-realm-values.md) | verification |

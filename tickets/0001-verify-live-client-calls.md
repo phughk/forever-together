@@ -10,6 +10,8 @@
 
 Confirm against a live Forever client the region values other than EU (3), and the Hardcore realm value once that ruleset is released.
 
+Samples from other regions are collected through the scan log (tickets 0039 to 0042).
+
 Done 2026-11-21: `GetAverageItemLevel` works, and RP-PvE is realm value 16 (see `docs/spike-s0.md` and ADR 0004).
 
 ## Done when
