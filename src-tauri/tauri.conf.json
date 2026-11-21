@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "template-rust-app",
+  "productName": "Forever Together",
   "version": "0.1.0",
-  "identifier": "com.gitlloop.templaterustapp",
+  "identifier": "com.gitlloop.forevertogether",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -10,7 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [{ "title": "template-rust-app", "width": 900, "height": 640 }],
+    "windows": [],
     "security": { "csp": null }
   },
   "bundle": {
