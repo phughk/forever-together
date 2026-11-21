@@ -4,3 +4,4 @@ The addon could use the github api to track releases and updates.
 
 We need more info on location I think, like x/y 
 
+The web components aren't good because they dont occupy the space they have. There is lots of empty space in various screen sizes.
