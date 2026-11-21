@@ -252,6 +252,8 @@ pub trait AppCore: Send + Sync + 'static {
         code: String,
     ) -> impl Future<Output = Result<CharacterView, CoreError>> + Send;
     fn clear_character(&self) -> impl Future<Output = Result<(), CoreError>> + Send;
+    /// Delete every stored search-history entry (ADR 0027). Loopback only at the route.
+    fn clear_history(&self) -> impl Future<Output = Result<(), CoreError>> + Send;
     fn dungeons(&self) -> impl Future<Output = DungeonsResponse> + Send;
     fn start_search(
         &self,

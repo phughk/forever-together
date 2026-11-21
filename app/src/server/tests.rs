@@ -102,6 +102,10 @@ impl AppCore for FakeCore {
         self.log("clear_character");
         Ok(())
     }
+    async fn clear_history(&self) -> Result<(), CoreError> {
+        self.log("clear_history");
+        Ok(())
+    }
     async fn dungeons(&self) -> DungeonsResponse {
         DungeonsResponse {
             dungeons: vec![],
@@ -421,6 +425,7 @@ async fn loopback_only_routes_refuse_a_remote_caller() {
     for (m, p) in [
         (Method::GET, "/api/pairing"),
         (Method::POST, "/api/token/reset"),
+        (Method::DELETE, "/api/history"),
     ] {
         let (s, b, _) = send(&h, remote(m, p)).await;
         assert_eq!(s, StatusCode::FORBIDDEN, "{p}");
@@ -452,6 +457,29 @@ async fn loopback_only_routes_refuse_a_remote_caller() {
     )
     .await;
     assert_eq!(s, StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn delete_history_is_loopback_only_and_needs_a_token() {
+    let h = harness();
+    h.shared.guard.lan.store(true, Ordering::Relaxed);
+    let (s, _, _) = send(&h, rq(Method::DELETE, "/api/history")).await;
+    assert_eq!(s, StatusCode::UNAUTHORIZED);
+    let (s, b, _) = send(
+        &h,
+        rq(Method::DELETE, "/api/history")
+            .token(&h.token)
+            .host(&format!("192.168.1.20:{PORT}"))
+            .peer(REMOTE),
+    )
+    .await;
+    assert_eq!(s, StatusCode::FORBIDDEN);
+    assert_eq!(err_code(&b), "loopback_only");
+    assert!(h.core.calls().is_empty());
+    let (s, b, _) = send(&h, rq(Method::DELETE, "/api/history").token(&h.token)).await;
+    assert_eq!(s, StatusCode::NO_CONTENT);
+    assert!(b.is_empty());
+    assert_eq!(h.core.calls(), ["clear_history"]);
 }
 
 #[tokio::test]
