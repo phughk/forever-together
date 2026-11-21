@@ -1,21 +1,26 @@
 import { Card } from "../atoms/Card";
-import { Notice } from "../atoms/Notice";
-import { Text } from "../atoms/Typography";
-import { AppHeader } from "../organisms/AppHeader";
+import { SettingsIcon } from "../atoms/SettingsIcon";
+import { NumberedStep } from "../molecules/NumberedStep";
 import { SettingsTemplate } from "../templates/SettingsTemplate";
+import "../../styles/settings.css";
 
-/** Shown when the server answers 401: the token is missing, wrong or was reset. */
+/** Shown when the server answers 401: this phone has no valid link. It has no navigation, since nothing else works yet. */
 export function NotPairedPage() {
   return (
     <SettingsTemplate
-      header={<AppHeader view="finder" onNavigate={() => {}} status="unauthorized" />}
       sections={
-        <Card title="This device is not paired">
-          <Notice tone="warn">The app refused the request because this browser has no valid token.</Notice>
-          <Text>
-            On the desktop app open Settings, turn on LAN mode and scan the pairing QR with this phone's camera app. If you reset
-            the token on the desktop, every phone must pair again.
-          </Text>
+        <Card title="This phone isn't linked yet">
+          <ol className="ft-steps">
+            <NumberedStep n={1} icon={<SettingsIcon name="monitor" size={24} />}>
+              Open Settings on your PC
+            </NumberedStep>
+            <NumberedStep n={2} icon={<SettingsIcon name="switch" size={24} />}>
+              Switch on Phone link
+            </NumberedStep>
+            <NumberedStep n={3} icon={<SettingsIcon name="qr" size={24} />}>
+              Scan the QR with this phone
+            </NumberedStep>
+          </ol>
         </Card>
       }
     />

@@ -53,12 +53,11 @@ export const Settings: StoryObj = {
   render: () => (
     <SettingsTemplate
       header={<Slot label="header" height={56} />}
-      notices={<Slot label="notices" height={40} />}
+      notices={<Slot label="notices (remote banner, error)" height={40} />}
       sections={
         <>
-          <Slot label="section: LAN mode" height={140} />
-          <Slot label="section: paired phones" height={120} />
-          <Slot label="section: peers" height={220} />
+          <Slot label="section: phone link (main action, about 8 to 14rem)" height={140} />
+          <Slot label="section: advanced (collapsed, one row)" height={56} />
         </>
       }
     />
