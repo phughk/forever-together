@@ -8,7 +8,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "The three roles against what a party needs (1 tank, 1 healer, 3 damage), as seen / needed. Your own role is pre-filled. Grey means not seen from here, never red, so none seen does not read as none exist. `~` marks rough counts.",
+          "The three roles against what a party needs (1 tank, 1 healer, 3 damage), as seen / needed, in three equal tiles that fill the card width (role icon, large count, role name). Your own role is pre-filled. Grey means not seen from here, never red, so none seen does not read as none exist. `~` marks rough counts.",
       },
     },
   },

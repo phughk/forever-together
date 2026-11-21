@@ -38,9 +38,12 @@ export function PartyNeedRow({ seen, ownRole, rough }: PartyNeedRowProps) {
               aria-label={`${ROLE_LABEL[r]}: ${n} seen of ${need} needed${ownRole === r ? ", including you" : ""}`}
             >
               <RoleIcon role={r} />
-              <span aria-hidden="true">
+              <span className="ft-need__count" aria-hidden="true">
                 {rough && n > 0 ? "~" : ""}
                 {n}/{need}
+              </span>
+              <span className="ft-need__name" aria-hidden="true">
+                {ROLE_LABEL[r]}
               </span>
             </li>
           );

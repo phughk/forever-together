@@ -1,13 +1,12 @@
 import { SEARCH_LIMIT_S } from "../../api/constants";
 import type { DungeonEntry, SearchView } from "../../api/types";
-import { formatAge } from "../../lib/format";
 import { Badge } from "../atoms/Badge";
 import { Button } from "../atoms/Button";
 import { Card } from "../atoms/Card";
 import { Notice } from "../atoms/Notice";
-import { ProgressBar } from "../atoms/ProgressBar";
 import { Entity, Heading, Text } from "../atoms/Typography";
 import { DiagnosisSummary } from "../molecules/DiagnosisSummary";
+import { SearchClock } from "../molecules/SearchClock";
 import { SearchingWiderChip } from "../molecules/SearchingWiderChip";
 import "../../styles/search.css";
 
@@ -49,10 +48,10 @@ export function SearchProgress({ search, dungeons, now, onStop, onSearchAgain, o
     const hasNext = Boolean(onSearchAgain || onChangeDungeon);
     return (
       <>
-        <Card title="Search ended">
+        <Card title="Search ended" className="ft-search__main">
           <Text className="ft-search__names">{names}</Text>
           {!diagnosis && <Notice tone="warn">No party formed.</Notice>}
-          <div className="ft-actions">
+          <div className="ft-actions ft-search__actions">
             {onSearchAgain && (
               <Button variant="primary" onClick={onSearchAgain}>
                 Search again
@@ -73,7 +72,7 @@ export function SearchProgress({ search, dungeons, now, onStop, onSearchAgain, o
 
   return (
     <>
-      <Card>
+      <Card className="ft-search__main">
         <div className="ft-search__top">
           <Heading level={2}>Searching</Heading>
           <Button variant="danger" onClick={() => void onStop()}>
@@ -81,17 +80,7 @@ export function SearchProgress({ search, dungeons, now, onStop, onSearchAgain, o
           </Button>
         </div>
         <Text className="ft-search__names">{names}</Text>
-        <div>
-          <ProgressBar value={elapsedS / SEARCH_LIMIT_S} label="Time until the search limit" />
-          <div className="ft-search__time">
-            <Text size="small" muted>
-              {formatAge(elapsedS)}
-            </Text>
-            <Text size="small" muted>
-              of {SEARCH_LIMIT_S / 60} min
-            </Text>
-          </div>
-        </div>
+        <SearchClock elapsedS={elapsedS} limitS={SEARCH_LIMIT_S} />
         {search.stage > 0 && <SearchingWiderChip />}
       </Card>
       {seen ?? (

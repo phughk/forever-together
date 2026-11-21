@@ -4,13 +4,15 @@ export interface ProgressBarProps {
   /** Accessible name. */
   label: string;
   urgent?: boolean;
+  /** `thick` is the 16px bar for a screen where the bar is the main thing. */
+  size?: "default" | "thick";
 }
 
-export function ProgressBar({ value, label, urgent }: ProgressBarProps) {
+export function ProgressBar({ value, label, urgent, size = "default" }: ProgressBarProps) {
   const pct = Math.round(Math.min(1, Math.max(0, value)) * 100);
   return (
     <div
-      className={["ft-progress", urgent && "ft-progress--warn"].filter(Boolean).join(" ")}
+      className={["ft-progress", size === "thick" && "ft-progress--thick", urgent && "ft-progress--warn"].filter(Boolean).join(" ")}
       role="progressbar"
       aria-label={label}
       aria-valuemin={0}

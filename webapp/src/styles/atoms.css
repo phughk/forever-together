@@ -96,6 +96,7 @@ textarea.ft-input { resize: vertical; min-height: 5rem; }
 .ft-check input { width: 1.2rem; height: 1.2rem; margin: 0; accent-color: var(--accent-solid); }
 
 .ft-progress { height: 8px; overflow: hidden; background: var(--surface-2); border-radius: 999px; }
+.ft-progress--thick { height: 16px; }
 .ft-progress__bar { height: 100%; background: var(--accent-solid); transition: width 0.4s linear; }
 .ft-progress--warn .ft-progress__bar { background: var(--bad); }
 

@@ -2,20 +2,55 @@
 
 .ft-search__top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .ft-search__top .ft-heading { margin: 0; }
-.ft-search__time { display: flex; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-1); }
-
 .ft-wider { display: inline-flex; align-items: center; gap: var(--space-1); }
 
-.ft-need { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
-.ft-need__label { font-size: 0.85rem; color: var(--text-muted); }
-.ft-need__roles { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
-.ft-need__role { display: inline-flex; align-items: center; gap: var(--space-2); font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+/* The roles seen, as three equal tiles that fill the card: icon, large count, role name. */
+.ft-need { display: grid; gap: var(--space-2); container-type: inline-size; }
+.ft-need__label { font-size: 0.9rem; font-weight: 600; color: var(--text-muted); }
+.ft-need__roles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.ft-need__role { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); padding: var(--space-4) var(--space-2); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; font-variant-numeric: tabular-nums; }
+.ft-need__role .ft-role { width: 2.75rem; height: 2.75rem; font-size: 1.15rem; }
+.ft-need__count { font-size: 2rem; font-weight: 700; line-height: 1.1; white-space: nowrap; }
+.ft-need__name { font-size: 0.9rem; color: var(--text-muted); }
+@container (max-width: 22rem) {
+  .ft-need__roles { gap: var(--space-2); }
+  .ft-need__role { padding: var(--space-2) var(--space-1); }
+  .ft-need__role .ft-role { width: 2.25rem; height: 2.25rem; font-size: 1rem; }
+  .ft-need__count { font-size: 1.5rem; }
+}
 /* Grey, never red: not seen from here is not "none exist". */
-.ft-need__role--none, .ft-need__role--some { color: var(--text-muted); }
+.ft-need__role--none .ft-need__count, .ft-need__role--some .ft-need__count { color: var(--text-muted); }
 .ft-need__role--none .ft-role, .ft-need__role--some .ft-role { color: var(--text-muted); border-color: var(--border); }
+.ft-need__role--none { background: transparent; }
 .ft-need__role--none .ft-role { background: transparent; border-style: dashed; }
-.ft-need__role--met { color: var(--text); font-weight: 600; }
+.ft-need__role--met { border-color: var(--good); }
+.ft-need__role--met .ft-need__name { color: var(--text); }
 
 .ft-diagnosis__headline { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
 .ft-diagnosis__chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.ft-search__names { font-size: 1.1rem; line-height: 1.3; color: var(--text); }
+.ft-search__names { font-size: 1.65rem; line-height: 1.2; color: var(--text); }
+
+/* The main search card and the "seen" card are the two things on the screen, so they get room. */
+.ft-search__main { gap: var(--space-4); padding: var(--space-5); }
+.ft-search__seen { gap: var(--space-4); padding: var(--space-5); }
+.ft-search__seen .ft-notice { font-size: 1.05rem; padding: var(--space-4) var(--space-5); }
+.ft-search__seen .ft-diagnosis { gap: var(--space-4); }
+
+/* The elapsed time is the main thing while a search runs. */
+.ft-clock { display: grid; gap: var(--space-3); }
+.ft-clock__row { display: flex; align-items: baseline; gap: var(--space-3); }
+.ft-clock__elapsed { font-size: 3.5rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.ft-clock__limit { font-size: 1.15rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+/* Ended: one clear primary action, one secondary. */
+.ft-search__actions { gap: var(--space-3); }
+.ft-search__actions .ft-button { flex: 1 1 10rem; min-height: 3.25rem; font-size: 1.05rem; }
+.ft-search__actions .ft-button--primary { flex-grow: 2; }
+@media (max-width: 480px) {
+  .ft-search__main, .ft-search__seen { padding: var(--space-4); gap: var(--space-3); }
+  .ft-search__seen .ft-diagnosis { gap: var(--space-3); }
+  .ft-search__seen .ft-notice { padding: var(--space-3); font-size: 1rem; }
+  .ft-search__actions .ft-button { min-height: 3rem; }
+  .ft-search__names { font-size: 1.4rem; }
+  .ft-clock__elapsed { font-size: 3rem; }
+}
