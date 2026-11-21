@@ -16,7 +16,7 @@ The addon sends the region and the realm as opaque values from the real client, 
 
 Which client calls return the realm and region is unverified. Candidates are `C_GameRules.GetActiveGameMode`, `GetCurrentGameModeRecordID`, `GetForeverExperiencePreset`, `IsHardcoreActive` and `GetCurrentRegion`. Someone must log them on the real client before the code format freezes.
 
-**Amendment 2026-11-21 (first live capture):** the realm value is the game-mode record ID as a decimal string (14 = PvP, 15 = PvE, 18 = RP-PvP) and the region is `GetCurrentRegion()` (3 = EU). RP-PvE and Hardcore IDs are still unknown. Names are for display only; topics still hash the raw values. See `docs/rdf-code-spec.md` "Realm and region".
+**Amendment 2026-11-21 (first live capture):** the realm value is the game-mode record ID as a decimal string (14 = PvP, 15 = PvE, 18 = RP-PvP) and the region is `GetCurrentRegion()` (3 = EU). RP-PvE was captured later the same day: 16 = RP-PvE. The Hardcore ID is unknown because the ruleset is not released. Names are for display only; topics still hash the raw values. See `docs/rdf-code-spec.md` "Realm and region".
 
 ## Alternatives considered
 

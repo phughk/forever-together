@@ -10,9 +10,10 @@ vm.test("region numbers map to names, 0 is unknown, others show their number", f
   vm.assert_eq(RD().RegionName(9), "region 9")
 end)
 
-vm.test("realm IDs map to rulesets, others show 'realm <id>' (RP-PvE and Hardcore are not known yet)", function()
+vm.test("realm IDs map to rulesets, others show 'realm <id>' (Hardcore is not released, so not known)", function()
   vm.assert_eq(RD().RealmName("14"), "PvP")
   vm.assert_eq(RD().RealmName("15"), "PvE")
+  vm.assert_eq(RD().RealmName("16"), "RP-PvE")
   vm.assert_eq(RD().RealmName("18"), "RP-PvP")
   vm.assert_eq(RD().RealmName("99"), "realm 99")
   vm.assert_eq(RD().RealmName("mankrik"), "realm mankrik")

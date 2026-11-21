@@ -264,11 +264,12 @@ pub fn region_name(region: u8) -> String {
 }
 
 /// Display name of a realm value (the game-mode record ID as a decimal string). Display only: topics hash the raw value.
-/// Verified live 2026-11-21: 14 = PvP, 15 = PvE, 18 = RP-PvP. The RP-PvE and Hardcore IDs are unknown and not guessed.
+/// Verified live 2026-11-21: 14 = PvP, 15 = PvE, 16 = RP-PvE, 18 = RP-PvP. The Hardcore ID is unknown (not released) and not guessed.
 pub fn realm_name(realm: &str) -> String {
     match realm {
         "14" => "PvP".to_owned(),
         "15" => "PvE".to_owned(),
+        "16" => "RP-PvE".to_owned(),
         "18" => "RP-PvP".to_owned(),
         other => format!("realm {other}"),
     }
@@ -643,6 +644,7 @@ mod tests {
         assert_eq!(region_name(9), "region 9");
         assert_eq!(realm_name("14"), "PvP");
         assert_eq!(realm_name("15"), "PvE");
+        assert_eq!(realm_name("16"), "RP-PvE");
         assert_eq!(realm_name("18"), "RP-PvP");
         assert_eq!(realm_name("27"), "realm 27");
     }

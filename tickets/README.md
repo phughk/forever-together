@@ -4,7 +4,7 @@ One file per ticket, named `NNNN-slug.md`. Status is `open` unless it says other
 
 | # | Ticket | Kind |
 |---|--------|------|
-| 0001 | [Verify addon client calls on a live client](0001-verify-live-client-calls.md) | verification |
+| 0001 | [Verify region values and the Hardcore realm value (item level and RP-PvE done)](0001-verify-live-client-calls.md) | verification |
 | 0002 | [Verify a phone scans the addon QR](0002-verify-qr-phone-scan.md) | verification |
 | 0003 | [Verify varaq key-file permissions and maturity](0003-verify-varaq-key-permissions.md) | verification |
 | 0004 | [Verify iroh over the real network](0004-verify-iroh-live-network.md) | verification |

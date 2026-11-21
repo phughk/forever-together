@@ -63,11 +63,11 @@ The realm value and the region are opaque values from the client, compared as gi
 | `14` | PvP | verified live |
 | `15` | PvE | verified live |
 | `18` | RP-PvP | verified live |
-| RP-PvE | not known | **not captured**, deliberately not guessed |
-| Hardcore | not known | **not captured**, deliberately not guessed |
+| `16` | RP-PvE | verified live 2026-11-21 (second capture) |
+| Hardcore | not known | not released yet, deliberately not guessed |
 | any other value | shown as `realm <id>` | mapped when a capture names it |
 
-Still assumed: the RP-PvE and Hardcore IDs, whether the other regions use the same numbering as EU, and that the same ID means the same ruleset in every region. The fallback when the game-mode call is missing, `GetRealmName()` lowercased in ASCII and cut at 24 bytes, is untested on a live client (a realm name is not a ruleset). Two peers on the same ruleset must produce the same topic string. The tables live in `addon/ForeverTogether/Names.lua` and `code::region_name` / `code::realm_name` in `app/src/code.rs`; the app exposes the names as `realmName` and `regionName` on the character in the API.
+Still assumed: the Hardcore ID, whether the other regions use the same numbering as EU, and that the same ID means the same ruleset in every region. The fallback when the game-mode call is missing, `GetRealmName()` lowercased in ASCII and cut at 24 bytes, is untested on a live client (a realm name is not a ruleset). Two peers on the same ruleset must produce the same topic string. The tables live in `addon/ForeverTogether/Names.lua` and `code::region_name` / `code::realm_name` in `app/src/code.rs`; the app exposes the names as `realmName` and `regionName` on the character in the API.
 
 ### Size
 
