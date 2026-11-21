@@ -107,6 +107,10 @@ export function createMockApi(opts: MockApiOptions = {}): MockApi {
         addresses,
       };
     },
+    async clearHistory() {
+      await delay();
+      loopbackOnly();
+    },
     async resetToken() {
       await delay();
       loopbackOnly();

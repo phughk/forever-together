@@ -176,4 +176,6 @@ export interface Api {
   /** `ip` picks one of the listed addresses; without it the app picks the one on the active network. */
   getPairing(ip?: string): Promise<PairingInfo>;
   resetToken(): Promise<void>;
+  /** Deletes the local record of finished searches. Loopback only. */
+  clearHistory(): Promise<void>;
 }
