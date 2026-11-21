@@ -65,6 +65,9 @@ pub struct Settings {
     pub known_peers_cache: usize,
     /// Extra trusted peer keys, hex.
     pub trusted_peers: Vec<String>,
+    /// The game's `Interface/AddOns` folder the addon is installed into (canonical path). Set
+    /// only through `PUT /api/addon/folder`, which is loopback only; not character data.
+    pub addon_dir: Option<String>,
 }
 
 impl Default for Settings {
@@ -74,6 +77,7 @@ impl Default for Settings {
             lan_address: None,
             known_peers_cache: 100,
             trusted_peers: Vec::new(),
+            addon_dir: None,
         }
     }
 }
@@ -114,6 +118,7 @@ mod tests {
             lan_address: Some("10.0.0.7".into()),
             known_peers_cache: 7,
             trusted_peers: vec!["ab".into()],
+            addon_dir: Some("/games/wow/_forever_/Interface/AddOns".into()),
         };
         s.save(&store).unwrap();
         assert_eq!(Settings::load(&store).unwrap(), s);
@@ -126,6 +131,7 @@ mod tests {
         let s = Settings::load(&store).unwrap();
         assert!(s.lan_mode);
         assert_eq!(s.known_peers_cache, 100);
+        assert_eq!(s.addon_dir, None);
     }
 
     #[test]

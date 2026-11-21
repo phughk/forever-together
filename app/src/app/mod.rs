@@ -54,6 +54,8 @@ enum Cmd {
     Confirm(Reply<()>),
     Decline(Reply<()>),
     UpdateSettings(SettingsPatch, Reply<SettingsView>),
+    AddonDir(oneshot::Sender<Option<String>>),
+    SetAddonDir(Option<String>, Reply<()>),
 }
 
 pub struct CoreDeps {
@@ -816,6 +818,18 @@ async fn handle_cmd<N: Network>(
             });
             finish(m, state, reply, r);
         }
+        Cmd::AddonDir(reply) => {
+            let _ = reply.send(m.settings.addon_dir.clone());
+        }
+        Cmd::SetAddonDir(dir, reply) => {
+            let mut next = m.settings.clone();
+            next.addon_dir = dir;
+            let r = next
+                .save(m.store.as_ref())
+                .map_err(|e| CoreError::internal(e.to_string()))
+                .map(|()| m.settings = next);
+            finish(m, state, reply, r);
+        }
     }
 }
 
@@ -1105,5 +1119,11 @@ impl AppCore for LiveCore {
     }
     async fn update_settings(&self, patch: SettingsPatch) -> Result<SettingsView, CoreError> {
         self.ask_result(|r| Cmd::UpdateSettings(patch, r)).await
+    }
+    async fn addon_dir(&self) -> Option<String> {
+        self.ask(Cmd::AddonDir).await.flatten()
+    }
+    async fn set_addon_dir(&self, dir: Option<String>) -> Result<(), CoreError> {
+        self.ask_result(|r| Cmd::SetAddonDir(dir, r)).await
     }
 }

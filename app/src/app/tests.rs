@@ -372,3 +372,47 @@ fn local_offset_is_plausible() {
     assert!((-12 * 3600..=14 * 3600).contains(&off), "{off}");
     assert_eq!(super::local_utc_offset_secs(u64::MAX), 0);
 }
+
+#[tokio::test]
+async fn addon_dir_is_saved_survives_a_restart_and_other_updates_and_clear_character() {
+    let store: Arc<dyn Store> = Arc::new(MemStore::new());
+    let (core, _h, _tx) = core_with(store.clone());
+    assert_eq!(core.addon_dir().await, None);
+    core.set_addon_dir(Some("/g/Interface/AddOns".into()))
+        .await
+        .unwrap();
+    assert_eq!(
+        core.addon_dir().await.as_deref(),
+        Some("/g/Interface/AddOns")
+    );
+    // A settings patch writes the whole settings: the folder must survive it.
+    core.update_settings(SettingsPatch {
+        known_peers_size: Some(50),
+        ..Default::default()
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        core.addon_dir().await.as_deref(),
+        Some("/g/Interface/AddOns")
+    );
+    // A folder path is not character data.
+    core.set_character(encode(&sample_character()))
+        .await
+        .unwrap();
+    core.clear_character().await.unwrap();
+    assert_eq!(
+        core.addon_dir().await.as_deref(),
+        Some("/g/Interface/AddOns")
+    );
+    let stored = Settings::load(store.as_ref()).unwrap();
+    assert_eq!(stored.addon_dir.as_deref(), Some("/g/Interface/AddOns"));
+    assert_eq!(stored.known_peers_cache, 50);
+    let (again, _h2, _tx2) = core_with(store);
+    assert_eq!(
+        again.addon_dir().await.as_deref(),
+        Some("/g/Interface/AddOns")
+    );
+    again.set_addon_dir(None).await.unwrap();
+    assert_eq!(again.addon_dir().await, None);
+}

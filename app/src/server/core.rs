@@ -246,6 +246,8 @@ pub struct CoreError {
     pub status: StatusCode,
     pub code: String,
     pub message: String,
+    /// Raw reason for the Details line; only some errors carry one.
+    pub detail: Option<String>,
 }
 
 impl CoreError {
@@ -254,7 +256,12 @@ impl CoreError {
             status,
             code: code.into(),
             message: message.into(),
+            detail: None,
         }
+    }
+    pub fn with_detail(mut self, detail: impl Into<String>) -> Self {
+        self.detail = Some(detail.into());
+        self
     }
     pub fn bad_request(code: &str, message: impl Into<String>) -> Self {
         Self::new(StatusCode::BAD_REQUEST, code, message)
@@ -294,4 +301,11 @@ pub trait AppCore: Send + Sync + 'static {
         &self,
         patch: SettingsPatch,
     ) -> impl Future<Output = Result<SettingsView, CoreError>> + Send;
+    /// The saved AddOns folder (`addon_dir` setting).
+    fn addon_dir(&self) -> impl Future<Output = Option<String>> + Send;
+    /// Save (or clear) the AddOns folder. Not exposed through `SettingsPatch`.
+    fn set_addon_dir(
+        &self,
+        dir: Option<String>,
+    ) -> impl Future<Output = Result<(), CoreError>> + Send;
 }
