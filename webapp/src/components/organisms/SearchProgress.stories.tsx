@@ -11,7 +11,7 @@ const meta = {
       description: {
         component: [
           "Running: Stop at the top, one bar for time to the 10 minute limit, a \"Searching wider\" chip once the search has widened (rule in an info tip, no countdown), and what is seen from here (see DiagnosisSummary).",
-          "The connection is not shown here; the header's status dot covers it, so `network` is accepted but unused.",
+          "The connection is not shown here; the header's status dot covers it.",
           "Ended: title \"Search ended\", the result, and \"Search again\" and \"Change dungeon\". Without those two callbacks the card has a single \"OK\".",
           "An older server sends no diagnosis: the card shows only a rough count of players.",
         ].join("\n"),
@@ -76,8 +76,6 @@ export const BusyTopic: Story = {
 export const StageClockRestartedAfterDrop: Story = {
   args: { search: searchingFor(300, { stage: 0, stageClockStartedAt: NOW - 10_000 }) },
 };
-/** The `network` prop is still accepted, but nothing about the network shows in the card. */
-export const NetworkPropIgnored: Story = { args: { network: { peers: 0, bootstrap: "none" } } };
 
 /** An older server sends no diagnosis: only a rough count of players. */
 export const NoDiagnosisFromOldServer: Story = {

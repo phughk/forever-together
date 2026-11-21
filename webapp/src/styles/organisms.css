@@ -1,6 +1,5 @@
 /* Organisms: distinct interface sections built from molecules and atoms. */
 
-.ft-stack { display: grid; gap: var(--space-3); }
 .ft-list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 .ft-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .ft-section-label { margin: var(--space-2) 0 0; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }

@@ -1,5 +1,5 @@
 import { SEARCH_LIMIT_S } from "../../api/constants";
-import type { DungeonEntry, NetworkView, SearchView } from "../../api/types";
+import type { DungeonEntry, SearchView } from "../../api/types";
 import { formatAge } from "../../lib/format";
 import { Badge } from "../atoms/Badge";
 import { Button } from "../atoms/Button";
@@ -13,8 +13,6 @@ import "../../styles/search.css";
 
 export interface SearchProgressProps {
   search: SearchView;
-  /** No longer shown (the header's status dot covers the connection). Still accepted so callers keep compiling. */
-  network?: NetworkView;
   dungeons: DungeonEntry[];
   now: number;
   onStop: () => void | Promise<void>;

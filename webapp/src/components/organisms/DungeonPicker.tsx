@@ -24,13 +24,6 @@ export interface DungeonPickerProps {
   busy?: boolean;
   /** Start with "Combine dungeons" on. */
   defaultCombine?: boolean;
-  /**
-   * Combine-mode ticks. Optional: when not supplied the picker keeps its own.
-   * @deprecated The picker owns this state now. Remove from callers.
-   */
-  selected?: string[];
-  /** @deprecated See `selected`. */
-  onSelectionChange?: (slugs: string[]) => void;
 }
 
 export function DungeonPicker({
@@ -42,16 +35,9 @@ export function DungeonPicker({
   searching,
   busy,
   defaultCombine = false,
-  selected: selectedProp,
-  onSelectionChange,
 }: DungeonPickerProps) {
   const [combine, setCombine] = useState(defaultCombine);
-  const [own, setOwn] = useState<string[]>([]);
-  const selected = selectedProp ?? own;
-  const setSelected = (slugs: string[]) => {
-    setOwn(slugs);
-    onSelectionChange?.(slugs);
-  };
+  const [selected, setSelected] = useState<string[]>([]);
 
   if (needsCharacter) {
     return (

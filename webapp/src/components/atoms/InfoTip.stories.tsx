@@ -3,7 +3,7 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Card } from "./Card";
 import { INFO_TIP_MAX_CHARS, InfoTip } from "./InfoTip";
 
-const SHORT = "Phones must be on the same Wi-Fi as this computer.";
+const SHORT = "Phones must be on the same Wi-Fi as your PC.";
 const AT_CAP = ("Exactly at the cap. " + "x".repeat(INFO_TIP_MAX_CHARS)).slice(0, INFO_TIP_MAX_CHARS);
 const OVER_CAP = AT_CAP + " This sentence pushes the tip over the cap and logs a development warning.";
 

@@ -35,9 +35,16 @@ export const NoCharacter: Story = { args: { needsCharacter: true, recommended: [
 export const SearchRunning: Story = { args: { searching: true } };
 export const Busy: Story = { args: { busy: true } };
 export const CombineOn: Story = { args: { defaultCombine: true } };
-export const CombineWithSelection: Story = { args: { defaultCombine: true, selected: ["the-deadmines", "wailing-caverns"] } };
+export const CombineWithSelection: Story = {
+  args: { defaultCombine: true },
+  play: async ({ canvasElement }) => {
+    const c = within(canvasElement);
+    await userEvent.click(c.getByRole("checkbox", { name: "Include The Deadmines" }));
+    await userEvent.click(c.getByRole("checkbox", { name: "Include Wailing Caverns" }));
+  },
+};
 export const CombineThirty: Story = {
-  args: { dungeons: many, recommended: many.slice(0, 4).map((d) => d.slug), defaultCombine: true, selected: [many[0]!.slug] },
+  args: { dungeons: many, recommended: many.slice(0, 4).map((d) => d.slug), defaultCombine: true },
 };
 export const NarrowPhone: Story = {
   decorators: [(Story) => <div style={{ width: 320 }}>{Story()}</div>],

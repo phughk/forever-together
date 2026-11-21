@@ -2,7 +2,6 @@
 
 .ft-search__top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .ft-search__top .ft-heading { margin: 0; }
-.ft-search__meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .ft-search__time { display: flex; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-1); }
 
 .ft-wider { display: inline-flex; align-items: center; gap: var(--space-1); }

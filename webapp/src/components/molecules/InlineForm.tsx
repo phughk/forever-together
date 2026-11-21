@@ -17,7 +17,7 @@ export interface InlineFormProps {
   clearOnSubmit?: boolean;
 }
 
-/** A label, one input and a submit button on one row. Used for "add trusted peer" and "known peers size". */
+/** A label, one input and a submit button on one row. Used for "add a backup contact" and "players to remember". */
 export function InlineForm({ label, submitLabel, onSubmit, initialValue = "", type = "text", clearOnSubmit, ...rest }: InlineFormProps) {
   const id = useId();
   const [value, setValue] = useState(initialValue);

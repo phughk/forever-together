@@ -4,7 +4,7 @@ import { Countdown } from "./Countdown";
 const meta = {
   title: "Molecules/Countdown",
   component: Countdown,
-  args: { label: "Time to confirm", remainingMs: 11_000, totalMs: 15_000 },
+  args: { label: "Time to accept", remainingMs: 11_000, totalMs: 15_000 },
 } satisfies Meta<typeof Countdown>;
 export default meta;
 type Story = StoryObj<typeof meta>;
