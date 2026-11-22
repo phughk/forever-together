@@ -6,7 +6,7 @@
 * **Blocked by:** tickets 6
 * **Source:** ADR 0028
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0007-addon-installer-stage-2/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

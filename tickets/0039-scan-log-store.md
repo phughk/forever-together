@@ -5,7 +5,7 @@
 * **Priority:** P2
 * **Source:** ADR 0038
 * **ADRs:** [0038](../docs/adr/0038-scan-log-and-opt-in-export.md)
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0039-scan-log-store/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

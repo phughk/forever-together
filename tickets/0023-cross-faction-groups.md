@@ -5,7 +5,7 @@
 * **Priority:** P3
 * **Source:** ADR 0007
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0023-cross-faction-groups/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

@@ -6,7 +6,7 @@
 * **Blocked by:** tickets 4
 * **Source:** ADR 0034 (risks)
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0038-self-host-iroh-relay/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

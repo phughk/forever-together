@@ -6,7 +6,7 @@
 * **Blocked by:** tickets 5, 29
 * **Source:** ADR 0027; docs/design-process/archive brief (search diagnosis)
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0027-history-estimator/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

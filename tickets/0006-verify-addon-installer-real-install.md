@@ -5,7 +5,7 @@
 * **Priority:** P1
 * **Source:** ADR 0028; docs/design-process/archive/addon_installer_concepts_brief.md
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0006-verify-addon-installer-real-install/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

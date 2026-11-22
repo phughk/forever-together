@@ -6,7 +6,7 @@
 * **Blocked by:** tickets 4
 * **Source:** ADR 0025; docs/spike-s0.md
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0005-verify-agreement-live/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

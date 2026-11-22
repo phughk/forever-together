@@ -6,7 +6,7 @@
 * **Blocked by:** tickets 25
 * **Source:** docs/design-process/archive brief (search diagnosis), staging 7
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0026-diagnosis-hysteresis-and-hints/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

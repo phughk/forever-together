@@ -5,7 +5,7 @@
 * **Priority:** P2
 * **Source:** ADR 0026; docs/design-process/archive brief (search diagnosis), staging 6
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0025-diagnosis-attempt-counters/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

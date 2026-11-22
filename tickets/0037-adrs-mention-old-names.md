@@ -5,7 +5,7 @@
 * **Priority:** P3
 * **Source:** ADR 0029
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0037-adrs-mention-old-names/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

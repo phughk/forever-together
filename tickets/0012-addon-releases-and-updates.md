@@ -5,7 +5,7 @@
 * **Priority:** P1
 * **Source:** the tickets in `tickets/`; ADR 0028
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0012-addon-releases-and-updates/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

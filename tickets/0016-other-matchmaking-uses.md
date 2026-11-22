@@ -5,7 +5,7 @@
 * **Priority:** P3
 * **Source:** the tickets in `tickets/`
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0016-other-matchmaking-uses/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

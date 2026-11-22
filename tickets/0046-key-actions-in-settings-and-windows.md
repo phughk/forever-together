@@ -6,7 +6,7 @@
 * **Blocked by:** tickets 43
 * **Source:** author, egm 0043 round 1 (A6)
 * **ADRs:** [0039](../docs/adr/0039-key-management.md)
-* **EGM:** [0043-key-management](../docs/egm/0043-key-management/README.md)
+* **EGM:** [0043-key-management](../docs/egm/0043-key-management/README.md); [initial draft](../docs/egm/0046-key-actions-in-settings-and-windows/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

@@ -5,7 +5,7 @@
 * **Priority:** P2
 * **Source:** CLAUDE.md
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0024-re-audit-revised-design/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

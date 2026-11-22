@@ -6,7 +6,7 @@
 * **Blocked by:** tickets 39, 44
 * **Source:** ADR 0038
 * **ADRs:** [0038](../docs/adr/0038-scan-log-and-opt-in-export.md), [0039](../docs/adr/0039-key-management.md)
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0040-scan-log-export-api/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

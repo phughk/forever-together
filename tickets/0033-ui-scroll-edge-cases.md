@@ -5,7 +5,7 @@
 * **Priority:** P2
 * **Source:** ADR 0029; ui audit follow-up
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0033-ui-scroll-edge-cases/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

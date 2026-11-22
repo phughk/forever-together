@@ -6,7 +6,7 @@
 * **Blocked by:** tickets 41, 44
 * **Source:** ADR 0038; ticket 0001
 * **ADRs:** [0038](../docs/adr/0038-scan-log-and-opt-in-export.md)
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0042-collect-region-and-realm-values/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

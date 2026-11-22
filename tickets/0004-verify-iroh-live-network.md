@@ -6,7 +6,7 @@
 * **Blocked by:** tickets 8
 * **Source:** ADR 0008, 0009, 0019; docs/spike-s0.md
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0004-verify-iroh-live-network/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

@@ -6,7 +6,7 @@
 * **Blocked by:** tickets 40
 * **Source:** ADR 0038, ADR 0029
 * **ADRs:** [0038](../docs/adr/0038-scan-log-and-opt-in-export.md)
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0041-scan-log-ui/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

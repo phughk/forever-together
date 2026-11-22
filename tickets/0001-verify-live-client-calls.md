@@ -6,7 +6,7 @@
 * **Blocked by:** tickets 42
 * **Source:** docs/spike-s0.md
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0001-verify-live-client-calls/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

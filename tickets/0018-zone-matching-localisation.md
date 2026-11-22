@@ -5,7 +5,7 @@
 * **Priority:** P2
 * **Source:** design doc Open Questions
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0018-zone-matching-localisation/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

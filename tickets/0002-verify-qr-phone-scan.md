@@ -5,7 +5,7 @@
 * **Priority:** P1
 * **Source:** docs/spike-s0.md; ADR 0014
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0002-verify-qr-phone-scan/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

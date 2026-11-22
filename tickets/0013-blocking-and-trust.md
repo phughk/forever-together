@@ -5,7 +5,7 @@
 * **Priority:** P3
 * **Source:** the tickets in `tickets/`; design doc Future Improvements
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0013-blocking-and-trust/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

@@ -6,7 +6,7 @@
 * **Blocked by:** tickets 8
 * **Source:** design doc Open Questions
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0010-trusted-peer-deployment-policy/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

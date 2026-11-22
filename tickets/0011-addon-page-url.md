@@ -5,7 +5,7 @@
 * **Priority:** P1
 * **Source:** ADR 0031; ui audit
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0011-addon-page-url/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

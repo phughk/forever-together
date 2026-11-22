@@ -5,7 +5,7 @@
 * **Priority:** P2
 * **Source:** the tickets in `tickets/`
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0034-empty-space-components/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

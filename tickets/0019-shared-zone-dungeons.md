@@ -5,7 +5,7 @@
 * **Priority:** P3
 * **Source:** design doc Open Questions; Alternative G2
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0019-shared-zone-dungeons/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

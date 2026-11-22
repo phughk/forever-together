@@ -5,7 +5,7 @@
 * **Priority:** P2
 * **Source:** ADR 0012; design doc Future Improvements
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0022-encrypted-lan-link/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

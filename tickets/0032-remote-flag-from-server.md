@@ -5,7 +5,7 @@
 * **Priority:** P2
 * **Source:** ADR 0032
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0032-remote-flag-from-server/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

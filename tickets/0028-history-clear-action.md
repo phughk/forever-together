@@ -5,7 +5,7 @@
 * **Priority:** P1
 * **Source:** ADR 0027; docs/design-process/archive brief (search diagnosis), resolution 13
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0028-history-clear-action/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

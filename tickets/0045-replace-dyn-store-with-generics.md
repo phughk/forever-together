@@ -5,7 +5,7 @@
 * **Priority:** P3
 * **Source:** author, 2026-11-21 (egm 0043)
 * **ADRs:** none
-* **EGM:** [0043-key-management](../docs/egm/0043-key-management/README.md)
+* **EGM:** [0043-key-management](../docs/egm/0043-key-management/README.md); [initial draft](../docs/egm/0045-replace-dyn-store-with-generics/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

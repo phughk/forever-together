@@ -5,7 +5,7 @@
 * **Priority:** P3
 * **Source:** design doc Future Improvements
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0020-professions-and-gear-in-code/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

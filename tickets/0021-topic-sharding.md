@@ -6,7 +6,7 @@
 * **Blocked by:** tickets 4, 5
 * **Source:** ADR 0005; design doc Future Improvements
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0021-topic-sharding/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 

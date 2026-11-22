@@ -6,7 +6,7 @@
 * **Blocked by:** tickets 8
 * **Source:** CLAUDE.md; ADR 0028
 * **ADRs:** none
-* **EGM:** none
+* **EGM:** [initial draft](../docs/egm/0035-web-app-only-mock-tested/design_draft.md) (2026-11-22, unreviewed)
 
 ## What
 
