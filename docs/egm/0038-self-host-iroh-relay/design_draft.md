@@ -103,6 +103,59 @@ flowchart LR
 *   **What the project builds.** Only the endpoint configuration above, a dependency, and tests. No server, no new protocol, no new message.
 *   **IPs become public.** Anyone who knows a peer's key can read its IP addresses from DNS or the DHT. Peer IDs travel in gossip to every swarm member (ADR 0016, ADR 0040), so any player can find the IP addresses of the peers in the swarms they join. This must be written down as a risk in [ADR 0034](../../adr/0034-system-overview-goals-and-risks.md) and a line added for players.
 
+## Decisions taken in this pass
+
+All six questions were answered by the author on 2026-11-23 (they are listed with their options at the end of this file):
+
+1.  Records publish direct IP addresses as well as the relay URL.
+2.  DNS and DHT address lookup both run on every node and every dial.
+3.  First contact with the trusted peers is by key only.
+4.  The DHT crate ships in every build.
+5.  The project's hole-punching relay is the `iroh-relay` server with a low per-client rate limit.
+6.  Clients reach it by a plain `http://` URL with an IP and port, held in a compiled-in list next to `BUILTIN`.
+
+Plus the earlier decisions: no UDP or other traffic relay of the project's own beyond what the rate limit allows; n0's relays and DNS stay; serving is opt-in and only under `--headless`.
+
+## Alternatives Considered
+
+*   **Keep the `N0` preset unchanged.** Rejected by author: the project wants direct dialing from published addresses and a fallback that does not depend on n0's DNS.
+*   **Run the project's own address lookup server (`iroh-dns-server`).** Rejected by author: no lookup or rendezvous server of the project's own; the DHT is the fallback instead.
+*   **A relay that carries traffic over UDP, built on iroh's `unstable-custom-transports`.** Rejected by author: the project does not carry traffic between nodes, and the transport API is marked unstable.
+*   **Relay with generous limits** (question 5B). Rejected by author: it would carry player traffic and cost the operator bandwidth.
+*   **A patched `iroh-relay` that drops a connection after a byte count** (5C). Rejected by author: a fork to maintain for exact enforcement.
+*   **Relay URL with TLS, by IP and a compiled-in root (6A) or by a name with Let's Encrypt (6B).** Rejected by author: plain HTTP avoids certificates and a domain.
+*   **DHT only when DNS fails (2B), or on headless nodes only (2C, 4B, 4C).** Rejected by author: one code path on every node, accepting the DHT's dependency and UDP traffic everywhere.
+*   **First contact by IP address (3B) or by hostname (3C).** Rejected by author: keys only in `BUILTIN`; the lookup supplies the address.
+*   **Publish only the relay URL (the default).** Rejected by author: direct dialing needs the addresses, and the author accepts that they are public.
+
+## Detailed Implementation
+
+Every file, with what changes and why. No code here.
+
+*   `app/Cargo.toml`: add `iroh-mainline-address-lookup` (0.6.x; compatible with the `iroh` 1.5.0 in `Cargo.lock`, unbuilt) and `iroh-relay` with the `server` feature. The `server` feature pulls in more crates (`tokio-rustls-acme`, `rcgen`, `clap`, `toml`, `tracing-subscriber` among them, from the crate's own manifest), so the build size and time grow; check with `cargo tree` and `cargo build` before settling.
+*   `app/src/net/iroh_net.rs`: in `IrohNet::start`, the `IrohConfig::Default` branch is built from `presets::Minimal` with a relay map made of n0's default relays plus the project's, an unfiltered `PkarrPublisher::n0_dns()`, `PkarrResolver::n0_dns()`, `DnsAddressLookup::n0_dns()` and an unfiltered `DhtAddressLookup`. `IrohConfig::Isolated` is unchanged (tests).
+*   `app/src/net/trusted.rs`: a compiled-in list of the project's relay URLs next to `BUILTIN` (initially trusted1's `http://89.40.6.71` with the port the relay binds; the port is a mechanical choice made with the server's flag below, and the list must match it).
+*   `app/src/net/relay_server.rs` (new): starts and stops an embedded `iroh_relay::server::Server` with `RelayConfig::new(bind)` (no TLS), `Limits.client_rx` set to the low rate (a constant here, the value to be set from the measurement below), `quic: None`, no metrics port. Returns a handle held for the life of the node.
+*   `app/src/net/mod.rs`: export the new module.
+*   `app/src/cli.rs`: a `--relay <addr:port>` option accepted only together with `--headless` (clap `requires`), so a window install cannot serve; an error text for the combination. Tests in the existing `cli` test module.
+*   `app/src/runtime.rs`: `run_headless` starts the relay server when `--relay` is given and keeps it alive until Ctrl-C; `build_network` passes nothing new (the relay list is a constant).
+*   `app/src/lib.rs`: pass the relay option from `Mode::Headless` to `run_headless`.
+*   `app/src/live_tests.rs`: extend the ignored live test with a relay-served run, and an ignored test that measures the rate limit (see the test plan).
+*   `docs/adr/0041-address-lookup-and-hole-punching-relay.md` (new) and `docs/adr/README.md`: the decisions above, as an ADR in the same change that builds them; cites 0009, 0023, 0034, 0040.
+*   `docs/adr/0034-system-overview-goals-and-risks.md`: risk rows for public IP addresses in DNS and the DHT, the relay's plain-HTTP metadata exposure, and the dependence on n0's relays and DNS (status: accepted with the DHT as fallback).
+*   `docs/adr/0023-no-supernodes.md`: a line pointing to 0041 (an ADR's text is not edited, only its status or a superseded-by note, per ADR 0036).
+*   `docs/spike-s0.md`: the rows on address lookup and hosted components get the 0004 results and the measurements below.
+*   `README.md` and `CLAUDE.md`: the `--relay` flag, the DHT, the architecture line for `net`. No operator instructions beyond the flag.
+*   `tickets/0038-self-host-iroh-relay.md` and `tickets/README.md`: status; new tickets for the measurements and for what stays open.
+
+## Test and verification plan
+
+*   **Unit and loopback (run in the normal suite).** An in-process `iroh-relay` server with the low rate limit and two endpoints with direct paths disabled (the `Isolated` config shape plus `RelayMode::Custom` with the test relay URL): the connection completes through the relay. A second test with a generous limit shows the same connection completing faster, so the limit is observable.
+*   **Rate measurement (ignored, on the real machines).** The value of the low limit is not chosen. Measure on trusted1: for a range of limits, whether two endpoints behind different NATs complete a connection and migrate to a direct path, and how long it takes; and the throughput a pair gets when it cannot punch through. The limit is the lowest rate at which connections complete within a stated time.
+*   **DHT latency (ignored).** Time to first contact with DNS only, DHT only (an endpoint built from `Minimal` plus the DHT) and both, to answer whether iroh waits on the DHT before DNS.
+*   **CLI.** `--relay` without `--headless` is rejected; with `--headless` it starts the server on the given address.
+*   **After the run.** Aggregate numbers in `docs/spike-s0.md`; no IP addresses of the author's machines other than the published trusted peer addresses.
+
 ## Open questions for the author
 
 Question 1 is answered above. Question 2 (DNS and DHT together) was asked and the author's reply was about hole punching (decision 6), so it is still open. Options below; none is ranked.
@@ -115,7 +168,7 @@ Question 1 is answered above. Question 2 (DNS and DHT together) was asked and th
     *   **A. By key only, through the lookup** (as today). Mechanism: `BUILTIN` stays 32-byte keys. Trade-off: no change to the data. Fails when both lookups are down; a new install has nothing to dial.
     *   **B. By IP address and key** (`89.40.6.71` for trusted1; trusted2's when it exists). Mechanism: `BUILTIN` entries gain an optional socket address; the first dial uses `EndpointAddr` with that IP, then the lookup if it fails. Trade-off: first contact works with the lookup down. Fails when the IP changes: old builds hold the old IP until a release, and the lookup by key is then the only route.
     *   **C. By address through a name the author controls** (a DNS name resolving to the trusted peer's address). Mechanism: `BUILTIN` holds a hostname. Trade-off: moving the server needs no release. Fails if the name lapses, and it adds the author's domain as a dependency.
-4.  **Where the DHT dependency ships.**
+4.  **Where the DHT dependency ships.** *Answered 2026-11-23: option A, in every build.*
     *   **A. In every build.** Mechanism: the crate is a normal dependency. Trade-off: simplest. Fails if the DHT client's background UDP traffic and dependency tree are unwelcome on players' machines (not measured).
     *   **B. Behind a Cargo feature, on in the release builds the author chooses.** Mechanism: `dht` feature gates the crate and the builder call. Trade-off: the author controls what ships. Fails by adding a build matrix: a build without the feature has no DHT fallback.
     *   **C. Only the headless build.** Mechanism: the crate is linked into the same binary but started only for `--headless`; equivalent to 2C in effect. Trade-off: same as 2C. Fails the same way.
