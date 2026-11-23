@@ -28,6 +28,10 @@ pub trait Transport: Network + Dialer {
     fn shared(&self) -> &Arc<Shared>;
     /// Tell every joined swarm about a freshly reached peer.
     async fn introduce(&mut self, peer: PeerId);
+    /// A topic this transport joined by itself and never leaves (the membership topic).
+    fn always_on(&self) -> Option<TopicId> {
+        None
+    }
 }
 
 impl Transport for super::IrohNet {
@@ -36,6 +40,9 @@ impl Transport for super::IrohNet {
     }
     async fn introduce(&mut self, peer: PeerId) {
         self.join_peer(peer).await
+    }
+    fn always_on(&self) -> Option<TopicId> {
+        Some(crate::dungeons::membership_topic())
     }
 }
 
@@ -117,7 +124,12 @@ impl<T: Transport> LiveNet<T> {
 
     /// One bootstrap run on the joined topics. Returns the peer it reached.
     pub async fn bootstrap_once(&mut self) -> Outcome {
-        let topics: Vec<TopicId> = self.topics.iter().copied().collect();
+        // The always-on topic goes first: a request names at most 3 topics.
+        let always = self.inner.always_on();
+        let topics: Vec<TopicId> = always
+            .into_iter()
+            .chain(self.topics.iter().copied().filter(|t| Some(*t) != always))
+            .collect();
         let shared = self.inner.shared().clone();
         let clk = Clock {
             now: Instant::now(),
@@ -148,7 +160,8 @@ impl<T: Transport> LiveNet<T> {
     }
 
     fn wants_bootstrap(&self) -> bool {
-        (self.headless || !self.topics.is_empty()) && self.inner.connected().is_empty()
+        (self.headless || self.inner.always_on().is_some() || !self.topics.is_empty())
+            && self.inner.connected().is_empty()
     }
 }
 

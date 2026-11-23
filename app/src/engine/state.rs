@@ -38,6 +38,11 @@ pub struct Profile {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
     Tick,
+    /// A peer joined the network (a `NewMember` message). The network layer acts on it; the
+    /// engine ignores it.
+    MemberJoined {
+        member: PeerId,
+    },
     AdReceived {
         topic: TopicId,
         ad: Ad,
@@ -526,6 +531,7 @@ impl Engine {
                     });
                 }
             }
+            Event::MemberJoined { .. } => {}
             Event::HeartbeatAckReceived {
                 from,
                 party_id: pid,

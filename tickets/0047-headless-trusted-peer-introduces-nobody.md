@@ -1,10 +1,10 @@
 # 0047. A headless trusted peer does not introduce players to each other
 
-* **Status:** open
+* **Status:** done (built 2026-11-23, ADR 0040; verified on one machine only)
 * **Kind:** bug
 * **Priority:** P0
 * **Source:** ticket 0004 live run, 2026-11-23 (`docs/spike-s0.md`, "Live network run")
-* **ADRs:** [ADR 0009](../docs/adr/0009-bootstrap-and-peer-exchange.md), [ADR 0023](../docs/adr/0023-no-supernodes.md)
+* **ADRs:** [ADR 0040](../docs/adr/0040-membership-topic.md), [ADR 0009](../docs/adr/0009-bootstrap-and-peer-exchange.md), [ADR 0023](../docs/adr/0023-no-supernodes.md)
 * **EGM:** none
 
 ## What

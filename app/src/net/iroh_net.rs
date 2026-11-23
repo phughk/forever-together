@@ -17,7 +17,7 @@ use super::bootstrap::Dialer;
 use super::exchange::{self, ALPN as EXCHANGE_ALPN, Entry, Shared, serve_stream, unix_now};
 use super::gossip::{open, seal};
 use super::known_peers::KnownPeers;
-use crate::dungeons::TopicId;
+use crate::dungeons::{TopicId, membership_topic};
 use crate::engine::{Event, Message, NetError, Network, event_from_message};
 use crate::identity::{Identity, PeerId, Signer};
 use bytes::Bytes;
@@ -144,6 +144,8 @@ pub struct IrohNet {
     events_tx: mpsc::Sender<Event>,
     events_rx: mpsc::Receiver<Event>,
     conns: HashMap<PeerId, Connection>,
+    member_window: Instant,
+    member_joins: u32,
 }
 
 impl IrohNet {
@@ -179,7 +181,7 @@ impl IrohNet {
             )
             .spawn();
         let (events_tx, events_rx) = mpsc::channel(EVENT_QUEUE);
-        Ok(Self {
+        let mut net = Self {
             me,
             signer: identity,
             endpoint,
@@ -190,7 +192,12 @@ impl IrohNet {
             events_tx,
             events_rx,
             conns: HashMap::new(),
-        })
+            member_window: Instant::now(),
+            member_joins: 0,
+        };
+        // Every node is in the membership swarm from the start, searching or not (ADR 0040).
+        net.join(membership_topic()).await?;
+        Ok(net)
     }
 
     pub fn peer_id(&self) -> PeerId {
@@ -260,12 +267,19 @@ impl IrohNet {
     }
 }
 
+/// New-member messages acted on per window; more are dropped (ADR 0040: a poster can name any
+/// key, so each one costs a dial, and the rate is capped).
+const MEMBER_JOINS_PER_WINDOW: u32 = 30;
+const MEMBER_WINDOW: Duration = Duration::from_secs(60);
+
 async fn pump(
     topic: TopicId,
     mut rx: iroh_gossip::GossipReceiver,
     tx: mpsc::Sender<Event>,
     me: PeerId,
     shared: Arc<Shared>,
+    sender: GossipSender,
+    signer: Arc<Identity>,
 ) {
     while let Some(ev) = rx.next().await {
         match ev {
@@ -280,12 +294,23 @@ async fn pump(
             },
             // A gossip neighbour is a live, authenticated peer: remember it for this topic.
             Ok(GossipEvent::NeighborUp(id)) => {
-                let _ =
-                    shared
-                        .known
-                        .lock()
-                        .unwrap()
-                        .mark_verified(peer_of(id), &[topic], unix_now());
+                let member = peer_of(id);
+                // On the membership topic, a neighbour never seen before is announced to the
+                // whole swarm (ADR 0040), so every member can introduce it to its own swarms.
+                let first_time = topic == membership_topic()
+                    && member != me
+                    && !shared.known.lock().unwrap().is_verified(&member);
+                let _ = shared
+                    .known
+                    .lock()
+                    .unwrap()
+                    .mark_verified(member, &[topic], unix_now());
+                if first_time {
+                    let msg = Message::NewMember { peer: me, member };
+                    if let Ok(bytes) = seal(&*signer, topic, None, &msg) {
+                        let _ = sender.broadcast(Bytes::from(bytes)).await;
+                    }
+                }
             }
             Ok(_) => {}
             Err(_) => break,
@@ -298,13 +323,14 @@ impl Network for IrohNet {
         if self.topics.contains_key(&topic) {
             return Ok(());
         }
-        let bootstrap: Vec<EndpointId> = self
-            .shared
-            .known
-            .lock()
-            .unwrap()
-            .remembered(&[topic])
+        // Peers known for this topic first, then members of the network (ADR 0040).
+        let (for_topic, members) = {
+            let k = self.shared.known.lock().unwrap();
+            (k.remembered(&[topic]), k.remembered(&[membership_topic()]))
+        };
+        let bootstrap: Vec<EndpointId> = for_topic
             .into_iter()
+            .chain(members)
             .take(BOOTSTRAP_PEERS)
             .filter_map(|p| endpoint_id(p).ok())
             .collect();
@@ -320,6 +346,8 @@ impl Network for IrohNet {
             self.events_tx.clone(),
             self.me,
             self.shared.clone(),
+            sender.clone(),
+            self.signer.clone(),
         ));
         self.topics.insert(topic, TopicHandle { sender, task });
         self.sync_topics();
@@ -351,7 +379,24 @@ impl Network for IrohNet {
     }
 
     async fn next_event(&mut self) -> Result<Event, NetError> {
-        self.events_rx.recv().await.ok_or(NetError::Closed)
+        loop {
+            let ev = self.events_rx.recv().await.ok_or(NetError::Closed)?;
+            if let Event::MemberJoined { member } = ev {
+                // A new member: hand it to every swarm we are in. If it searches the same
+                // dungeon topic it connects; if not, the join is ignored on its side.
+                let now = Instant::now();
+                if now.duration_since(self.member_window) >= MEMBER_WINDOW {
+                    self.member_window = now;
+                    self.member_joins = 0;
+                }
+                if member != self.me && self.member_joins < MEMBER_JOINS_PER_WINDOW {
+                    self.member_joins += 1;
+                    self.join_peer(member).await;
+                }
+                continue;
+            }
+            return Ok(ev);
+        }
     }
 
     async fn dial(&mut self, peer: PeerId) -> Result<(), NetError> {

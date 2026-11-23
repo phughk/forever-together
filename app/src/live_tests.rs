@@ -117,8 +117,8 @@ fn real_network_bootstrap_remembered_peers_exchange_and_gossip() {
     if std::env::var("LIVE_T_SEARCHES").is_ok() {
         search(&t, "Testt", Role::Damage);
     }
-    eprintln!("LIVE T up, waiting 20 s for its address to be published");
-    std::thread::sleep(Duration::from_secs(20));
+    eprintln!("LIVE T up, waiting 10 s for its address to be published");
+    std::thread::sleep(Duration::from_secs(10));
 
     // Step 1: a fresh A reaches T by key through n0.
     trust(&da, &t_key);
@@ -148,7 +148,7 @@ fn real_network_bootstrap_remembered_peers_exchange_and_gossip() {
     let mut n = 0;
     let s3 = wait(
         "step 3/4 A and B see each other",
-        Duration::from_secs(120),
+        Duration::from_secs(90),
         || {
             n += 1;
             let (sa, sb) = (state(&a), state(&b));
@@ -172,7 +172,7 @@ fn real_network_bootstrap_remembered_peers_exchange_and_gossip() {
 
     // Step 3b: T goes away; A and B must keep seeing each other.
     drop(t);
-    std::thread::sleep(Duration::from_secs(90));
+    std::thread::sleep(Duration::from_secs(30));
     let (pa, pb) = (state(&a).network.peers, state(&b).network.peers);
     eprintln!(
         "LIVE after T stopped: A peers {pa}, B peers {pb}, seen A {} B {}",

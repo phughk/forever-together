@@ -112,6 +112,7 @@ Messages are serialized with `postcard`. Every gossip message carries the author
 | `Taken` | `peer, counter` | the peer committed to a party. Others drop it from their samples. This is a core rule. |
 | `Invite` | `peer, epoch, ad` | direct. A leader (a tank) invites a peer to the party it is building. `ad` is the leader's own ad. |
 | `Accept` | `peer, epoch` | direct, to the leader. The invitee takes the best invitation it got for that epoch. |
+| `NewMember` | `peer, member` | only on the membership topic (`SHA-256("wowft/1/membership")`). `peer` is the poster, `member` a node it saw for the first time. Receivers hand `member` to their swarms as a bootstrap peer (ADR 0040). Last in the enum. |
 | `PartyAnnounce` | `peer, epoch, members[5], partyId` | direct, from the leader to the four members that accepted: the party is formed |
 | `Ready` | `peer, partyId, nonce, ad` | the peer's app is alive and has shown the Confirm prompt. `ad` is the sender's own ad, the source of its name and details for the other members. |
 | `Confirm` | `peer, partyId` | the human pressed Confirm |

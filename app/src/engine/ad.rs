@@ -98,6 +98,12 @@ pub enum Message {
         peer: PeerId,
         epoch: u64,
     },
+    /// Posted on the membership topic by a node that saw `member` for the first time (ADR 0040).
+    /// `peer` is the poster. Always last in the enum so earlier message numbers do not move.
+    NewMember {
+        peer: PeerId,
+        member: PeerId,
+    },
 }
 
 /// Pair compatibility at `stage` (the caller passes the stricter, that is the lower, of the two
@@ -200,6 +206,7 @@ pub fn event_from_message(topic: TopicId, msg: Message) -> super::state::Event {
             from: peer,
             party_id,
         },
+        Message::NewMember { member, .. } => Event::MemberJoined { member },
     }
 }
 

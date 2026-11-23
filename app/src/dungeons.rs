@@ -41,6 +41,13 @@ pub fn topic_id(region: u8, realm: &str, faction: Faction, slug: &str, shard: u3
     TopicId(Sha256::digest(s.as_bytes()).into())
 }
 
+/// The one topic every node joins, whatever it searches (ADR 0040): `SHA-256("wowft/1/membership")`.
+/// It carries only `NewMember` messages, so a node that searches nothing (a trusted peer) is
+/// still part of the network and introduces players to each other.
+pub fn membership_topic() -> TopicId {
+    TopicId(Sha256::digest(b"wowft/1/membership").into())
+}
+
 pub fn load_table() -> Vec<Dungeon> {
     serde_json::from_str(TABLE_JSON).expect("data/dungeons.json is valid")
 }
