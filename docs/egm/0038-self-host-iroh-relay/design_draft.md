@@ -1,7 +1,7 @@
-# Direct peer-to-peer connections with n0 relays as fallback only
+# Address lookup: n0's public service plus a DHT fallback; no relay or rendezvous service of ours
 
 *   **Author:** Hugh Kaznowski
-*   **Status:** Rewritten 2026-11-23 after the author's decisions below. Sections drafted: Overview, Problem, Goals, Non-Goals, open questions. Technical plan, alternatives and implementation not yet drafted. The first version of this file (keep or replace n0's services) and the second (relays built into the product) are in git history.
+*   **Status:** Rewritten 2026-11-23 after the author's decisions below, the last one made after reading the iroh DNS and DHT pages (saved locally by the author). Sections drafted: Overview, Problem, Goals, Non-Goals, open questions. Technical plan, alternatives and implementation not yet drafted. The first version of this file (keep or replace n0's services) and the second (relays built into the product) are in git history.
 *   **Date:** 2026-11-23
 *   **Ticket:** [ticket 0038](../../../tickets/0038-self-host-iroh-relay.md). Related: [ticket 0004](../../../tickets/0004-verify-iroh-live-network.md), [ticket 0010](../../../tickets/0010-trusted-peer-deployment-policy.md), [ticket 0021](../../../tickets/0021-topic-sharding.md).
 *   **Related decisions:** [ADR 0008](../../adr/0008-iroh-and-local-storage.md), [ADR 0009](../../adr/0009-bootstrap-and-peer-exchange.md), [ADR 0023](../../adr/0023-no-supernodes.md), [ADR 0034](../../adr/0034-system-overview-goals-and-risks.md), [ADR 0040](../../adr/0040-membership-topic.md). Where this document and an ADR disagree, the ADR wins.
@@ -19,9 +19,22 @@ n0's price list (saved by the author as a local file outside the repository) cha
 1.  **The project does not carry traffic between nodes.** Nodes must have direct peer-to-peer UDP connections. No node of ours, trusted or not, forwards other peers' packets.
 2.  **n0's relays stay as they are, as a fallback, and the project does no work on relaying.** Peers that cannot connect directly (symmetric NAT, carrier-grade NAT, strict firewalls) solve their own networking problems, for example by forwarding a port. The author does not want to spend effort on carrying TCP or other relayed traffic.
 3.  **Anything the project adds is run by a headless node that is explicitly set to do it.** Window installs never serve other peers. The two trusted peers will get IP addresses of their own; trusted1 is `89.40.6.71` for now.
-4.  **The author's model of how direct connections would work:** a server captures the remote address of every node that connects to it, and gives that address to whoever asks; the asker then sends UDP to that address directly and gets answers directly.
+4.  **No relay service and no rendezvous service of the project's own.** (Decided after reading the iroh DNS and DHT docs.) The public address lookup services are used, and DHT address lookup is added as a fallback.
+5.  **The author's earlier model of how direct connections would work:** a server captures the remote address of every node that connects to it, and gives that address to whoever asks; the asker then sends UDP to that address directly and gets answers directly.
+
+### What the iroh DNS and DHT pages say
+
+From [DNS address lookup](https://docs.iroh.computer/connecting/dns-address-lookup) and [DHT address lookup](https://docs.iroh.computer/connecting/dht) (the author's saved copies), plus the source of `iroh-mainline-address-lookup` 0.6.1 read from the cargo registry:
+
+*   **DNS (default in the `N0` preset).** An endpoint publishes a signed record mapping its key to its home relay URL, over HTTP to a Pkarr server (`dns.iroh.link` by default); others resolve it by DNS or HTTP. n0's public servers are "free to use", "configured by default", and n0 says it is fine to run production systems on them if performance is acceptable. They rate-limit traffic and have no guaranteed uptime. n0 sells hosted DNS for capacity or SLAs, and `iroh-dns-server` can be self-hosted.
+*   **DHT (not default).** The same signed records are stored on the BitTorrent Mainline DHT instead. No hosted server, any endpoint can publish and resolve, lookups are slower than DNS. It is a separate crate, `iroh-mainline-address-lookup`, and can run next to DNS (`Endpoint::builder(presets::N0).address_lookup(DhtAddressLookup::builder())`) or alone from `presets::Minimal`. The page shows version `0.4`; the registry has `0.6.1`, which depends on `iroh` 1.0 or newer, so it should work with the `iroh` 1.5.0 in `app/Cargo.lock`. Not built or run here.
+*   **The record holds the home relay URL, not IP addresses, by default.** DNS says the publisher "publishes only the home relay URL, not direct IP addresses" unless an `AddrFilter` is set; `DhtAddressLookup` defaults to `AddrFilter::relay_only()` "to avoid leaking IP addresses". With the defaults, a node that resolves a key learns which relay to contact, and the connection then starts on that relay and is upgraded to a direct path by hole punching. So with default settings, both lookups lead through n0's relays. `AddrFilter::unfiltered()` publishes direct IP addresses as well; those records are public, so anyone who knows a peer ID could read the player's IP address from DNS or the DHT.
 
 ### Is n0's address lookup free?
+
+Free to use, by the DNS page: no price, rate-limited, no uptime guarantee, and no published numbers. The price page lists relays and metrics only, so the earlier reading that the price list was silent on lookup was correct, and the DNS page fills the gap. A change in n0's terms would reach every install, because the preset is compiled in; the DHT fallback is what keeps first contact working if it did.
+
+### How that model compares with what `iroh-relay` does
 
 Not stated anywhere I could find. [n0's pricing page](https://www.iroh.computer/pricing) (the local copy the author saved) lists relays and metrics only. [The iroh docs on DNS address lookup](https://docs.iroh.computer/connecting/dns-address-lookup) say the N0 preset publishes to and resolves from the n0-hosted `dns.iroh.link`, and that if more capacity or uptime guarantees are needed one can run `iroh-dns-server` or contact n0 about hosted DNS. No rate limits, capacity or uptime numbers for the public service were found, and no price. So today it is free to use with no published limits and no guarantee. A change of terms would reach every install, because the preset is compiled in. The same docs describe self-hosting: build the endpoint from `presets::Minimal` and configure a pkarr publisher and resolver against your own `iroh-dns-server`. That server needs a public IP and DNS delegation for its zone (from the same docs; not verified here).
 
@@ -59,9 +72,9 @@ Checked against `iroh-relay` 1.5.0 source. Not run.
 
 ## Open questions raised so far
 
-Decided in later sections of the draft, one at a time. Answered so far: n0's relays stay as they are and the project does no relaying work; our nodes do not carry traffic; serving any new role is opt-in on headless nodes.
+Decided in later sections of the draft, one at a time. Answered so far: no relay or rendezvous service of ours; n0's public DNS lookup stays; DHT lookup is added as a fallback; n0's relays stay as they are with no project work on relaying; serving any new role would be opt-in on headless nodes (nothing is now planned to serve).
 
-1.  **Does the project run its own introduction service at all?** That is, an address lookup plus a channel to tell a node who is about to contact it, so that direct connections no longer depend on n0's relay for coordination. Or does coordination stay with n0 and the project only adds addresses to peer exchange?
-2.  **How clients learn addresses and which servers they trust**, now that anyone can run a headless node.
-3.  **What first contact with a trusted peer looks like** when its IP address is known: dial the address directly (no lookup needed for it), or still by key.
-4.  **Whether to keep n0's address lookup service** alongside any lookup of our own, or only as the fallback.
+1.  **What the records contain.** Keep the default (home relay URL only; connections start on a relay), or publish direct IP addresses too (`AddrFilter::unfiltered()`), which makes direct dialing possible without a relay but makes each player's IP address readable from DNS and the DHT by anyone with the peer ID.
+2.  **How DNS and DHT run together.** Both lookups on every node and every dial, or DHT only for peers that DNS cannot resolve, or DHT published by headless nodes only. Whether iroh asks several lookups at once or one after another is not verified.
+3.  **First contact with the trusted peers.** Dial `89.40.6.71` directly, through the lookup by key, or both. `BUILTIN` holds keys only today; an address would be a new field.
+4.  **Cost of the DHT crate.** It adds a dependency tree (`n0-mainline` and its UDP DHT client) and background UDP traffic from every install. Whether that is acceptable for window installs, or only for headless nodes, is open.
