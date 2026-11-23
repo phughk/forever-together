@@ -1,6 +1,6 @@
 # 0023. Avoid supernodes: trusted peers are ordinary peers
 
-* **Status:** Accepted
+* **Status:** Accepted. Extended by [0041](0041-address-lookup-and-hole-punching-relay.md) (headless relay nodes)
 * **Date:** 2026-11-21
 * **Deciders:** Hugh Kaznowski
 
