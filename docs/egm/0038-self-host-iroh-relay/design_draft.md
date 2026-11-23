@@ -17,9 +17,13 @@ n0's price list (saved by the author as a local file outside the repository) cha
 **The author's decisions (2026-11-23):**
 
 1.  **The project does not carry traffic between nodes.** Nodes must have direct peer-to-peer UDP connections. No node of ours, trusted or not, forwards other peers' packets.
-2.  **n0's relays stay as a fallback.** They remain available for peers that cannot connect directly.
+2.  **n0's relays stay as they are, as a fallback, and the project does no work on relaying.** Peers that cannot connect directly (symmetric NAT, carrier-grade NAT, strict firewalls) solve their own networking problems, for example by forwarding a port. The author does not want to spend effort on carrying TCP or other relayed traffic.
 3.  **Anything the project adds is run by a headless node that is explicitly set to do it.** Window installs never serve other peers. The two trusted peers will get IP addresses of their own; trusted1 is `89.40.6.71` for now.
-4.  **The author's model of how this would work:** a server captures the remote address of every node that connects to it, and gives that address to whoever asks; the asker then sends UDP to that address directly and gets answers directly.
+4.  **The author's model of how direct connections would work:** a server captures the remote address of every node that connects to it, and gives that address to whoever asks; the asker then sends UDP to that address directly and gets answers directly.
+
+### Is n0's address lookup free?
+
+Not stated anywhere I could find. [n0's pricing page](https://www.iroh.computer/pricing) (the local copy the author saved) lists relays and metrics only. [The iroh docs on DNS address lookup](https://docs.iroh.computer/connecting/dns-address-lookup) say the N0 preset publishes to and resolves from the n0-hosted `dns.iroh.link`, and that if more capacity or uptime guarantees are needed one can run `iroh-dns-server` or contact n0 about hosted DNS. No rate limits, capacity or uptime numbers for the public service were found, and no price. So today it is free to use with no published limits and no guarantee. A change of terms would reach every install, because the preset is compiled in. The same docs describe self-hosting: build the endpoint from `presets::Minimal` and configure a pkarr publisher and resolver against your own `iroh-dns-server`. That server needs a public IP and DNS delegation for its zone (from the same docs; not verified here).
 
 ### How that model compares with what `iroh-relay` does
 
@@ -41,7 +45,7 @@ Checked against `iroh-relay` 1.5.0 source. Not run.
 ## Goals
 
 *   Peers connect directly over UDP whenever the network allows it, and no node of ours carries other peers' traffic.
-*   A peer that cannot connect directly can still connect through n0's relays.
+*   Peers that cannot connect directly are not the project's problem to solve. n0's relays stay in the default configuration; the project neither builds relaying nor promises it works.
 *   The two trusted peers, once they have their own IP addresses, are reachable at known addresses by new installs.
 *   A headless node can be started in a role that serves the project's own address or introduction service, only when it is explicitly set to; window installs cannot.
 *   The ADRs say that n0's relays and, if kept, its address lookup are accepted dependencies, with the evidence for it ([ADR 0023](../../adr/0023-no-supernodes.md) amended or cited).
@@ -50,12 +54,12 @@ Checked against `iroh-relay` 1.5.0 source. Not run.
 
 *   Replacing iroh, or writing a relay protocol of our own. Decision 1 rules out a UDP relay of ours.
 *   Hiding peers' IP addresses from each other or from a rendezvous server.
-*   Making peers behind symmetric NATs or carrier-grade NAT connect directly. They go through n0's relays, or fail if those are unavailable.
+*   Making peers behind symmetric NATs or carrier-grade NAT connect. They use n0's relays if those work, or fix their own network.
 *   Running the live tests of ticket 0004 (they remain the evidence source).
 
 ## Open questions raised so far
 
-Decided in later sections of the draft, one at a time. Answered so far: n0 stays as a fallback; our nodes do not carry traffic; serving is opt-in on headless nodes.
+Decided in later sections of the draft, one at a time. Answered so far: n0's relays stay as they are and the project does no relaying work; our nodes do not carry traffic; serving any new role is opt-in on headless nodes.
 
 1.  **Does the project run its own introduction service at all?** That is, an address lookup plus a channel to tell a node who is about to contact it, so that direct connections no longer depend on n0's relay for coordination. Or does coordination stay with n0 and the project only adds addresses to peer exchange?
 2.  **How clients learn addresses and which servers they trust**, now that anyone can run a headless node.
