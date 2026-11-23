@@ -164,7 +164,12 @@ pub fn run_key_command<O: Write, E: Write>(
     match cmd {
         KeyCommand::Show => {
             let info = keys::show(&store).map_err(key_error)?;
-            writeln!(out, "{}\n{}", info.peer_id, info.openssh_public)?;
+            // One JSON object on one line: {"peer_id": hex, "public_key": OpenSSH line}.
+            let json = serde_json::json!({
+                "peer_id": info.peer_id.to_string(),
+                "public_key": info.openssh_public,
+            });
+            writeln!(out, "{json}")?;
         }
         KeyCommand::Export(ExportArgs { stdout: true, .. }) => {
             let (peer, text) = keys::export_text(&store).map_err(key_error)?;

@@ -19,8 +19,15 @@ fn key(d: &std::path::Path, cmd: KeyCommand, confirm: bool) -> Result<(String, S
     ))
 }
 
+fn show_json(show_output: &str) -> serde_json::Value {
+    serde_json::from_str(show_output).unwrap()
+}
+
 fn peer_of(show_output: &str) -> String {
-    show_output.lines().next().unwrap().to_owned()
+    show_json(show_output)["peer_id"]
+        .as_str()
+        .unwrap()
+        .to_owned()
 }
 
 #[test]
@@ -29,12 +36,18 @@ fn key_show_creates_a_key_once_and_prints_the_peer_id_then_the_public_line() {
     let (a, _) = key(&d, KeyCommand::Show, false).unwrap();
     let (b, _) = key(&d, KeyCommand::Show, false).unwrap();
     assert_eq!(a, b);
-    let mut lines = a.lines();
-    let peer = lines.next().unwrap();
+    assert_eq!(a.lines().count(), 1, "one line of JSON");
+    let v = show_json(&a);
+    assert_eq!(v.as_object().unwrap().len(), 2);
+    let peer = v["peer_id"].as_str().unwrap();
     assert_eq!(peer.len(), 64);
     assert!(PeerId::from_hex(peer).is_some());
-    assert!(lines.next().unwrap().starts_with("ssh-ed25519 AAAA"));
-    assert!(lines.next().is_none());
+    assert!(
+        v["public_key"]
+            .as_str()
+            .unwrap()
+            .starts_with("ssh-ed25519 AAAA")
+    );
     let other = temp("show2");
     assert_ne!(a, key(&other, KeyCommand::Show, false).unwrap().0);
     let _ = std::fs::remove_dir_all(d);

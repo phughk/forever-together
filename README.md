@@ -76,7 +76,7 @@ Trusted peers (the last-resort way in for a new install): run an always-on copy 
 
 Every install has one permanent ed25519 key. Its public half is the peer ID. Headless is the same program, so a node creates a key at first start and takes the same `key` commands (ADR 0039).
 
-- `key show` prints the peer ID (hex, the form used in `BUILTIN` and `trusted_peers`) and the OpenSSH public key line. `key show` and `key export` create a key if there is none.
+- `key show` prints one line of JSON: `{"peer_id": <hex, the form used in `BUILTIN` and `trusted_peers`>, "public_key": <OpenSSH public key line>}`. Read a field with `jq -r .peer_id`. `key show` and `key export` create a key if there is none.
 - `key export <file>` writes the key as an unencrypted OpenSSH ed25519 key file: a new file, owner-only, never overwriting. `key export --stdout` prints it instead (a shell redirect creates the file with your umask, so `chmod 600` it). The file works with `ssh-keygen -y -f <file>` and `age -d -i <file>`.
 - `key import <file>` replaces the stored key. It refuses if a key is already stored, unless you pass `--force`. A key created by an earlier `key show` counts, so import into a fresh data directory before anything else, or use `--force`.
 - `key reset` makes a new key after a confirmation prompt (`--yes` skips it) and prints only `old: <peer ID or none>` and `new: <peer ID>`. Other nodes see a new peer ID. A trusted peer's entry in `BUILTIN` then needs a new release.
