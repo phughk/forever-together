@@ -136,7 +136,7 @@ fn show_old(old: &OldKey) -> String {
     }
 }
 
-const CHANGED_WARNING: &str = "Other nodes now see a new peer ID. If this is a trusted peer, its entry in net::trusted::BUILTIN needs a new release.";
+const CHANGED_WARNING: &str = "Other nodes now see a new peer ID.";
 
 /// The `key` subcommands (ADR 0039). Takes the data directory lock first, so it refuses while the
 /// app (or another `key` command) uses the directory. Output goes to `out` (data) and `err`

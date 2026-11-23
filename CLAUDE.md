@@ -86,7 +86,7 @@ Three parts in one repo (ADR 0020):
 
 The headless WoW Lua test VM lives in the `wow-forever-addons` repo (`/Users/hughkaznowski/Projects/gitlloop/wow-forever-addons`) and is a git submodule at `vendor/wow-forever-addons` (0021). The code spec and test vectors live once under `docs/` (`rdf-code-spec.md`, `rdf-code-vectors.json`) and are read by both the Lua and Rust tests.
 
-**Running two instances on one machine:** give each its own `--data-dir`; ports are random. **Adding a trusted peer:** run an always-on copy with `--headless`, print its key with `key show` (stop the node first: the data directory is locked), then add it to `net::trusted::BUILTIN` (ships with the app) or to `trusted_peers` in settings (loopback only).
+**Running two instances on one machine:** give each its own `--data-dir`; ports are random.
 
 ### Domain rules that shape the design
 

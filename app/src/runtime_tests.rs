@@ -119,7 +119,7 @@ fn a_key_made_by_show_needs_force_before_import_replaces_it() {
     assert_eq!(peer_of(&key(&d, KeyCommand::Show, false).unwrap().0), first);
     let (out, err) = key(&d, import(true), false).unwrap();
     assert!(out.contains(&first));
-    assert!(err.contains("BUILTIN"));
+    assert!(err.contains("new peer ID"));
     assert_ne!(peer_of(&key(&d, KeyCommand::Show, false).unwrap().0), first);
     let _ = std::fs::remove_file(file);
     let _ = std::fs::remove_dir_all(d);
