@@ -107,7 +107,7 @@ flowchart LR
 
 Question 1 is answered above. Question 2 (DNS and DHT together) was asked and the author's reply was about hole punching (decision 6), so it is still open. Options below; none is ranked.
 
-2.  **How DNS and DHT run together.**
+2.  **How DNS and DHT run together.** *Answered 2026-11-23: option A, both on every node and every dial.* Still to measure: whether iroh waits on the DHT before using DNS's answer.
     *   **A. Both on every node, every dial.** Mechanism: both lookups are added to every endpoint; iroh resolves with whichever answers (whether it queries them at once or in turn is not verified). Trade-off: one code path, no condition to test. Fails when DHT lookups are slow and iroh waits for them before using DNS's answer, which would slow first contact for everyone (to be measured).
     *   **B. DHT only for dials DNS cannot resolve.** Mechanism: the endpoint is built with DNS only; the app adds DHT as a second attempt when a dial by key fails. Trade-off: normal dials are exactly as fast as now. Fails by needing application code around dials (the app currently dials in `IrohNet::dial_peer` and the gossip join path), and a node whose record exists only on the DHT is invisible to the gossip join, which never goes through `dial_peer`.
     *   **C. Both on headless nodes only; window installs use DNS only.** Mechanism: a setting or mode switches the DHT on for `--headless`. Trade-off: window installs avoid the DHT dependency's UDP traffic, and the trusted peers are on the DHT. Fails when n0's DNS is down: window installs cannot resolve anything, and the trusted peers are still unreachable by key for them.
