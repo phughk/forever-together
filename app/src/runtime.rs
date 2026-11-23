@@ -203,10 +203,8 @@ pub fn run_key_command<O: Write, E: Write>(
                 }
             }
             let r = keys::reset(&store).map_err(key_error)?;
-            writeln!(out, "new key; peer {} -> {}", show_old(&r.old), r.new)?;
-            if r.old != OldKey::None {
-                writeln!(err, "{CHANGED_WARNING}")?;
-            }
+            // Only `KEY: VALUE` lines, no sentences, so scripts can read it.
+            writeln!(out, "old: {}\nnew: {}", show_old(&r.old), r.new)?;
         }
     }
     Ok(())

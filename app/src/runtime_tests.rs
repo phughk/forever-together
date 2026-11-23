@@ -144,8 +144,14 @@ fn reset_asks_first_and_only_a_yes_changes_the_key() {
     let second = peer_of(&key(&d, KeyCommand::Show, false).unwrap().0);
     assert_ne!(second, first);
     let (out, err) = key(&d, KeyCommand::Reset { yes: true }, false).unwrap();
-    assert!(out.contains(&second));
-    assert!(err.contains("new peer ID"));
+    assert_eq!(
+        out,
+        format!(
+            "old: {second}\nnew: {}\n",
+            peer_of(&key(&d, KeyCommand::Show, false).unwrap().0)
+        )
+    );
+    assert!(err.is_empty(), "{err}");
     let _ = std::fs::remove_dir_all(d);
 }
 
@@ -153,7 +159,7 @@ fn reset_asks_first_and_only_a_yes_changes_the_key() {
 fn reset_on_an_empty_directory_needs_no_confirmation() {
     let d = temp("reset-empty");
     let (out, err) = key(&d, KeyCommand::Reset { yes: false }, false).unwrap();
-    assert!(out.contains("none ->"));
+    assert!(out.starts_with("old: none\nnew: "));
     assert!(err.is_empty());
     let _ = std::fs::remove_dir_all(d);
 }
