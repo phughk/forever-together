@@ -108,10 +108,7 @@ The run itself builds nothing. Code and doc changes tied to it:
 
 ## Open questions for the author
 
-1.  **How should the run observe T and the nodes?**
-    *   **Install a `tracing` subscriber in the app, controlled by `RUST_LOG`.** Mechanism: a small change in `app/src/main.rs` plus one dependency; logs go to stderr. Trade-off: T becomes observable and later live tickets (0005) benefit. Fails when logs expose peer IDs or addresses to a player's terminal by default, which needs a default filter that stays quiet.
-    *   **A temporary local patch that prints, not merged.** Mechanism: the same change on a throwaway branch. Trade-off: no permanent product change. Fails when the run is repeated later (0005, regression after an iroh upgrade) and the patch is gone.
-    *   **Use only `/api/state` and the OS monitor.** Mechanism: no code change; T gets no observation at all, so T's side is inferred from A and B. Trade-off: nothing to build. Fails for step 1 when T never answers: nothing shows why.
+1.  **How should the run observe T and the nodes?** Answered by the author on 2026-11-23: install a `tracing` subscriber controlled by `RUST_LOG`, quiet by default (warnings only). Built in `app/src/lib.rs` (`init_logging`, not run for `key` commands) with `tracing-subscriber` in `app/Cargo.toml`. The author also said iroh itself does not need testing ("we know it does"); the scope of the run is open question 4.
 2.  **Where does the trusted node T run?**
     *   **A cloud VM with a public IP.** Mechanism: the headless binary on a VM, key restored with `key import`. Trade-off: a stable test target that is also the production shape. Fails if the VM's provider blocks UDP or the run is judged by the author as hosting something (ADR 0034 says nothing is hosted; a trusted peer is an ordinary peer run by the author).
     *   **A machine at home behind NAT.** Mechanism: T behind the same kind of NAT as players. Trade-off: tests the harder path. Fails when T is not reachable even over relays, which then blames the home router rather than the design.
@@ -119,3 +116,4 @@ The run itself builds nothing. Code and doc changes tied to it:
 3.  **What are the numeric pass thresholds for first contact?**
     *   **Fixed from the design: reached within the first 30 s backoff step, steady connection afterwards.** Mechanism: pass or fail against numbers already in ADR 0035. Trade-off: clear. Fails by judging an acceptable but slower DNS publish as a failure.
     *   **Measure first, then set thresholds from the data and record them as ADR 0035 constants.** Mechanism: no gate in this run. Trade-off: avoids guessing. Fails by leaving the verification with no pass criterion until a second run.
+4.  **Scope after the author's remark that iroh works.** Which of steps 1 to 6 still belong in this ticket? Options to decide between (not ranked): keep all steps; keep only what is specific to this app (bootstrap order, peer exchange, trusted fallback, steps 2 and 3); or drop the run and close the ticket on the author's say-so, recording the unverified rows in `docs/spike-s0.md` as accepted.

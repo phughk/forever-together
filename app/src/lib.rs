@@ -40,10 +40,26 @@ fn fail(msg: impl std::fmt::Display) -> ! {
     std::process::exit(1)
 }
 
+/// Send `tracing` output to stderr. `RUST_LOG` picks the filter (for example
+/// `RUST_LOG=app_lib=debug,iroh=info`); without it only warnings and errors show, so a
+/// player's terminal stays quiet. Safe to call twice (the second call is ignored).
+fn init_logging() {
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn"));
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_writer(std::io::stderr)
+        .try_init();
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let cli = Cli::parse();
     let data_dir = cli.resolve_data_dir();
+    // Key commands print results on stdout and stderr and never log.
+    if !matches!(cli.mode(), Mode::Key(_)) {
+        init_logging();
+    }
     match cli.mode() {
         Mode::Key(cmd) => {
             let confirm = |question: &str| {
