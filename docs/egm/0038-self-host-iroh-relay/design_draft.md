@@ -70,11 +70,41 @@ Checked against `iroh-relay` 1.5.0 source. Not run.
 *   Making peers behind symmetric NATs or carrier-grade NAT connect. They use n0's relays if those work, or fix their own network.
 *   Running the live tests of ticket 0004 (they remain the evidence source).
 
-## Open questions raised so far
+## Technical Plan
 
-Decided in later sections of the draft, one at a time. Answered so far: no relay or rendezvous service of ours; n0's public DNS lookup stays; DHT lookup is added as a fallback; n0's relays stay as they are with no project work on relaying; serving any new role would be opt-in on headless nodes (nothing is now planned to serve).
+**Decided 2026-11-23:** records are published with direct IP addresses as well as the relay URL (open question 1, answered by the author: public addresses may be read from DNS and the DHT, allowing direct dialing).
 
-1.  **What the records contain.** Keep the default (home relay URL only; connections start on a relay), or publish direct IP addresses too (`AddrFilter::unfiltered()`), which makes direct dialing possible without a relay but makes each player's IP address readable from DNS and the DHT by anyone with the peer ID.
-2.  **How DNS and DHT run together.** Both lookups on every node and every dial, or DHT only for peers that DNS cannot resolve, or DHT published by headless nodes only. Whether iroh asks several lookups at once or one after another is not verified.
-3.  **First contact with the trusted peers.** Dial `89.40.6.71` directly, through the lookup by key, or both. `BUILTIN` holds keys only today; an address would be a new field.
-4.  **Cost of the DHT crate.** It adds a dependency tree (`n0-mainline` and its UDP DHT client) and background UDP traffic from every install. Whether that is acceptable for window installs, or only for headless nodes, is open.
+What the endpoint looks like after the change, in `IrohNet::start` (`app/src/net/iroh_net.rs`), `IrohConfig::Default` branch:
+
+```mermaid
+flowchart LR
+    E[Endpoint] -- publish key to relay URL and IP addresses --> DNS[(n0 DNS / Pkarr)]
+    E -- publish same record --> DHT[(BitTorrent Mainline DHT)]
+    D[Dialer, knows only a key] -- resolve --> DNS
+    D -- resolve --> DHT
+    D -- UDP to a published IP --> E
+    D -. relay URL, if no direct path works .-> R[n0 relay]
+    R -.-> E
+```
+
+*   Today the branch is `Endpoint::builder(presets::N0)`. That preset publishes a record with `AddrFilter` relay-only and resolves through n0's DNS. After the change the branch is built from `presets::Minimal` with `RelayMode::Default` (n0's relays, unchanged), a `PkarrPublisher::n0_dns()` with `.addr_filter(AddrFilter::unfiltered())`, the same `PkarrResolver::n0_dns()` and `DnsAddressLookup::n0_dns()` the preset adds, and a `DhtAddressLookup` (crate `iroh-mainline-address-lookup`) with the same unfiltered setting. Adding the unfiltered publisher on top of `presets::N0` would leave two publishers writing the same key, so the preset is not used. (API names read from `iroh` 1.5.0 `src/endpoint/presets.rs` and `src/address_lookup/pkarr.rs`; not built.)
+*   **Who gains.** A direct UDP dial can succeed without a relay when the target has an address that accepts unsolicited packets: the trusted peers once they have their own IP addresses, peers with a public IPv6 address, and peers whose router maps a port (iroh's `portmapper` feature is on by default). A peer behind a router that drops unsolicited packets is still reached through hole punching, which needs the relay to coordinate. Publishing its IPs does not change that.
+*   **What the project builds.** Only the endpoint configuration above, a dependency, and tests. No server, no new protocol, no new message.
+*   **IPs become public.** Anyone who knows a peer's key can read its IP addresses from DNS or the DHT. Peer IDs travel in gossip to every swarm member (ADR 0016, ADR 0040), so any player can find the IP addresses of the peers in the swarms they join. This must be written down as a risk in [ADR 0034](../../adr/0034-system-overview-goals-and-risks.md) and a line added for players.
+
+## Open questions for the author
+
+Question 1 is answered above. Options for the rest are below; none is ranked.
+
+2.  **How DNS and DHT run together.**
+    *   **A. Both on every node, every dial.** Mechanism: both lookups are added to every endpoint; iroh resolves with whichever answers (whether it queries them at once or in turn is not verified). Trade-off: one code path, no condition to test. Fails when DHT lookups are slow and iroh waits for them before using DNS's answer, which would slow first contact for everyone (to be measured).
+    *   **B. DHT only for dials DNS cannot resolve.** Mechanism: the endpoint is built with DNS only; the app adds DHT as a second attempt when a dial by key fails. Trade-off: normal dials are exactly as fast as now. Fails by needing application code around dials (the app currently dials in `IrohNet::dial_peer` and the gossip join path), and a node whose record exists only on the DHT is invisible to the gossip join, which never goes through `dial_peer`.
+    *   **C. Both on headless nodes only; window installs use DNS only.** Mechanism: a setting or mode switches the DHT on for `--headless`. Trade-off: window installs avoid the DHT dependency's UDP traffic, and the trusted peers are on the DHT. Fails when n0's DNS is down: window installs cannot resolve anything, and the trusted peers are still unreachable by key for them.
+3.  **First contact with the trusted peers.**
+    *   **A. By key only, through the lookup** (as today). Mechanism: `BUILTIN` stays 32-byte keys. Trade-off: no change to the data. Fails when both lookups are down; a new install has nothing to dial.
+    *   **B. By IP address and key** (`89.40.6.71` for trusted1; trusted2's when it exists). Mechanism: `BUILTIN` entries gain an optional socket address; the first dial uses `EndpointAddr` with that IP, then the lookup if it fails. Trade-off: first contact works with the lookup down. Fails when the IP changes: old builds hold the old IP until a release, and the lookup by key is then the only route.
+    *   **C. By address through a name the author controls** (a DNS name resolving to the trusted peer's address). Mechanism: `BUILTIN` holds a hostname. Trade-off: moving the server needs no release. Fails if the name lapses, and it adds the author's domain as a dependency.
+4.  **Where the DHT dependency ships.**
+    *   **A. In every build.** Mechanism: the crate is a normal dependency. Trade-off: simplest. Fails if the DHT client's background UDP traffic and dependency tree are unwelcome on players' machines (not measured).
+    *   **B. Behind a Cargo feature, on in the release builds the author chooses.** Mechanism: `dht` feature gates the crate and the builder call. Trade-off: the author controls what ships. Fails by adding a build matrix: a build without the feature has no DHT fallback.
+    *   **C. Only the headless build.** Mechanism: the crate is linked into the same binary but started only for `--headless`; equivalent to 2C in effect. Trade-off: same as 2C. Fails the same way.
