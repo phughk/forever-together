@@ -1,7 +1,7 @@
-# Relays built into the product
+# Direct peer-to-peer connections with n0 relays as fallback only
 
 *   **Author:** Hugh Kaznowski
-*   **Status:** Rewritten 2026-11-23 after the author's decision to build relays into the product. Sections so far: Overview, Problem, Goals, Non-Goals. Technical plan, alternatives and implementation not yet drafted. The earlier version of this file (a keep-or-replace decision between three options) is in git history.
+*   **Status:** Rewritten 2026-11-23 after the author's decisions below. Sections drafted: Overview, Problem, Goals, Non-Goals, open questions. Technical plan, alternatives and implementation not yet drafted. The first version of this file (keep or replace n0's services) and the second (relays built into the product) are in git history.
 *   **Date:** 2026-11-23
 *   **Ticket:** [ticket 0038](../../../tickets/0038-self-host-iroh-relay.md). Related: [ticket 0004](../../../tickets/0004-verify-iroh-live-network.md), [ticket 0010](../../../tickets/0010-trusted-peer-deployment-policy.md), [ticket 0021](../../../tickets/0021-topic-sharding.md).
 *   **Related decisions:** [ADR 0008](../../adr/0008-iroh-and-local-storage.md), [ADR 0009](../../adr/0009-bootstrap-and-peer-exchange.md), [ADR 0023](../../adr/0023-no-supernodes.md), [ADR 0034](../../adr/0034-system-overview-goals-and-risks.md), [ADR 0040](../../adr/0040-membership-topic.md). Where this document and an ADR disagree, the ADR wins.
@@ -10,66 +10,54 @@
 
 ## Overview
 
-A relay is a server that two peers use to reach each other when they cannot yet, or cannot at all, connect directly. Peers behind strict NATs stay on a relay for the whole connection; every connection starts on one. The app uses iroh's default `N0` preset, so it uses n0's public relays and n0's DNS-based address lookup (`IrohConfig::Default` in `app/src/net/iroh_net.rs`, chosen in `runtime::build_network`).
+A relay is a server that two peers use to reach each other when they cannot yet, or cannot at all, connect directly. The app uses iroh's default `N0` preset, so it uses n0's public relays and n0's DNS-based address lookup (`IrohConfig::Default` in `app/src/net/iroh_net.rs`, chosen in `runtime::build_network`).
 
-n0's price list ([Pricing - iroh](https://www.iroh.computer/pricing), saved by the author as a local file, not stored in the repository) charges for relays only: concurrent connected endpoints, egress, and rate limits. The free tier is public, rate limited, and has no uptime guarantee. The same price list does not mention address lookup. Traffic that goes directly between peers costs nothing. Our own run (2026-11-23, [spike results](../../spike-s0.md)) saw one TCP 443 connection to n0's EU relay on a machine whose peers could have connected directly, which fits the reading that every online endpoint holds a relay connection and is counted as a concurrent connection.
+n0's price list (saved by the author as a local file outside the repository) charges for relays only: concurrent connected endpoints, egress and rate limits. The free tier is public, rate limited, and has no uptime guarantee. The price list does not mention address lookup. Direct traffic between peers costs nothing. Our own run (2026-11-23, [spike results](../../spike-s0.md)) saw one TCP 443 connection to n0's EU relay on a machine whose peers could have connected directly, which fits every online endpoint holding a relay connection and counting as a concurrent connection.
 
-**The author's decisions (2026-11-23):** relay capability is built into the product, so the network does not depend on n0's relays. A node serves as a relay **only when it is run with `--headless` and relay serving is specified**; window installs never serve. The two trusted peers will get IP addresses of their own; trusted1 is `89.40.6.71` for now.
+**The author's decisions (2026-11-23):**
 
-The iroh relay is a library, not only a separate program. `iroh-relay` 1.5.0 has a `server` feature that exposes a `Server` taking a `ServerConfig` (an HTTP or HTTPS relay endpoint, an optional QUIC endpoint, per-client rate limits, access control). iroh's `RelayMode::Custom(RelayMap)` takes a list of relays, and a `RelayMap` can be changed while the endpoint runs (`insert` and `remove`). These facts come from reading the crate source (`~/.cargo/registry`, versions in `app/Cargo.lock`), not from running it.
+1.  **The project does not carry traffic between nodes.** Nodes must have direct peer-to-peer UDP connections. No node of ours, trusted or not, forwards other peers' packets.
+2.  **n0's relays stay as a fallback.** They remain available for peers that cannot connect directly.
+3.  **Anything the project adds is run by a headless node that is explicitly set to do it.** Window installs never serve other peers. The two trusted peers will get IP addresses of their own; trusted1 is `89.40.6.71` for now.
+4.  **The author's model of how this would work:** a server captures the remote address of every node that connects to it, and gives that address to whoever asks; the asker then sends UDP to that address directly and gets answers directly.
+
+### How that model compares with what `iroh-relay` does
+
+Checked against `iroh-relay` 1.5.0 source. Not run.
+
+*   **The first half is what the relay's QUIC endpoint does.** A node opens a QUIC connection to it (ALPN `/iroh-qad/0`) and the server reports the address it saw the connection come from (`send_observed_address_reports` in `src/quic.rs`). A node learns its own public IP address and port, the way STUN works.
+*   **The second half is not part of it.** The endpoint does not keep a table of nodes, and nobody can ask it for another node's address. It tells each connecting node its own address, nothing else. The "whoever asks gets the address" part is a lookup or rendezvous service. iroh has one as a separate service: nodes publish their addresses (including addresses found by that QUIC endpoint) to n0's DNS-based lookup, and a node that knows only a key resolves it.
+*   **Direct UDP needs more than knowing the address.** Most home routers drop an incoming packet from an address the inside machine has not sent to first. If A sends to B's address and B has not sent to A's, B's router discards it. Both sides must send at about the same time. So whoever tells A about B must also tell B about A, and B must be listening for that message on a channel that is already open. In iroh today that channel is the connection each node keeps to its relay, which is how hole punching is coordinated. A router that picks a different outside port for each destination (a symmetric NAT) and carrier-grade NAT often defeat hole punching, and those peers cannot connect directly at all. Their only route is a relay carrying their traffic, which is where decision 2 (n0 as fallback) applies.
 
 ## The Problem
 
-The first idea was that every replica is a relay. That collides with three facts. The author narrowed it to opt-in headless nodes (see Overview), which removes the first one for window installs; the other two remain.
-
-*   **A relay must accept connections from outside.** A relay is a server: other peers open a connection to its address. Most players' computers sit behind home routers (NAT) with no inbound route, so they cannot serve. Only a node with a reachable public address can be a relay. That is true of the trusted peers once they have their own IP addresses, and of any other operator who runs a headless node on a public address. It does not apply to window installs, which never serve.
-*   **Relays need an address that other nodes know.** iroh asks for a relay URL, and the relay's address must be known before a connection is made, because the relay is the thing that makes the connection possible. Today `KnownPeers` stores peer ID, topics and two timestamps per peer and no addresses (`Record` in `app/src/net/known_peers.rs`), and `net::trusted::BUILTIN` stores keys only. A relay URL, or an IP and port, has to be stored, found, and passed on somewhere.
-*   **A relay needs a TLS certificate that clients accept.** The relay's HTTPS endpoint presents a certificate. `iroh-relay` can get one from Let's Encrypt for a domain name (`CertConfig::LetsEncrypt`) or use one supplied by the operator (`CertConfig::Manual`), and it can also serve plain HTTP with no TLS (`RelayConfig::tls = None`). The client trusts a fixed set of roots by default and can be told to trust specific extra roots or use its own verifier (`CaTlsConfig`). A server known only by an IP address cannot easily get a normal certificate. Whether Let's Encrypt can issue one for a bare IP is not verified here.
-
-Other effects the design must account for:
-
-*   **Metadata.** A relay is a server that every client connects to, so it sees the IP address and port of every client, which endpoint ID each one is, and the timing and size of its packets. It cannot read the traffic (iroh encrypts end to end), so it is not a gossip supernode, but it is a place where who-talks-to-whom can be observed. Anyone can run a headless relay, so clients must decide which relays they use (open question 2).
-*   **Abuse.** A relay carries traffic for strangers. Without limits, one peer can use another's bandwidth. `iroh-relay` has a per-client rate limit and an access-control hook.
-*   **Bandwidth and trust.** A relay uses its operator's upload bandwidth and exposes the operator's IP address to every connecting peer.
-*   **A relay knows addresses, but does not share them as a lookup.** It knows which endpoint ID is connected to it and from where. It forwards packets between connected clients; it does not give one client another's IP address (the QUIC address-discovery endpoint tells a client its own address only). Peers swap direct addresses over the relayed path while they try to hole-punch. So a node can reach a peer through a relay only if it knows that peer's relay URL. Relays therefore shrink the lookup problem but do not remove it. With the trusted peers' IP addresses known, the app can dial them by address instead of by key, which needs no lookup for first contact. For every other peer the app still dials by key. This draft covers relays; the lookup question is open question 4.
-*   **Gossip is already a form of relaying.** Messages hop between swarm neighbours (ADR 0040 adds a swarm every node is in). That carries application messages but not connection setup, so it does not replace a relay.
+*   **What replaces the relay's coordination role.** With n0's relays kept as a fallback, hole punching keeps working as it does today for most peers: coordination travels over n0's relay connection. The project's own nodes add nothing there, and the dependency on n0's relays and DNS stays for first contact and coordination. If the aim is also to stop depending on n0 for those, the project needs its own introduction service, and the design must say what channel the target node listens on. This is open question 1.
+*   **The project has no addresses to hand out.** `KnownPeers` stores peer ID, topics and two timestamps per peer and no addresses (`Record` in `app/src/net/known_peers.rs`), and `net::trusted::BUILTIN` stores keys only. The peer-exchange protocol (`app/src/net/exchange.rs`) exchanges peer IDs, not addresses. Any lookup the project provides has to store and pass on addresses.
+*   **A server that learns addresses also learns who connects from where.** A rendezvous server sees every client's IP address and port and which key it belongs to. It cannot read traffic (iroh encrypts end to end), but it is a place where who-is-online-from-where is visible. Anyone can run a headless node, so clients must decide which of them they trust (open question 2).
+*   **Certificates.** `iroh-relay`'s QUIC endpoint needs a TLS server configuration (`QuicConfig`; the server refuses to start without one), and the client must accept it. A server known only by an IP address cannot easily get a normal certificate. Whether Let's Encrypt issues one for a bare IP is not verified. The client can be told to trust a specific root or use its own verifier (`CaTlsConfig`).
+*   **Relayed traffic is TCP.** The author prefers UDP because a lost TCP segment stalls everything behind it. In `iroh-relay` 1.5.0 the relay data protocol is a variant of Tailscale's DERP over WebSocket, so it is TCP, and the QUIC endpoint carries no data. Decision 1 keeps this out of our own nodes; it still applies to anyone who ends up on an n0 relay, which is outside our control.
+*   **Abuse.** Any service that answers "where is X" can be asked about every key. `iroh-relay` has a per-client rate limit and an access-control hook, and the project's own peer exchange already limits requests (one per 10 s per peer).
 
 ## Goals
 
-*   The network keeps working with no dependence on n0's relays.
-*   Relay capability ships in the app: the same binary. It is off by default and turned on only for a headless node by an explicit setting. A window install has no way to serve.
-*   The two trusted peers act as relays at their own addresses, reachable at a known address with a certificate the app accepts.
-*   Other operators can run a relay by starting a headless node with the same setting.
-*   Clients find relays without a release for every change (open question 2).
-*   A relay's bandwidth, connection count and per-client rate are capped.
-*   An ADR amends [ADR 0023](../../adr/0023-no-supernodes.md): relays are a hosted role the network now has, and who may run one.
+*   Peers connect directly over UDP whenever the network allows it, and no node of ours carries other peers' traffic.
+*   A peer that cannot connect directly can still connect through n0's relays.
+*   The two trusted peers, once they have their own IP addresses, are reachable at known addresses by new installs.
+*   A headless node can be started in a role that serves the project's own address or introduction service, only when it is explicitly set to; window installs cannot.
+*   The ADRs say that n0's relays and, if kept, its address lookup are accepted dependencies, with the evidence for it ([ADR 0023](../../adr/0023-no-supernodes.md) amended or cited).
 
 ## Non-Goals
 
-*   Replacing iroh, or writing a relay protocol of our own.
-*   Hiding peers' IP addresses from each other or from relays (a relay sees them).
-*   Paying for or contracting n0's hosted relays; they stay available as a fallback only if the author chooses (open question 3).
-*   The address lookup service, unless open question 4 brings it in.
+*   Replacing iroh, or writing a relay protocol of our own. Decision 1 rules out a UDP relay of ours.
+*   Hiding peers' IP addresses from each other or from a rendezvous server.
+*   Making peers behind symmetric NATs or carrier-grade NAT connect directly. They go through n0's relays, or fail if those are unavailable.
 *   Running the live tests of ticket 0004 (they remain the evidence source).
-
-## Relayed traffic is TCP, not UDP
-
-The author wants relayed traffic to go over UDP, on the belief that it is more reliable because it is not tied to one TCP stream. Checked against `iroh-relay` 1.5.0 source:
-
-*   The relay data protocol is a variant of Tailscale's DERP carried in WebSocket binary frames after an HTTP upgrade (`app` crate dependency tree: `iroh-relay` `protos::relay` and `client`). WebSocket runs on TCP, so all of a client's relayed packets share one TCP stream to its relay.
-*   The relay server's QUIC endpoint (`QuicConfig`, port 7842 by default) is for address discovery only. It does not carry relayed data.
-*   iroh's own traffic between two peers is QUIC, which runs over UDP. A relayed connection therefore puts QUIC datagrams inside a TCP stream. One lost TCP segment stalls every packet behind it until it is resent, including packets of unrelated connections that share the same relay stream. QUIC's own recovery works above that, so loss is handled twice. The author's concern is correct for the case where traffic stays on the relay.
-*   Direct paths use UDP and are not affected. The relay is used only until a direct path is punched, and for peers whose NAT prevents one.
-*   iroh 1.5.0 has an `unstable-custom-transports` feature (`CustomTransport` in `src/socket/transports/custom.rs`). It is a way to add a transport such as a UDP relay without changing iroh, but it is marked unstable, and the relay protocol and server would be written by this project. Not verified: how much of the transport contract (addressing, path selection) a relay needs.
-
-So `iroh-relay` cannot be switched to UDP by configuration. See open question 5.
 
 ## Open questions raised so far
 
-These are decided in later sections of the draft, one at a time. They are listed here so the Goals above are read as conditional on them.
+Decided in later sections of the draft, one at a time. Answered so far: n0 stays as a fallback; our nodes do not carry traffic; serving is opt-in on headless nodes.
 
-1.  ~~Which replicas act as relays.~~ Answered 2026-11-23: headless nodes only, and only when relay serving is specified. How it is specified (flags, a settings file) is a detail for the Technical Plan.
-2.  How clients learn relay addresses, and which relays they trust now that anyone can run one.
-3.  Whether n0's relays stay as a fallback.
-4.  What replaces address lookup for dialing by key.
-5.  Whether relayed traffic stays on the TCP relay protocol, or the project builds a UDP relay.
+1.  **Does the project run its own introduction service at all?** That is, an address lookup plus a channel to tell a node who is about to contact it, so that direct connections no longer depend on n0's relay for coordination. Or does coordination stay with n0 and the project only adds addresses to peer exchange?
+2.  **How clients learn addresses and which servers they trust**, now that anyone can run a headless node.
+3.  **What first contact with a trusted peer looks like** when its IP address is known: dial the address directly (no lookup needed for it), or still by key.
+4.  **Whether to keep n0's address lookup service** alongside any lookup of our own, or only as the fallback.

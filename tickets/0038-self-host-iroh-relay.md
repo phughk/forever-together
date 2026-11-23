@@ -1,4 +1,4 @@
-# 0038. Decide whether to self-host iroh relay and address lookup
+# 0038. Direct connections only; n0 relays as fallback (was: decide whether to self-host iroh relay and lookup)
 
 * **Status:** open
 * **Kind:** decision
