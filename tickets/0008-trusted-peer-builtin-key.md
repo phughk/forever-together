@@ -1,6 +1,6 @@
 # 0008. Supply the built-in trusted peer key
 
-* **Status:** open
+* **Status:** in progress (BUILTIN filled 2026-11-23 with trusted1 and trusted2, backed up by the author; no node is running on them yet, so the cold-start fallback is not verified live)
 * **Kind:** prerequisite
 * **Priority:** P0
 * **Source:** CLAUDE.md; ADR 0023

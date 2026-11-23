@@ -13,7 +13,18 @@ use crate::config::Settings;
 use crate::identity::PeerId;
 
 /// Built-in trusted peer keys.
-pub const BUILTIN: &[[u8; 32]] = &[];
+pub const BUILTIN: &[[u8; 32]] = &[
+    [
+        0x7c, 0x4b, 0x43, 0x0a, 0x31, 0x76, 0xb8, 0xb4, 0x8d, 0xca, 0xd1, 0x7d, 0x33, 0xd1, 0xe7,
+        0x30, 0xc7, 0xa0, 0x42, 0x0b, 0xec, 0x20, 0xaf, 0x15, 0xa8, 0xda, 0x27, 0x96, 0xeb, 0x28,
+        0x68, 0x0e,
+    ],
+    [
+        0x7b, 0x69, 0x49, 0x95, 0xa6, 0x7d, 0x74, 0xe8, 0x2e, 0xbd, 0x85, 0x51, 0x2b, 0xf8, 0xd9,
+        0x64, 0x58, 0xf5, 0x11, 0xd9, 0xa2, 0x29, 0x28, 0xf1, 0x22, 0x4a, 0x43, 0x11, 0xcb, 0x79,
+        0x1d, 0x3a,
+    ],
+];
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TrustedPeers {
@@ -64,9 +75,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn built_in_list_is_empty_until_the_author_supplies_a_key() {
+    fn built_in_list_is_trusted1_then_trusted2() {
         let (t, bad) = TrustedPeers::from_settings(BUILTIN, &Settings::default());
-        assert!(t.is_empty() && bad.is_empty());
+        assert!(bad.is_empty());
+        let hex: Vec<String> = t.peers().iter().map(|p| p.to_hex()).collect();
+        assert_eq!(
+            hex,
+            [
+                "7c4b430a3176b8b48dcad17d33d1e730c7a0420bec20af15a8da2796eb28680e",
+                "7b694995a67d74e82ebd85512bf8d96458f511d9a22928f1224a4311cb791d3a",
+            ]
+        );
     }
 
     #[test]

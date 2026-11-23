@@ -67,7 +67,7 @@ What is **not** verified (details and the full table in `docs/spike-s0.md`; trea
 - **The simulation reopened the agreement mechanism, and a new one passes in the model.** `docs/spike-s0.md` reports that converging announcements (about 2% at delivery 0.95) and the proposer model (9 to 25%) did not reach the 70% floor. Leader invitations ([ADR 0025](docs/adr/0025-leader-invitations.md), implemented in `engine`) reach it within 30 s (mean 78.4%, worst seed 74.6%, 6 rounds of 5 s; 73.0% mean and 69.7% worst at 3 rounds). That is simulation only. The role mix caps any mechanism, so the floor as worded cannot be met when tanks are scarce (the S0 results explain). The engine does not retransmit lost direct messages.
 - No real window, phone, or live game has been tried. The integration tests drive the HTTP API of several in-process instances on an in-memory network.
 - **The addon installer (ADR 0028) is unverified on a real install.** Not confirmed: the Forever folder layout beyond the author's macOS machine, the Windows and Linux default paths, game behaviour during an in-place swap, Windows file locking and admin rights, and the client ignoring dot-prefixed folders (`.ForeverTogether.new`).
-- `net::trusted::BUILTIN` is empty until the author supplies a key. A re-audit of the revised design has not been run.
+- `net::trusted::BUILTIN` holds two keys (trusted1, trusted2; backed up by the author, not yet running anywhere), so the last-resort fallback has not been exercised on a real node. A re-audit of the revised design has not been run.
 
 ### Where the truth lives
 
