@@ -1,4 +1,4 @@
-# Address lookup: n0's public service plus a DHT fallback; no relay or rendezvous service of ours
+# Address lookup (n0 DNS plus DHT) and a hole-punching relay in headless nodes
 
 *   **Author:** Hugh Kaznowski
 *   **Status:** Rewritten 2026-11-23 after the author's decisions below, the last one made after reading the iroh DNS and DHT pages (saved locally by the author). Sections drafted: Overview, Problem, Goals, Non-Goals, open questions. Technical plan, alternatives and implementation not yet drafted. The first version of this file (keep or replace n0's services) and the second (relays built into the product) are in git history.
@@ -19,8 +19,19 @@ n0's price list (saved by the author as a local file outside the repository) cha
 1.  **The project does not carry traffic between nodes.** Nodes must have direct peer-to-peer UDP connections. No node of ours, trusted or not, forwards other peers' packets.
 2.  **n0's relays stay as they are, as a fallback, and the project does no work on relaying.** Peers that cannot connect directly (symmetric NAT, carrier-grade NAT, strict firewalls) solve their own networking problems, for example by forwarding a port. The author does not want to spend effort on carrying TCP or other relayed traffic.
 3.  **Anything the project adds is run by a headless node that is explicitly set to do it.** Window installs never serve other peers. The two trusted peers will get IP addresses of their own; trusted1 is `89.40.6.71` for now.
-4.  **No relay service and no rendezvous service of the project's own.** (Decided after reading the iroh DNS and DHT docs.) The public address lookup services are used, and DHT address lookup is added as a fallback.
+4.  **Address lookup:** the public lookup services are used, and DHT address lookup is added as a fallback. The project runs no lookup or rendezvous server. (Decided after reading the iroh DNS and DHT docs.)
+6.  **Hole punching needs a relay in the service that runs under `--headless`.** (Added the same day, answering question 2.) The project's headless nodes, when explicitly set to, run a hole-punching relay. This changes decision 4's first sentence in earlier versions of this draft ("no relay of the project's own") and is in tension with decision 1; see "Hole punching in iroh 1.5.0".
 5.  **The author's earlier model of how direct connections would work:** a server captures the remote address of every node that connects to it, and gives that address to whoever asks; the asker then sends UDP to that address directly and gets answers directly.
+
+### Hole punching in iroh 1.5.0
+
+Checked in the `iroh` 1.5.0, `iroh-relay` 1.5.0 and `noq` sources and docs. Not run.
+
+*   **There is no hole-punching-only relay mode.** The `iroh` crate docs say a connection starts through the relay and "usually soon after" migrates to a direct path; if it cannot, it "will keep flowing over the relay server as a fallback". Hole punching in iroh 1.x is done by QUIC NAT traversal (`max_remote_nat_traversal_addresses` in `src/endpoint/quic.rs`, `noq`), whose frames travel inside the QUIC connection, and that connection is first carried by the relay. The relay forwards encrypted packets by endpoint ID only and cannot tell NAT-traversal frames from data (the `iroh-relay` server source has no concept of them).
+*   **So a hole-punching relay carries traffic.** The first packets of every connection: the QUIC handshake and the NAT-traversal frames, which is small, and then everything for a peer pair that cannot punch through. Decision 1 (no traffic carried by the project's nodes) cannot hold for such a relay unless the traffic is limited.
+*   **What the server can limit.** `iroh_relay::server::Limits.client_rx` is a per-client byte rate and burst (`ClientRateLimit`), and `AccessControl` decides only whether a client may connect. A low rate would let a handshake through and starve sustained traffic. Whether a handshake and the NAT-traversal frames pass inside a chosen limit, and how long the delay is, is not verified.
+*   **Clients and the relay map.** `RelayMode::Custom(RelayMap)` takes several relays and the map can be changed while the endpoint runs; a client picks its home relay by latency and publishes it in its record. The project's relay would be added to the map next to n0's. A relay's address and certificate must be known to every client (open question 5).
+*   **The relay server is embeddable.** `iroh-relay` 1.5.0 with feature `server` provides `Server`, `ServerConfig`, `RelayConfig` (HTTP or HTTPS; `tls: None` serves plain HTTP) and `QuicConfig` (address discovery). Its TLS options are Let's Encrypt for a name or a supplied certificate; the client can trust a fixed root (`CaTlsConfig`). A node known only by IP address has no name for a certificate.
 
 ### What the iroh DNS and DHT pages say
 
@@ -94,7 +105,7 @@ flowchart LR
 
 ## Open questions for the author
 
-Question 1 is answered above. Options for the rest are below; none is ranked.
+Question 1 is answered above. Question 2 (DNS and DHT together) was asked and the author's reply was about hole punching (decision 6), so it is still open. Options below; none is ranked.
 
 2.  **How DNS and DHT run together.**
     *   **A. Both on every node, every dial.** Mechanism: both lookups are added to every endpoint; iroh resolves with whichever answers (whether it queries them at once or in turn is not verified). Trade-off: one code path, no condition to test. Fails when DHT lookups are slow and iroh waits for them before using DNS's answer, which would slow first contact for everyone (to be measured).
@@ -108,3 +119,11 @@ Question 1 is answered above. Options for the rest are below; none is ranked.
     *   **A. In every build.** Mechanism: the crate is a normal dependency. Trade-off: simplest. Fails if the DHT client's background UDP traffic and dependency tree are unwelcome on players' machines (not measured).
     *   **B. Behind a Cargo feature, on in the release builds the author chooses.** Mechanism: `dht` feature gates the crate and the builder call. Trade-off: the author controls what ships. Fails by adding a build matrix: a build without the feature has no DHT fallback.
     *   **C. Only the headless build.** Mechanism: the crate is linked into the same binary but started only for `--headless`; equivalent to 2C in effect. Trade-off: same as 2C. Fails the same way.
+5.  **How the project's hole-punching relay is limited and trusted.** It carries the first packets of every connection and, for peers that cannot punch through, all their traffic.
+    *   **A. The iroh relay server with a low per-client rate limit** (`Limits.client_rx`). Mechanism: embedded `iroh-relay` under `--headless` with a flag, rate set so a handshake passes and sustained traffic does not. Trade-off: no fork, small code; decision 1 holds in effect (the relay cannot carry bulk traffic). Fails if the rate that lets NAT traversal finish also lets enough traffic through to be used as a relay, or if the rate starves the handshake and punching fails (not measured).
+    *   **B. The iroh relay server with generous limits.** Mechanism: same server, limits sized for real traffic. Trade-off: peers that cannot punch through work. Fails against decision 1: the headless node carries player traffic, its operator pays the bandwidth, and every node sees who talks to whom.
+    *   **C. A patched `iroh-relay` that drops a connection's packets after a fixed byte count.** Mechanism: a forked or vendored copy of the server's forwarding path. Trade-off: exact enforcement of "handshake only". Fails by maintaining a fork of a library the project otherwise takes unmodified, and by the byte count being a guess at what NAT traversal needs.
+6.  **How clients learn and trust the project's relay.**
+    *   **A. A relay URL beside each key in `BUILTIN`, with the relay's certificate or root compiled in.** Mechanism: a URL with an IP address (`https://89.40.6.71`), `CaTlsConfig` trusting the compiled-in root. Trade-off: no domain needed. Fails if the certificate expires or the IP changes: old builds keep the old values until a release.
+    *   **B. A relay URL on a name the author controls with an ordinary certificate.** Mechanism: a DNS name for the relay and Let's Encrypt. Trade-off: moves and renewals need no release. Fails if the name lapses.
+    *   **C. Plain HTTP relay URL, no TLS** (`RelayConfig.tls = None`). Mechanism: nothing to certify. Trade-off: simplest. Fails if the `iroh` client does not accept an `http` relay URL in production (not verified), and traffic to the relay is then unencrypted at the HTTP layer (the QUIC payload is still end-to-end encrypted).
