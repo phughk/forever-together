@@ -1,7 +1,7 @@
 # Verifying iroh over the real network
 
 *   **Author:** Hugh Kaznowski
-*   **Status:** Initial draft, unreviewed
+*   **Status:** Initial draft. Steps 1 to 5 partly run on one machine on 2026-11-23 (results in the spike doc, "Live network run"; harness `app/src/live_tests.rs`). Not run: two networks, step 6, the negative authorship check.
 *   **Date:** 2026-11-22
 *   **Ticket:** [ticket 0004](../../../tickets/0004-verify-iroh-live-network.md), blocked by [ticket 0008](../../../tickets/0008-trusted-peer-builtin-key.md). Feeds [ticket 0038](../../../tickets/0038-self-host-iroh-relay.md) and [ticket 0005](../../../tickets/0005-verify-agreement-live.md).
 *   **Related decisions:** [ADR 0008](../../adr/0008-iroh-and-local-storage.md), [ADR 0009](../../adr/0009-bootstrap-and-peer-exchange.md), [ADR 0019](../../adr/0019-signed-gossip-messages.md), [ADR 0023](../../adr/0023-no-supernodes.md), [ADR 0039](../../adr/0039-key-management.md). Where this document and an ADR disagree, the ADR wins.

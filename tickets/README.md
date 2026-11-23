@@ -17,6 +17,7 @@ Priority was set on 2026-11-21 by one question: what must be true before real pl
 | # | Ticket | Kind | Why | Blocked by |
 |---|--------|------|-----|------------|
 | 0008 | [Supply the built-in trusted peer key](0008-trusted-peer-builtin-key.md) | prerequisite | Fill `BUILTIN`: cold-start fallback and the scan-export recipient. The key tooling now exists, so this is a short task. |  |
+| 0047 | [A headless trusted peer does not introduce players to each other](0047-headless-trusted-peer-introduces-nobody.md) | bug | Found by the live run: a headless trusted peer gets players connected to it but never to each other. Cold start does not work until this is fixed. | |
 | 0004 | [Verify iroh over the real network](0004-verify-iroh-live-network.md) | verification | Nothing has run beyond loopback. Proves bootstrap, address lookup and relays across the internet. Everything else rests on it. | 8 |
 | 0005 | [Verify leader invitations on a live network](0005-verify-agreement-live.md) | verification | The agreement mechanism passes only in simulation. If the 70% floor fails live, the product does not work. | 4 |
 | 0035 | [Run the web app against the real API in a real window and on a phone](0035-web-app-only-mock-tested.md) | verification | No real window, phone or game session has been run end to end. | 8 |

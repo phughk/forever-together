@@ -101,3 +101,16 @@ Checked on macOS with the built binary and `ssh-keygen`/`age`; Windows and Linux
 | Does the app read an unmodified `ssh-keygen` ed25519 key? | **Yes** (a throwaway fixture in `app/src/keys.rs`; its public line is checked against `ssh-keygen -y`). Passphrase keys and ecdsa keys are refused with their own errors. |
 | Mode of exported files and the lock file? | `0600` on macOS (tests). The `varaq` directory is set to `0700` and its files are `0600` on every open (existing test). Linux and Windows not run. |
 
+
+## Live network run, one machine (ticket 0004, 2026-11-23)
+
+Run with `cd app && cargo test --lib live_tests -- --ignored --nocapture` (needs the internet; `LIVE_T_SEARCHES=1` makes T search). Three apps in one process on one macOS machine behind one home NAT, each with its own data directory and key, on the real iroh network (`IrohConfig::Default`, n0 relays and DNS). A and B know T only by its public key. **This is not the two-network run**: it does not show hole punching, NAT behaviour between networks, or Windows and Linux.
+
+| Question | Result |
+|---|---|
+| A fresh install reaches the trusted peer by key through n0 (step 1) | **Yes.** `bootstrap` became `trusted` in 0.5 to 5.6 s (three runs), after T had been up 20 s. |
+| A restart uses remembered peers before the trusted list (step 2) | **Yes.** `remembered` in 5.1 s on a restart with the same data directory. Bootstrap runs per topic, so the source shows only once a search is running. |
+| Peer exchange and signed gossip between two players (steps 3 and 4) | **Yes when T also searches the topic:** A and B saw each other in 15.3 s, and kept seeing each other and stayed connected 90 s after T stopped. **No when T never searches (what a `--headless` node does):** A and B each connected to T, stayed `alone` for the full 120 s and never met. T only holds their Hello as unverified claims and answers requests from verified peers; a headless node joins no topic and never dials claims. See ticket 0047. |
+| Hosts contacted (step 5) | Sampled with `lsof`: the only established connection seen was TCP 443 to `euc1-1.relay.n0.iroh.link` (the EU relay). Short-lived DNS and pkarr traffic and unconnected UDP sockets were not captured, so the list is incomplete. |
+| Degraded cases (step 6), two networks, direct versus relayed path | **Not run.** |
+| Forged-author rejection | Not run live (loopback tests only). |

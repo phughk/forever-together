@@ -10,6 +10,8 @@ pub mod identity;
 #[cfg(test)]
 mod integration_tests;
 pub mod keys;
+#[cfg(test)]
+mod live_tests;
 pub mod net;
 pub mod runtime;
 pub mod server;

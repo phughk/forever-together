@@ -1,6 +1,6 @@
 # 0004. Verify iroh over the real network
 
-* **Status:** open
+* **Status:** in progress (single-machine real-network run done 2026-11-23; two-network and degraded cases not run)
 * **Kind:** verification
 * **Priority:** P0
 * **Blocked by:** tickets 8
