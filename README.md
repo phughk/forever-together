@@ -58,6 +58,7 @@ forever-together                              # window mode
 forever-together --headless                   # network only, no window, no web server
 forever-together --headless --relay 0.0.0.0:3340   # also serve as a rate-limited hole-punching relay (ADR 0041)
 RUST_LOG=app_lib=debug,iroh=info forever-together --headless   # logs to stderr; default is warnings only
+WOWFT_LOG_FORMAT=json forever-together --headless      # the same logs as one JSON object per line
 forever-together key show                     # print this install's peer ID and public key
 forever-together key export ./node.key        # back up the key (new file, owner-only)
 forever-together key import ./node.key        # restore or deploy a key

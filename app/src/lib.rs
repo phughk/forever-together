@@ -49,14 +49,19 @@ fn fail(msg: impl std::fmt::Display) -> ! {
 
 /// Send `tracing` output to stderr. `RUST_LOG` picks the filter (for example
 /// `RUST_LOG=app_lib=debug,iroh=info`); without it only warnings and errors show, so a
-/// player's terminal stays quiet. Safe to call twice (the second call is ignored).
+/// player's terminal stays quiet. `WOWFT_LOG_FORMAT=json` switches to JSON lines. Safe to call twice (the second call is ignored).
 fn init_logging() {
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn"));
-    let _ = tracing_subscriber::fmt()
+    let builder = tracing_subscriber::fmt()
         .with_env_filter(filter)
-        .with_writer(std::io::stderr)
-        .try_init();
+        .with_writer(std::io::stderr);
+    // WOWFT_LOG_FORMAT=json: one JSON object per line (for log shippers); anything else is text.
+    let _ = if std::env::var("WOWFT_LOG_FORMAT").is_ok_and(|v| v.eq_ignore_ascii_case("json")) {
+        builder.json().try_init()
+    } else {
+        builder.try_init()
+    };
 }
 
 #[cfg_attr(feature = "ui", cfg_attr(mobile, tauri::mobile_entry_point))]

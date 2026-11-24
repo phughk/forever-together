@@ -39,7 +39,7 @@ thiserror = "2.0.21"
 tokio = { version = "1.54.1", features = ["rt", "rt-multi-thread", "net", "signal", "io-util", "sync", "time", "macros"] }
 tokio-util = "0.7"
 tracing = "0.1.44"
-tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt", "ansi"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt", "ansi", "json"] }
 varaq = "0.1.1"
 iroh-mainline-address-lookup = "0.6"
 iroh-relay = { version = "=1.5.0", default-features = false, features = ["server"] }
