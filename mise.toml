@@ -29,6 +29,10 @@ description = "Bundle the app for the host platform"
 dir = "{{config_root}}/app"
 run = "tauri build"
 
+[tasks.build-headless]
+description = "Build the headless-only binary (no window, no Tauri, GTK or WebKit): a server or a trusted peer"
+run = "cargo build --release --manifest-path app/Cargo.toml --no-default-features"
+
 [tasks.typecheck]
 description = "Typecheck the frontend"
 run = "pnpm --dir webapp typecheck"

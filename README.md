@@ -22,6 +22,7 @@ mise run dev        # desktop app (Tauri + Vite)
 | `mise run dev` | the desktop app (Tauri + Vite) |
 | `mise run web` | the web app alone in the browser (no backend, so no API) |
 | `mise run storybook` | the component workshop on port 6006 |
+| `mise run build-headless` | the release binary with no window and none of its libraries (Tauri, GTK, WebKit): `cargo build --release --no-default-features`. Run it with `--headless` |
 | `mise run typecheck` | typecheck the web app |
 | `mise run test` | Rust unit and integration tests (about 40 s, the multi-instance tests are slow on purpose) |
 | `mise run lint` | clippy with warnings denied, and a rustfmt check |

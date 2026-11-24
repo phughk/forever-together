@@ -19,14 +19,19 @@ pub mod store;
 
 use clap::Parser;
 use cli::{Cli, Mode};
+#[cfg(feature = "ui")]
 use server::static_files::{Asset, Assets};
+#[cfg(feature = "ui")]
 use std::sync::Arc;
+#[cfg(feature = "ui")]
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 
 /// The embedded web app, read through Tauri's asset resolver (`generate_context!` embeds the
 /// built `dist`).
+#[cfg(feature = "ui")]
 struct TauriAssets(tauri::AssetResolver<tauri::Wry>);
 
+#[cfg(feature = "ui")]
 impl Assets for TauriAssets {
     fn get(&self, path: &str) -> Option<Asset> {
         let a = self.0.get(path.to_owned())?;
@@ -54,7 +59,7 @@ fn init_logging() {
         .try_init();
 }
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
+#[cfg_attr(feature = "ui", cfg_attr(mobile, tauri::mobile_entry_point))]
 pub fn run() {
     let cli = Cli::parse();
     let data_dir = cli.resolve_data_dir();
@@ -87,10 +92,16 @@ pub fn run() {
                 fail(e);
             }
         }
+        #[cfg(feature = "ui")]
         Mode::Window => run_window(data_dir),
+        #[cfg(not(feature = "ui"))]
+        Mode::Window => fail(
+            "this build has no window (built without the `ui` feature); run it with --headless",
+        ),
     }
 }
 
+#[cfg(feature = "ui")]
 fn run_window(data_dir: std::path::PathBuf) {
     tauri::Builder::default()
         .setup(move |app| {

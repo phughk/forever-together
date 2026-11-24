@@ -44,3 +44,4 @@ Decisions for forever-together (short code `wowft`, working name `p2prdf` in old
 | 0039 | [The app's keys can be exported, imported and reset from the command line](0039-key-management.md) | Accepted (requirements; not built) |
 | 0040 | [Every node joins a membership topic, and new members are announced on it](0040-membership-topic.md) | Accepted (built; verified on one machine) |
 | 0041 | [Address lookup through n0 DNS and the DHT, direct addresses published, and a rate-limited hole-punching relay in headless nodes](0041-address-lookup-and-hole-punching-relay.md) | Accepted (not built) |
+| 0042 | [The window is a Cargo feature, so a headless build needs none of its libraries](0042-ui-is-a-cargo-feature.md) | Accepted (built) |

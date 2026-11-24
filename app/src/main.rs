@@ -1,5 +1,9 @@
 // Prevents an extra console window on Windows in release.
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+// Only the windowed build; a headless-only build keeps its console.
+#![cfg_attr(
+    all(not(debug_assertions), feature = "ui"),
+    windows_subsystem = "windows"
+)]
 
 fn main() {
     app_lib::run()

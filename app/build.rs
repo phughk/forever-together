@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 const ADDON_DIR: &str = "../addon/ForeverTogether";
 
 fn main() {
+    #[cfg(feature = "ui")]
     tauri_build::build();
     bundle_addon();
 }
