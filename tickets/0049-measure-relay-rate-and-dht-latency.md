@@ -18,4 +18,4 @@ The numbers are in `docs/spike-s0.md` and the relay rate constant is set from th
 
 ## Done so far
 
-All four items were measured or checked on one machine (spike results, "Relay rate limit, DHT lookup and build checks"). Open: the rate on real NATs (does a direct path still form at 2 kB/s with an 8 kB burst between two home networks?), DHT lookup time from a second network, and running the relay on `89.40.6.71`. Blocked by ticket 4 and by starting `--headless --relay 0.0.0.0:3340` there.
+All four items were measured or checked on one machine (spike results, "Relay rate limit, DHT lookup and build checks"). Open: the rate on real NATs (does a direct path still form at 2 kB/s with an 8 kB burst between two home networks?), DHT lookup time from a second network, and running the relay on `89.40.6.71`. The relay now runs on `89.40.6.71:3340` and answers. Still needed: two machines behind different home NATs.

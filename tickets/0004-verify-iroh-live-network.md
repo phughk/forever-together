@@ -1,6 +1,6 @@
 # 0004. Verify iroh over the real network
 
-* **Status:** in progress (single-machine real-network run done 2026-11-23; two-network and degraded cases not run)
+* **Status:** done in part (2026-11-24: laptop to the real trusted1 across the internet verified; two players behind different NATs, the blocked-DNS and blocked-UDP cases not run)
 * **Kind:** verification
 * **Priority:** P0
 * **Blocked by:** tickets 8

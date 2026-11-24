@@ -131,3 +131,18 @@ One macOS machine. The relay numbers are loopback (they show what the limit does
 | The full app with the new default configuration on the real network | Same result as before the change: first contact with a trusted peer 5.1 s, remembered peers 0.5 s on restart, two players saw each other in 45.4 s with a non-searching trusted peer, still connected 30 s after it stopped. |
 | Found on the way | `BUILTIN` held two keys with no node behind them. The bootstrap loop awaited each dial in turn inside a future the core drops whenever a command or tick arrives, so it never reached a live trusted peer listed after the dead ones. Fixed: dials are background tasks (`IrohNet::start_dial_peer`), and all trusted dials start before any is awaited. |
 | Not run | Two networks, real NATs, the relay on `89.40.6.71`, Windows and Linux. |
+
+## trusted1 live, from another network (tickets 0004, 0008, 0047, 2026-11-24)
+
+This laptop (home network) against trusted1 (`89.40.6.71`, a VPS, `--headless --relay 0.0.0.0:3340`, built-in `BUILTIN[0]`). Harness: `app/src/live_tests.rs` (`trusted_peers_are_reachable`, `builtin_trusted_peer_introduces_two_players`, both ignored).
+
+| Question | Result |
+|---|---|
+| Does trusted1's key resolve from another network? | **Yes.** n0's DNS record for the key holds four entries: its public IPv4 address, its public IPv6 address, a private `10.x` address and its home relay, which is **n0's EU relay** (`euc1-1`), not the project's own relay on port 3340. |
+| Dial `BUILTIN[0]` by key with the app's own endpoint setup | **Connected in 3.1 s** with one direct path and one relay path. |
+| Does the project relay answer? | **Yes.** TCP 3340 opens and the server returns `HTTP/1.1 200 OK` for `/` (after the firewall rule; ufw dropped it before). |
+| Two players on this machine, only `BUILTIN` and no settings | Both bootstrapped through the trusted peer in 0.5 s and saw each other in 45.5 s, through the real remote trusted node that never searches (ADR 0040). |
+| trusted2 | Not deployed; its key has no record (expected). |
+| Found on the way | A service with no `HOME` used `/.local/share/forever-together`, a new store and a new random key, and a wrong key means no record. The program now refuses to start without `HOME` or `--data-dir`. A firewall (`ufw`, default deny) dropped TCP 3340 and the node's UDP until rules were added. |
+| Notes | The published record includes a private LAN address (`10.40.6.71`), because the publisher is unfiltered (ADR 0041, decision 2). The project relay is in the relay map but the node chose n0's relay as its home, so the project relay's use as a home relay is not shown yet. |
+| Not run | Two players behind **different** NATs (both players here share one network), so hole punching between NAT'd peers and the 2 kB/s relay rate on real NATs are still unverified (ticket 0049). Windows and Linux desktops. |

@@ -6,7 +6,7 @@ Priority was set on 2026-11-21 by one question: what must be true before real pl
 
 ## Do next, in order
 
-1. **0008** `BUILTIN` is filled (trusted1, trusted2); install one on an always-on machine and check a fresh install reaches it.
+1. **0008** trusted1 is deployed and verified; deploy trusted2 the same way (ticket 0010 covers who may run trusted peers).
 2. **0004** two machines across the internet, using that trusted peer.
 3. **0005** the agreement mechanism live (the 70% floor).
 4. **0035** one real end-to-end session: window, phone, game.

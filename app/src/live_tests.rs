@@ -350,3 +350,42 @@ fn trusted_peers_are_reachable() {
         let _ = tokio::time::timeout(Duration::from_secs(3), ep.close()).await;
     });
 }
+
+/// Two players on this machine with nothing but the built-in trusted peers (no `trusted_peers`
+/// setting): they must reach the real trusted node over the internet and find each other
+/// through it. Needs trusted1 running. Run:
+/// `cargo test --lib live_tests::builtin -- --ignored --nocapture`
+#[test]
+#[ignore = "needs the internet and trusted1 running"]
+fn builtin_trusted_peer_introduces_two_players() {
+    crate::init_logging();
+    let (da, db) = (dir("bi-a"), dir("bi-b"));
+    let a = start(&da);
+    search(&a, "Testa", Role::Tank);
+    let b = start(&db);
+    search(&b, "Testb", Role::Healer);
+    let boot = wait(
+        "A and B bootstrap through BUILTIN",
+        Duration::from_secs(120),
+        || {
+            state(&a).network.bootstrap != BootstrapSource::None
+                && state(&b).network.bootstrap != BootstrapSource::None
+        },
+    );
+    eprintln!(
+        "LIVE sources: A {:?}, B {:?}",
+        state(&a).network.bootstrap,
+        state(&b).network.bootstrap
+    );
+    let met = wait("A and B see each other", Duration::from_secs(150), || {
+        others_seen(&a) >= 1 && others_seen(&b) >= 1
+    });
+    for d in [da, db] {
+        let _ = std::fs::remove_dir_all(d);
+    }
+    assert!(
+        boot.is_some(),
+        "never bootstrapped through the built-in trusted peers"
+    );
+    assert!(met.is_some(), "the two players never met");
+}
