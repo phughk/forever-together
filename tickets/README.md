@@ -46,6 +46,7 @@ Priority was set on 2026-11-21 by one question: what must be true before real pl
 | 0001 | [Verify addon client calls on a live client](0001-verify-live-client-calls.md) | verification | Region values other than EU and Hardcore; answered by the scan-log chain. | 42 |
 | 0025 | [Search diagnosis: attempt counters](0025-diagnosis-attempt-counters.md) | feature | Attempt counters make the search diagnosis honest about invitations and drops. |  |
 | 0029 | [Record history checkpoints at about 1 and 2 minutes](0029-history-checkpoints.md) | feature | History checkpoints: data only accumulates once recorded, so earlier is better. |  |
+| 0050 | [A mute and volume setting for the group-formed sound](0050-sound-setting.md) | feature | The gong has no mute or volume control; also confirm playback on Linux and a phone. | |
 | 0046 | [Key actions in Settings, and the key commands on Windows](0046-key-actions-in-settings-and-windows.md) | feature | Key actions in Settings and the key commands on Windows (most players are on Windows). | 43 |
 | 0007 | [Addon installer stage 2: native folder dialog and Linux detection](0007-addon-installer-stage-2.md) | feature | Installer stage 2: native folder dialog, Linux detection, first-run integration. | 6 |
 | 0022 | [Encrypt the phone link](0022-encrypted-lan-link.md) | feature | The phone link sends its token over plain HTTP (accepted risk, ADR 0012). |  |

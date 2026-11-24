@@ -45,3 +45,4 @@ Decisions for forever-together (short code `wowft`, working name `p2prdf` in old
 | 0040 | [Every node joins a membership topic, and new members are announced on it](0040-membership-topic.md) | Accepted (built; verified on one machine) |
 | 0041 | [Address lookup through n0 DNS and the DHT, direct addresses published, and a rate-limited hole-punching relay in headless nodes](0041-address-lookup-and-hole-punching-relay.md) | Accepted (not built) |
 | 0042 | [The window is a Cargo feature, so a headless build needs none of its libraries](0042-ui-is-a-cargo-feature.md) | Accepted (built) |
+| 0043 | [A WAV gong plays in the web app when a group forms](0043-group-formed-sound.md) | Accepted (built) |

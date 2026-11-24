@@ -3,6 +3,7 @@ import { installAddonFlow, type AddonResult } from "./api/addonFlow";
 import { describeAddonError, describeCodeError, isApiError, isLoopbackOnly } from "./api/errors";
 import type { AddonInfo, Api, DungeonsResponse, Settings } from "./api/types";
 import { ApiProvider, useAppState } from "./api/useAppState";
+import { useGroupFormedSound } from "./lib/useGroupFormedSound";
 import { NotPairedPage } from "./components/pages/NotPairedPage";
 import { FinderPage } from "./components/pages/FinderPage";
 import { SettingsPage } from "./components/pages/SettingsPage";
@@ -35,6 +36,7 @@ function Container({ api }: { api: Api }) {
 
   const characterKey = state?.character ? `${state.character.level}|${state.character.zone}|${state.character.createdAt}` : "none";
   const hasState = state !== null;
+  useGroupFormedSound(hasState, state?.party ?? null);
 
   // The dungeon list and recommendations depend on the character, so reload when it changes.
   useEffect(() => {
