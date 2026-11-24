@@ -72,7 +72,7 @@ fn relay_map() -> RelayMap {
             Ok(url) => {
                 map.insert(url.clone(), Arc::new(RelayConfig::new(url, None)));
             }
-            Err(e) => tracing::warn!("ignoring relay url {u}: {e}"),
+            Err(e) => tracing::warn!(url = %u, error = %e, "ignoring relay url"),
         }
     }
     map
@@ -355,7 +355,9 @@ async fn pump(
                     }
                 }
                 Ok(_) => {}
-                Err(e) => tracing::debug!(?topic, error = %e, "dropped an unverified message"),
+                Err(e) => {
+                    tracing::debug!(topic = ?topic, error = %e, "dropped an unverified message")
+                }
             },
             // A gossip neighbour is a live, authenticated peer: remember it for this topic.
             Ok(GossipEvent::NeighborUp(id)) => {

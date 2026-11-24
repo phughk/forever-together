@@ -198,11 +198,11 @@ impl Server {
                         let (l, now_lan) = match bind_with_retry(bind_addr(want, port)).await {
                             Ok(l) => (l, want),
                             Err(e) => {
-                                tracing::error!("could not rebind for LAN mode {want}: {e}");
+                                tracing::error!(lan = want, error = %e, "could not rebind for LAN mode");
                                 match bind_with_retry(bind_addr(lan, port)).await {
                                     Ok(l) => (l, lan),
                                     Err(e) => {
-                                        tracing::error!("could not rebind at all: {e}");
+                                        tracing::error!(error = %e, "could not rebind at all");
                                         return;
                                     }
                                 }

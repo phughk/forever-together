@@ -81,7 +81,7 @@ impl KnownPeers {
                     me.verified.insert(p, r);
                 }
                 _ => {
-                    tracing::warn!(%key, "dropping unreadable known-peer record");
+                    tracing::warn!(key = %key, "dropping unreadable known-peer record");
                     store.delete(&key)?;
                 }
             }

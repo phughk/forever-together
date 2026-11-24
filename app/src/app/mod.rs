@@ -289,7 +289,7 @@ impl Model {
         self.history_cache = match history::load(self.store.as_ref()) {
             Ok(rows) => rows.into_iter().map(|(_, e)| e).collect(),
             Err(e) => {
-                tracing::warn!("search history not read: {e}");
+                tracing::warn!(error = %e, "search history not read");
                 Vec::new()
             }
         };
@@ -538,7 +538,7 @@ async fn feed<N: Network>(m: &mut Model, net: &mut Option<N>, ev: Event) {
         Some(n) => match apply_network(n, actions).await {
             Ok(rest) => rest,
             Err(e) => {
-                tracing::warn!("network action failed: {e}");
+                tracing::warn!(error = %e, "network action failed");
                 Vec::new()
             }
         },
@@ -956,7 +956,7 @@ async fn run<N: Network>(
                     net = None;
                 }
                 Err(e) => {
-                    tracing::warn!("network event error: {e}");
+                    tracing::warn!(error = %e, "network event error");
                     tokio::time::sleep(Duration::from_millis(100)).await;
                 }
             },
@@ -986,11 +986,11 @@ impl LiveCore {
     {
         let character: Option<Character> = get_json(deps.store.as_ref(), KEY_CHARACTER)
             .unwrap_or_else(|e| {
-                tracing::warn!("stored character ignored: {e}");
+                tracing::warn!(error = %e, "stored character ignored");
                 None
             });
         let settings = Settings::load(deps.store.as_ref()).unwrap_or_else(|e| {
-            tracing::warn!("stored settings ignored: {e}");
+            tracing::warn!(error = %e, "stored settings ignored");
             Settings::default()
         });
         let mut model = Model {
@@ -1028,7 +1028,7 @@ impl LiveCore {
                     let net = match make_net().await {
                         Ok(n) => Some(n),
                         Err(e) => {
-                            tracing::error!("network failed to start: {e}");
+                            tracing::error!(error = %e, "network failed to start");
                             None
                         }
                     };

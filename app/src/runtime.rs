@@ -106,7 +106,7 @@ pub async fn build_network(ctx: NetContext) -> Result<AnyNet, NetError> {
         KnownPeers::load(cap, ctx.store.clone()).map_err(|e| NetError::Io(e.to_string()))?;
     let (trusted, bad) = TrustedPeers::from_settings(trusted::BUILTIN, &settings);
     for b in bad {
-        tracing::warn!("ignoring trusted peer entry that is not a key: {b}");
+        tracing::warn!(entry = %b, "ignoring trusted peer entry that is not a key");
     }
     let identity = Arc::new(
         Identity::load_or_create(ctx.store.as_ref()).map_err(|e| NetError::Io(e.to_string()))?,
@@ -280,7 +280,7 @@ pub fn run_headless(data_dir: &Path, relay: Option<std::net::SocketAddr>) -> Res
         let relay_server = match relay {
             Some(addr) => {
                 let r = crate::net::relay_server::RelayServer::start(addr).await?;
-                tracing::info!("serving as a hole-punching relay on {:?}", r.addr());
+                tracing::info!(addr = ?r.addr(), "serving as a hole-punching relay");
                 Some(r)
             }
             None => None,
@@ -296,7 +296,7 @@ pub fn run_headless(data_dir: &Path, relay: Option<std::net::SocketAddr>) -> Res
             status,
         })
         .await?;
-        tracing::info!("headless peer {me} running; Ctrl-C to stop");
+        tracing::info!(peer = %me, "headless peer running; Ctrl-C to stop");
         loop {
             tokio::select! {
                 _ = tokio::signal::ctrl_c() => break,

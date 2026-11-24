@@ -239,7 +239,7 @@ pub fn record_facts(store: &dyn Store, facts: &SearchFacts, ctx: &Context) -> bo
     match record(store, &entry) {
         Ok(()) => true,
         Err(e) => {
-            tracing::warn!("search history not saved: {e}");
+            tracing::warn!(error = %e, "search history not saved");
             false
         }
     }
