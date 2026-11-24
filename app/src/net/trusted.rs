@@ -13,6 +13,10 @@ use crate::config::Settings;
 use crate::identity::PeerId;
 
 /// Built-in trusted peer keys.
+/// The project's hole-punching relays (ADR 0041): plain `http://` URLs with an IP and port, added
+/// to the relay map next to n0's. Run by a headless node started with `--relay <addr:port>`.
+pub const RELAYS: &[&str] = &["http://89.40.6.71:3340"];
+
 pub const BUILTIN: &[[u8; 32]] = &[
     [
         0x7c, 0x4b, 0x43, 0x0a, 0x31, 0x76, 0xb8, 0xb4, 0x8d, 0xca, 0xd1, 0x7d, 0x33, 0xd1, 0xe7,

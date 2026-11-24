@@ -22,11 +22,15 @@ use crate::engine::{Event, Message, NetError, Network, event_from_message};
 use crate::identity::{Identity, PeerId, Signer};
 use bytes::Bytes;
 use futures_lite::StreamExt;
-use iroh::address_lookup::MemoryLookup;
+use iroh::address_lookup::{
+    AddrFilter, DnsAddressLookup, MemoryLookup, PkarrPublisher, PkarrResolver,
+};
 use iroh::endpoint::{Connection, presets};
 use iroh::protocol::{AcceptError, ProtocolHandler, Router};
-use iroh::{Endpoint, EndpointAddr, EndpointId, RelayMode, SecretKey};
+use iroh::{Endpoint, EndpointAddr, EndpointId, RelayMap, RelayMode, RelayUrl, SecretKey};
 use iroh_gossip::{Event as GossipEvent, Gossip, GossipSender};
+use iroh_mainline_address_lookup::DhtAddressLookup;
+use iroh_relay::RelayConfig;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -42,15 +46,36 @@ const BOOTSTRAP_PEERS: usize = 5;
 /// How the endpoint is set up.
 #[derive(Clone, Debug, Default)]
 pub enum IrohConfig {
-    /// n0 relays and n0 DNS/pkarr address lookup (the `N0` preset).
+    /// n0's relays plus the project's (`trusted::RELAYS`), and address lookup through n0's DNS and
+    /// the BitTorrent Mainline DHT, both publishing direct addresses (ADR 0041).
     #[default]
     Default,
+    /// Tests of the relay path: one given relay, no direct paths (no IP transport), peers
+    /// resolved from the in-memory lookup. The relay is where every packet goes.
+    RelayOnly {
+        relay: RelayUrl,
+        lookup: MemoryLookup,
+    },
     /// No relay, no hosted lookup, bound to one local address; peers are resolved from the
     /// given in-memory lookup. For tests and for LAN-only experiments.
     Isolated {
         bind: SocketAddr,
         lookup: MemoryLookup,
     },
+}
+
+/// n0's default relays plus the project's own (`trusted::RELAYS`).
+fn relay_map() -> RelayMap {
+    let map = RelayMode::Default.relay_map();
+    for u in super::trusted::RELAYS {
+        match u.parse::<RelayUrl>() {
+            Ok(url) => {
+                map.insert(url.clone(), Arc::new(RelayConfig::new(url, None)));
+            }
+            Err(e) => tracing::warn!("ignoring relay url {u}: {e}"),
+        }
+    }
+    map
 }
 
 fn io<E: std::fmt::Display>(e: E) -> NetError {
@@ -144,6 +169,9 @@ pub struct IrohNet {
     events_tx: mpsc::Sender<Event>,
     events_rx: mpsc::Receiver<Event>,
     conns: HashMap<PeerId, Connection>,
+    /// Dials in flight. They run as tasks, so a caller that is dropped (the core's loop drops
+    /// `next_event` whenever a command or tick arrives) does not cancel them.
+    dials: HashMap<PeerId, JoinHandle<Result<Connection, NetError>>>,
     member_window: Instant,
     member_joins: u32,
 }
@@ -157,7 +185,17 @@ impl IrohNet {
     ) -> Result<Self, NetError> {
         let key = SecretKey::from_bytes(&identity.secret_bytes());
         let builder = match config {
-            IrohConfig::Default => Endpoint::builder(presets::N0),
+            IrohConfig::Default => Endpoint::builder(presets::Minimal)
+                .relay_mode(RelayMode::Custom(relay_map()))
+                .address_lookup(PkarrPublisher::n0_dns().addr_filter(AddrFilter::unfiltered()))
+                .address_lookup(PkarrResolver::n0_dns())
+                .address_lookup(DnsAddressLookup::n0_dns())
+                .address_lookup(DhtAddressLookup::builder().addr_filter(AddrFilter::unfiltered())),
+            IrohConfig::RelayOnly { relay, lookup } => Endpoint::builder(presets::Minimal)
+                .relay_mode(RelayMode::custom([relay]))
+                .clear_address_lookup()
+                .address_lookup(lookup)
+                .clear_ip_transports(),
             IrohConfig::Isolated { bind, lookup } => Endpoint::builder(presets::Minimal)
                 .relay_mode(RelayMode::Disabled)
                 .clear_address_lookup()
@@ -192,6 +230,7 @@ impl IrohNet {
             events_tx,
             events_rx,
             conns: HashMap::new(),
+            dials: HashMap::new(),
             member_window: Instant::now(),
             member_joins: 0,
         };
@@ -213,6 +252,31 @@ impl IrohNet {
     }
 
     /// Connect to `peer` on the exchange ALPN, send our `Hello`, and keep the connection.
+    /// Start dialing `peer` as a background task unless it is connected or already being dialed.
+    pub fn start_dial_peer(&mut self, peer: PeerId) {
+        if self
+            .conns
+            .get(&peer)
+            .is_some_and(|c| c.close_reason().is_none())
+            || self.dials.contains_key(&peer)
+        {
+            return;
+        }
+        let Ok(id) = endpoint_id(peer) else { return };
+        let endpoint = self.endpoint.clone();
+        self.dials.insert(
+            peer,
+            tokio::spawn(async move {
+                tokio::time::timeout(DIAL_TIMEOUT, endpoint.connect(id, EXCHANGE_ALPN))
+                    .await
+                    .map_err(|_| NetError::Io("dial timed out".into()))?
+                    .map_err(io)
+            }),
+        );
+    }
+
+    /// Connect to `peer` on the exchange ALPN, send our `Hello`, and keep the connection. The
+    /// dial itself is a task: if this future is dropped, the next call picks the result up.
     pub async fn dial_peer(&mut self, peer: PeerId) -> Result<(), NetError> {
         if self
             .conns
@@ -221,11 +285,12 @@ impl IrohNet {
         {
             return Ok(());
         }
-        let id = endpoint_id(peer)?;
-        let conn = tokio::time::timeout(DIAL_TIMEOUT, self.endpoint.connect(id, EXCHANGE_ALPN))
-            .await
-            .map_err(|_| NetError::Io("dial timed out".into()))?
-            .map_err(io)?;
+        endpoint_id(peer)?;
+        self.start_dial_peer(peer);
+        let handle = self.dials.get_mut(&peer).ok_or(NetError::UnknownPeer)?;
+        let joined = handle.await;
+        self.dials.remove(&peer);
+        let conn = joined.map_err(io)??;
         let shared = self.shared.clone();
         let c2 = conn.clone();
         tokio::spawn(async move { serve_connection(shared, c2, true).await });
@@ -410,6 +475,10 @@ impl Network for IrohNet {
 impl Dialer for IrohNet {
     async fn dial(&mut self, peer: PeerId) -> Result<(), NetError> {
         self.dial_peer(peer).await
+    }
+
+    fn start_dial(&mut self, peer: PeerId) {
+        self.start_dial_peer(peer)
     }
 
     fn connected(&self) -> Vec<PeerId> {

@@ -26,6 +26,10 @@ pub const MAX_EXCHANGE_ASKS: usize = 3;
 #[allow(async_fn_in_trait)]
 pub trait Dialer {
     async fn dial(&mut self, peer: PeerId) -> Result<(), NetError>;
+    /// Begin dialing `peer` in the background without waiting, so several dials can run at
+    /// once and a dial survives the caller being dropped. `dial` then picks up the result.
+    /// The default does nothing (a dialer that connects instantly needs no head start).
+    fn start_dial(&mut self, _peer: PeerId) {}
     fn connected(&self) -> Vec<PeerId>;
     async fn request_peers(
         &mut self,
@@ -140,6 +144,13 @@ pub async fn run<D: Dialer>(
         return Outcome::Failed {
             trusted_retry_at: Some(at),
         };
+    }
+    // Start every trusted dial first: a dead entry must not make the live ones wait for its
+    // timeout, and this whole function is dropped whenever the caller's loop wakes.
+    for &peer in trusted.peers() {
+        if peer != me {
+            d.start_dial(peer);
+        }
     }
     for &peer in trusted.peers() {
         if peer != me && d.dial(peer).await.is_ok() {

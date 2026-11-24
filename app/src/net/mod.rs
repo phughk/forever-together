@@ -6,7 +6,8 @@
 //! * `known_peers`: the LRU table with reserved slots for active topics, persisted in the store.
 //! * `exchange`: the peer exchange protocol (ALPN `wowft/peers/1`) and its limits.
 //! * `bootstrap`: remembered peers, then peer exchange, then trusted peers with backoff.
-//! * `trusted`: the trusted peer keys.
+//! * `trusted`: the trusted peer keys and the project's relay list.
+//! * `relay_server`: the rate-limited hole-punching relay a headless node can run (ADR 0041).
 //! * `iroh_net`: the real `Network` on iroh and iroh-gossip.
 //! * `live`: wraps a transport, runs bootstrap and publishes the network status.
 //! * `fake`: an in-memory `Network` for tests.
@@ -18,6 +19,7 @@ pub mod gossip;
 pub mod iroh_net;
 pub mod known_peers;
 pub mod live;
+pub mod relay_server;
 pub mod trusted;
 
 pub use fake::{FakeHub, FakeNet};

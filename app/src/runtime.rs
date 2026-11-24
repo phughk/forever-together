@@ -278,13 +278,22 @@ pub fn start_window(data_dir: &Path, assets: Arc<dyn Assets>) -> Result<Running,
 }
 
 /// `--headless`: join the network and relay until interrupted. No web server, no window.
-pub fn run_headless(data_dir: &Path) -> Result<(), AnyError> {
+pub fn run_headless(data_dir: &Path, relay: Option<std::net::SocketAddr>) -> Result<(), AnyError> {
     let (_lock, store) = open_store(data_dir)?;
     let me = Identity::load_or_create(store.as_ref())?.peer_id();
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()?;
     rt.block_on(async move {
+        // The relay role is opt-in and only exists here (ADR 0041).
+        let relay_server = match relay {
+            Some(addr) => {
+                let r = crate::net::relay_server::RelayServer::start(addr).await?;
+                tracing::info!("serving as a hole-punching relay on {:?}", r.addr());
+                Some(r)
+            }
+            None => None,
+        };
         let (status, _rx) = watch::channel(NetworkView {
             peers: 0,
             bootstrap: BootstrapSource::None,
@@ -307,6 +316,7 @@ pub fn run_headless(data_dir: &Path) -> Result<(), AnyError> {
                 }
             }
         }
+        drop(relay_server);
         Ok::<(), AnyError>(())
     })
 }

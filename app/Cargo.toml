@@ -34,6 +34,8 @@ tokio-util = "0.7"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt", "ansi"] }
 varaq = "0.1.1"
+iroh-mainline-address-lookup = "0.6"
+iroh-relay = { version = "=1.5.0", default-features = false, features = ["server"] }
 
 [dev-dependencies]
 tower = { version = "0.5", default-features = false, features = ["util"] }

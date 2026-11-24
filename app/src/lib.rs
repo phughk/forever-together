@@ -82,8 +82,8 @@ pub fn run() {
                 fail(e);
             }
         }
-        Mode::Headless => {
-            if let Err(e) = runtime::run_headless(&data_dir) {
+        Mode::Headless { relay } => {
+            if let Err(e) = runtime::run_headless(&data_dir, relay) {
                 fail(e);
             }
         }

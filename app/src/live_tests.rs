@@ -191,3 +191,115 @@ fn real_network_bootstrap_remembered_peers_exchange_and_gossip() {
         "step 3b: A and B lost each other without T"
     );
 }
+
+/// Ticket 0049, measurement: time for a node that knows only a key to connect, with n0 DNS
+/// only, the Mainline DHT only, and both (ADR 0041). Two endpoints on this machine, so the
+/// connection itself is quick; what is measured is publish plus resolve. Run:
+/// `cargo test --lib live_tests::lookup -- --ignored --nocapture`
+#[test]
+#[ignore = "needs the internet; run with --ignored --nocapture"]
+fn lookup_time_for_dns_dht_and_both() {
+    use iroh::address_lookup::{AddrFilter, DnsAddressLookup, PkarrPublisher, PkarrResolver};
+    use iroh::endpoint::presets;
+    use iroh::{Endpoint, RelayMode};
+    use iroh_mainline_address_lookup::DhtAddressLookup;
+
+    const ALPN: &[u8] = b"wowft/test/lookup";
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        for (name, dns, dht) in [
+            ("dns", true, false),
+            ("dht", false, true),
+            ("both", true, true),
+        ] {
+            let build = || async {
+                let mut b = Endpoint::builder(presets::Minimal)
+                    .relay_mode(RelayMode::Default)
+                    .alpns(vec![ALPN.to_vec()]);
+                if dns {
+                    b = b
+                        .address_lookup(
+                            PkarrPublisher::n0_dns().addr_filter(AddrFilter::unfiltered()),
+                        )
+                        .address_lookup(PkarrResolver::n0_dns())
+                        .address_lookup(DnsAddressLookup::n0_dns());
+                }
+                if dht {
+                    b = b.address_lookup(
+                        DhtAddressLookup::builder().addr_filter(AddrFilter::unfiltered()),
+                    );
+                }
+                b.bind().await.unwrap()
+            };
+            let (a, b) = (build().await, build().await);
+            let a_id = a.id();
+            let acc = tokio::spawn({
+                let a = a.clone();
+                async move {
+                    while let Some(inc) = a.accept().await {
+                        if let Ok(c) = inc.await {
+                            c.closed().await;
+                        }
+                    }
+                }
+            });
+            let t0 = Instant::now();
+            let mut tries = 0;
+            let ok = loop {
+                tries += 1;
+                let r = tokio::time::timeout(Duration::from_secs(10), b.connect(a_id, ALPN)).await;
+                if let Ok(Ok(c)) = r {
+                    c.close(0u32.into(), b"x");
+                    break true;
+                }
+                if t0.elapsed() > Duration::from_secs(120) {
+                    break false;
+                }
+                tokio::time::sleep(Duration::from_secs(1)).await;
+            };
+            eprintln!(
+                "LIVE lookup {name}: connected={ok} after {:.1} s ({tries} tries)",
+                t0.elapsed().as_secs_f32()
+            );
+            acc.abort();
+            let _ = tokio::time::timeout(Duration::from_secs(3), a.close()).await;
+            let _ = tokio::time::timeout(Duration::from_secs(3), b.close()).await;
+        }
+    });
+}
+
+/// Two `IrohNet`s on the real network with the app's `Default` configuration: B dials A by key.
+#[test]
+#[ignore = "needs the internet; run with --ignored --nocapture"]
+fn default_config_dials_by_key() {
+    use crate::identity::Identity;
+    use crate::net::bootstrap::Dialer;
+    use crate::net::{IrohConfig, IrohNet, KnownPeers};
+    use crate::store::MemStore;
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        let known = || KnownPeers::new(100, Arc::new(MemStore::new()));
+        let ia = Arc::new(Identity::generate());
+        let ib = Arc::new(Identity::generate());
+        let a = IrohNet::start(ia.clone(), known(), IrohConfig::Default)
+            .await
+            .unwrap();
+        let mut b = IrohNet::start(ib, known(), IrohConfig::Default)
+            .await
+            .unwrap();
+        let t0 = Instant::now();
+        let mut ok = false;
+        while t0.elapsed() < Duration::from_secs(60) {
+            if Dialer::dial(&mut b, ia.peer_id()).await.is_ok() {
+                ok = true;
+                break;
+            }
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+        eprintln!(
+            "LIVE default dial by key: ok={ok} after {:.1} s",
+            t0.elapsed().as_secs_f32()
+        );
+        drop(a);
+    });
+}

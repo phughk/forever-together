@@ -10,6 +10,10 @@ pub struct Cli {
     /// Run without a window or web server: only join the network and relay as a peer.
     #[arg(long)]
     pub headless: bool,
+    /// Also serve as a hole-punching relay on this address (headless only, ADR 0041). Players'
+    /// apps carry the project's relay URLs; this is how a node becomes one of them.
+    #[arg(long, value_name = "ADDR:PORT", requires = "headless")]
+    pub relay: Option<std::net::SocketAddr>,
     /// Where to keep the identity, settings and known peers.
     #[arg(long, value_name = "DIR", global = true)]
     pub data_dir: Option<PathBuf>,
@@ -65,7 +69,7 @@ pub struct ExportArgs {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Mode {
     Key(KeyCommand),
-    Headless,
+    Headless { relay: Option<std::net::SocketAddr> },
     Window,
 }
 
@@ -75,7 +79,7 @@ impl Cli {
         if let Some(Command::Key(k)) = &self.command {
             Mode::Key(k.clone())
         } else if self.headless {
-            Mode::Headless
+            Mode::Headless { relay: self.relay }
         } else {
             Mode::Window
         }
@@ -125,9 +129,25 @@ mod tests {
     }
 
     #[test]
+    fn relay_needs_headless_and_is_passed_through() {
+        assert!(
+            parse(&["--relay", "0.0.0.0:3340"]).is_err(),
+            "a window install cannot serve"
+        );
+        let c = parse(&["--headless", "--relay", "0.0.0.0:3340"]).unwrap();
+        assert_eq!(
+            c.mode(),
+            Mode::Headless {
+                relay: Some("0.0.0.0:3340".parse().unwrap())
+            }
+        );
+        assert!(parse(&["--headless", "--relay", "not-an-address"]).is_err());
+    }
+
+    #[test]
     fn headless_and_data_dir() {
         let c = parse(&["--headless", "--data-dir", "/tmp/x"]).unwrap();
-        assert_eq!(c.mode(), Mode::Headless);
+        assert_eq!(c.mode(), Mode::Headless { relay: None });
         assert_eq!(c.resolve_data_dir(), PathBuf::from("/tmp/x"));
         let c = parse(&["--data-dir=rel/dir"]).unwrap();
         assert_eq!(c.data_dir, Some(PathBuf::from("rel/dir")));
