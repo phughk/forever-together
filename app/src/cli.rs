@@ -99,6 +99,15 @@ impl Cli {
 const APP_DIR: &str = "forever-together";
 
 /// The per-user data directory for `os`, reading the environment through `env`.
+/// Whether the default data directory can be worked out: `HOME` (or `APPDATA` on Windows, or an
+/// absolute `XDG_DATA_HOME`) is set. `default_data_dir` falls back to `.` otherwise.
+pub fn has_home_for_default_dir(env: impl Fn(&str) -> Option<std::ffi::OsString>) -> bool {
+    let set = |k: &str| env(k).is_some_and(|v| !v.is_empty());
+    set("HOME")
+        || set("APPDATA")
+        || env("XDG_DATA_HOME").is_some_and(|v| std::path::Path::new(&v).is_absolute())
+}
+
 pub fn default_data_dir(env: impl Fn(&str) -> Option<PathBuf>, os: &str) -> PathBuf {
     let home = || env("HOME").unwrap_or_else(|| PathBuf::from("."));
     match os {
@@ -230,6 +239,19 @@ mod tests {
         assert!(parse(&["--nope"]).is_err());
         assert!(parse(&["--data-dir"]).is_err());
         assert!(parse(&["--headless=maybe"]).is_err());
+    }
+
+    #[test]
+    fn a_default_data_dir_needs_home() {
+        let with = |home: Option<&'static str>| {
+            move |k: &str| match (k, home) {
+                ("HOME", Some(h)) => Some(std::ffi::OsString::from(h)),
+                _ => None,
+            }
+        };
+        assert!(has_home_for_default_dir(with(Some("/root"))));
+        assert!(!has_home_for_default_dir(with(None)));
+        assert!(!has_home_for_default_dir(with(Some(""))));
     }
 
     #[test]

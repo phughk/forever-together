@@ -86,7 +86,7 @@ Every install has one permanent ed25519 key. Its public half is the peer ID. Hea
 - Not supported on Windows release builds yet (no console, ticket 0046).
 
 
-A cloud node gets its key by `forever-together key import ./node.key --data-dir <dir>` before its first start. If a start has already created a random key, add `--force`. A headless node logs nothing at start unless `RUST_LOG` is set.
+A cloud node gets its key by `forever-together key import ./node.key --data-dir <dir>` before its first start. If a start has already created a random key, add `--force`. A headless node logs nothing at start unless `RUST_LOG` is set. Under systemd set `HOME` or pass `--data-dir`: without either the program refuses to start (a relative default directory would give the node a new key on every setup).
 
 ## Mobile
 

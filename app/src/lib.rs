@@ -67,6 +67,11 @@ fn init_logging() {
 #[cfg_attr(feature = "ui", cfg_attr(mobile, tauri::mobile_entry_point))]
 pub fn run() {
     let cli = Cli::parse();
+    // Without HOME the default directory would be relative to the working directory, which for
+    // a service is `/`: a different store, and a new random key, per setup. Refuse instead.
+    if cli.data_dir.is_none() && !cli::has_home_for_default_dir(|k| std::env::var_os(k)) {
+        fail("cannot find a data directory (HOME is not set); set HOME or pass --data-dir");
+    }
     let data_dir = cli.resolve_data_dir();
     // Key commands print results on stdout and stderr and never log.
     if !matches!(cli.mode(), Mode::Key(_)) {
