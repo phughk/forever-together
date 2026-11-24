@@ -64,6 +64,17 @@ pub enum IrohConfig {
     },
 }
 
+/// The endpoint the app runs on (ADR 0041): n0's relays plus the project's, and address lookup
+/// through n0's DNS and the DHT, publishing direct addresses.
+pub(crate) fn default_builder() -> iroh::endpoint::Builder {
+    Endpoint::builder(presets::Minimal)
+        .relay_mode(RelayMode::Custom(relay_map()))
+        .address_lookup(PkarrPublisher::n0_dns().addr_filter(AddrFilter::unfiltered()))
+        .address_lookup(PkarrResolver::n0_dns())
+        .address_lookup(DnsAddressLookup::n0_dns())
+        .address_lookup(DhtAddressLookup::builder().addr_filter(AddrFilter::unfiltered()))
+}
+
 /// n0's default relays plus the project's own (`trusted::RELAYS`).
 fn relay_map() -> RelayMap {
     let map = RelayMode::Default.relay_map();
@@ -185,12 +196,7 @@ impl IrohNet {
     ) -> Result<Self, NetError> {
         let key = SecretKey::from_bytes(&identity.secret_bytes());
         let builder = match config {
-            IrohConfig::Default => Endpoint::builder(presets::Minimal)
-                .relay_mode(RelayMode::Custom(relay_map()))
-                .address_lookup(PkarrPublisher::n0_dns().addr_filter(AddrFilter::unfiltered()))
-                .address_lookup(PkarrResolver::n0_dns())
-                .address_lookup(DnsAddressLookup::n0_dns())
-                .address_lookup(DhtAddressLookup::builder().addr_filter(AddrFilter::unfiltered())),
+            IrohConfig::Default => default_builder(),
             IrohConfig::RelayOnly { relay, lookup } => Endpoint::builder(presets::Minimal)
                 .relay_mode(RelayMode::custom([relay]))
                 .clear_address_lookup()

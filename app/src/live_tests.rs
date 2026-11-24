@@ -303,3 +303,50 @@ fn default_config_dials_by_key() {
         drop(a);
     });
 }
+
+/// Confirm the built-in trusted peers are up: dial each `BUILTIN` key with the app's own endpoint
+/// setup and report whether it connected, how long it took and what kind of path it got.
+/// Run: `cargo test --lib live_tests::trusted_peers -- --ignored --nocapture`
+#[test]
+#[ignore = "needs the internet and the trusted peers running"]
+fn trusted_peers_are_reachable() {
+    use iroh::EndpointId;
+    const ALPN: &[u8] = b"wowft/peers/1";
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        let ep = crate::net::iroh_net::default_builder()
+            .alpns(vec![ALPN.to_vec()])
+            .bind()
+            .await
+            .unwrap();
+        for (i, key) in crate::net::trusted::BUILTIN.iter().enumerate() {
+            let id = EndpointId::from_bytes(key).unwrap();
+            let t0 = Instant::now();
+            let r = tokio::time::timeout(Duration::from_secs(30), ep.connect(id, ALPN)).await;
+            match r {
+                Ok(Ok(conn)) => {
+                    tokio::time::sleep(Duration::from_secs(3)).await;
+                    let (mut ip, mut relay) = (0, 0);
+                    for p in conn.paths().iter() {
+                        if p.is_ip() {
+                            ip += 1
+                        } else if p.is_relay() {
+                            relay += 1
+                        }
+                    }
+                    eprintln!(
+                        "LIVE trusted[{i}] connected in {:.1} s; paths: {ip} direct, {relay} relay",
+                        t0.elapsed().as_secs_f32()
+                    );
+                    conn.close(0u32.into(), b"x");
+                }
+                Ok(Err(e)) => eprintln!(
+                    "LIVE trusted[{i}] FAILED after {:.1} s: {e}",
+                    t0.elapsed().as_secs_f32()
+                ),
+                Err(_) => eprintln!("LIVE trusted[{i}] not reachable within 30 s"),
+            }
+        }
+        let _ = tokio::time::timeout(Duration::from_secs(3), ep.close()).await;
+    });
+}

@@ -16,3 +16,7 @@
 ## Done when
 
 BUILTIN holds the key; a fresh instance with no remembered peers reaches the trusted peer as a last resort.
+
+## Check from outside, 2026-11-24
+
+After the author reported trusted1 deployed: SSH on `89.40.6.71` answers; TCP 3340, 80, 443 and 7842 time out (filtered, not refused); n0's DNS has no record for either `BUILTIN` key; dialing both keys with the app's own endpoint setup fails with "No addressing information available" (`live_tests::trusted_peers_are_reachable`, ignored test). So from here trusted1 is not resolvable by key and the relay port is not reachable. Likely causes, none confirmed: the node is not running; it runs with a different key than `BUILTIN[0]` (check `key show` against `7c4b430a…`); or a firewall blocks TCP 3340 and the node's outbound UDP.
