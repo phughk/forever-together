@@ -114,3 +114,20 @@ Run with `cd app && cargo test --lib live_tests -- --ignored --nocapture` (needs
 | Hosts contacted (step 5) | Sampled with `lsof`: the only established connection seen was TCP 443 to `euc1-1.relay.n0.iroh.link` (the EU relay). Short-lived DNS and pkarr traffic and unconnected UDP sockets were not captured, so the list is incomplete. |
 | Degraded cases (step 6), two networks, direct versus relayed path | **Not run.** |
 | Forged-author rejection | Not run live (loopback tests only). |
+
+## Relay rate limit, DHT lookup and build checks (ticket 0049, ADR 0041, 2026-11-24)
+
+One macOS machine. The relay numbers are loopback (they show what the limit does, not how real NATs behave); the lookup numbers are against n0's DNS and the public Mainline DHT. Harness: `app/src/net/relay_server.rs` tests and `app/src/live_tests.rs` (both ignored measurements).
+
+| Question | Result |
+|---|---|
+| Does `iroh-mainline-address-lookup` 0.6.1 build against `iroh` 1.5.0? | **Yes** (`cargo clippy` clean; used in `IrohNet::start`). |
+| Does the `iroh-relay` client connect to a plain `http://` relay URL? | **Yes** (loopback: every relay test uses `http://127.0.0.1:<port>`). |
+| Does a connection open through a rate-limited relay with no direct path? | **Yes**, in 6 to 10 ms at every rate tried (500 B/s with a 2 kB burst up to unlimited). |
+| Does the connection still gain a direct path (hole punching) under the limit? | **Yes.** About 11 to 19 ms at 1 kB/s with a 4 kB burst and above, same as unlimited (12 to 14 ms). At 500 B/s with a 2 kB burst it took 4.0 s. |
+| What does the limit do to bulk traffic through the relay? | It holds it to the rate. 20 kB took 7.3 s at 2 kB/s with an 8 kB burst, against 6.6 ms with no limit; at 500 to 1000 B/s a 20 kB transfer did not finish in 40 s (loss recovery collapses); 100 kB took 2.3 s at 20 kB/s with a 64 kB burst. **A rate limit caps sustained throughput, it cannot make it zero:** at 2 kB/s a client can still move small gossip messages through the relay. |
+| Project value chosen | **2 kB/s, 8 kB burst** (`CLIENT_BYTES_PER_SECOND`, `CLIENT_BURST_BYTES`). Not checked against real NATs. |
+| Lookup time for a node that knows only a key, two endpoints on one machine | DNS only 0.3 s; DHT only 5.0 s (second try); both 0.1 s. **iroh did not wait on the DHT** when DNS answered (one run). |
+| The full app with the new default configuration on the real network | Same result as before the change: first contact with a trusted peer 5.1 s, remembered peers 0.5 s on restart, two players saw each other in 45.4 s with a non-searching trusted peer, still connected 30 s after it stopped. |
+| Found on the way | `BUILTIN` held two keys with no node behind them. The bootstrap loop awaited each dial in turn inside a future the core drops whenever a command or tick arrives, so it never reached a live trusted peer listed after the dead ones. Fixed: dials are background tasks (`IrohNet::start_dial_peer`), and all trusted dials start before any is awaited. |
+| Not run | Two networks, real NATs, the relay on `89.40.6.71`, Windows and Linux. |

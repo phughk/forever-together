@@ -55,6 +55,7 @@ The QR holds the same text. The app has no camera scanner, so on a phone you sca
 ```sh
 forever-together                              # window mode
 forever-together --headless                   # network only, no window, no web server
+forever-together --headless --relay 0.0.0.0:3340   # also serve as a rate-limited hole-punching relay (ADR 0041)
 RUST_LOG=app_lib=debug,iroh=info forever-together --headless   # logs to stderr; default is warnings only
 forever-together key show                     # print this install's peer ID and public key
 forever-together key export ./node.key        # back up the key (new file, owner-only)

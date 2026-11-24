@@ -1,6 +1,6 @@
 # 0049. Measure the relay rate limit and the DHT lookup
 
-* **Status:** open
+* **Status:** in progress (one-machine measurements done 2026-11-24, see the spike results; two-network and real-NAT runs open)
 * **Kind:** verification
 * **Priority:** P1
 * **Blocked by:** tickets 4
@@ -15,3 +15,7 @@ Measure what ADR 0041 depends on: (1) the lowest per-client rate at which two en
 ## Done when
 
 The numbers are in `docs/spike-s0.md` and the relay rate constant is set from them.
+
+## Done so far
+
+All four items were measured or checked on one machine (spike results, "Relay rate limit, DHT lookup and build checks"). Open: the rate on real NATs (does a direct path still form at 2 kB/s with an 8 kB burst between two home networks?), DHT lookup time from a second network, and running the relay on `89.40.6.71`. Blocked by ticket 4 and by starting `--headless --relay 0.0.0.0:3340` there.

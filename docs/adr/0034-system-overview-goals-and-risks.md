@@ -64,7 +64,10 @@ flowchart TD
 | Quiet topics depend on peer exchange | Reserved slots, widening, trusted-peer fallback | mitigated |
 | Trusted peers as single point of failure, cold-start load | More keys over time, ordinary peers, backoff; key rotation needs a release | open: tickets 0008, 0010 |
 | Young dependencies (`iroh-gossip`, `varaq`) | Spike checks; keychain fallback if `varaq` fails the key-file test | open: tickets 0003, 0004 |
-| Dependence on n0's hosted relays and DNS through iroh's default preset | Self-host `iroh-relay` and address lookup if n0's services go away | open: ticket 0038 |
+| Dependence on n0's hosted relays and DNS through iroh's default preset | DHT address lookup alongside n0's DNS, and project hole-punching relays run by headless nodes (ADR 0041); n0's relays stay | mitigated on one machine: ticket 0049 (real NATs open) |
+| IP addresses of every peer readable from DNS and the DHT by anyone with the peer ID (ADR 0041); peer IDs travel in gossip to every swarm member | Accepted by the author; say so to players | accepted |
+| A relay sees which endpoint IDs connect from which addresses; the project relay is plain HTTP, so a path observer sees it too | Payload is end-to-end encrypted; the relay is opt-in on headless nodes only | accepted |
+| A rate-limited relay still carries a trickle of traffic (about 2 kB/s per client) | The limit is low; bulk traffic starves | accepted |
 | IP exposure, open LAN API | Stated in the app; token, Host and Origin checks, a visible on/off switch | accepted |
 | Unverified client assumptions | Spike S0, provisional spec values | partly done: tickets 0001, 0002 |
 | Too few users early | Widening, community communication | accepted |

@@ -52,7 +52,7 @@ Copy `_template/README.md` when starting. Nothing else goes in a folder, and not
 | [0035-web-app-only-mock-tested](0035-web-app-only-mock-tested/README.md) | [0035](../../tickets/0035-web-app-only-mock-tested.md) | open (initial draft, no review round) | |
 | [0036-mise-test-addon-submodule](0036-mise-test-addon-submodule/README.md) | [0036](../../tickets/0036-mise-test-addon-submodule.md) | open (initial draft, no review round) | |
 | [0037-adrs-mention-old-names](0037-adrs-mention-old-names/README.md) | [0037](../../tickets/0037-adrs-mention-old-names.md) | open (initial draft, no review round) | |
-| [0038-self-host-iroh-relay](0038-self-host-iroh-relay/README.md) | [0038](../../tickets/0038-self-host-iroh-relay.md) | open (initial draft, no review round) | |
+| [0038-self-host-iroh-relay](0038-self-host-iroh-relay/README.md) | [0038](../../tickets/0038-self-host-iroh-relay.md) | closed (decided, built) | 0041 |
 | [0039-scan-log-store](0039-scan-log-store/README.md) | [0039](../../tickets/0039-scan-log-store.md) | open (initial draft, no review round) | |
 | [0040-scan-log-export-api](0040-scan-log-export-api/README.md) | [0040](../../tickets/0040-scan-log-export-api.md) | open (initial draft, no review round) | |
 | [0041-scan-log-ui](0041-scan-log-ui/README.md) | [0041](../../tickets/0041-scan-log-ui.md) | open (initial draft, no review round) | |

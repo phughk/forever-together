@@ -1,9 +1,8 @@
 # 0048. Build the DHT lookup, published addresses and the headless relay
 
-* **Status:** open
+* **Status:** done (built 2026-11-24, ADR 0041; verified on one machine)
 * **Kind:** feature
 * **Priority:** P1
-* **Blocked by:** tickets 49 (the rate and the unknowns)
 * **Source:** ADR 0041
 * **ADRs:** [ADR 0041](../docs/adr/0041-address-lookup-and-hole-punching-relay.md)
 * **EGM:** [0038-self-host-iroh-relay](../docs/egm/0038-self-host-iroh-relay/design_draft.md)

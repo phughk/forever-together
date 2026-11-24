@@ -25,8 +25,7 @@ Priority was set on 2026-11-21 by one question: what must be true before real pl
 
 | # | Ticket | Kind | Why | Blocked by |
 |---|--------|------|-----|------------|
-| 0049 | [Measure the relay rate limit and the DHT lookup](0049-measure-relay-rate-and-dht-latency.md) | verification | The relay rate, DHT latency and two build checks that ADR 0041 depends on. | 4 |
-| 0048 | [Build the DHT lookup, published addresses and the headless relay](0048-build-address-lookup-and-headless-relay.md) | feature | Implements ADR 0041. | 49 |
+| 0049 | [Measure the relay rate limit and the DHT lookup](0049-measure-relay-rate-and-dht-latency.md) | verification | Measured on one machine; open: real NATs, and running the relay on `89.40.6.71`. | 4 |
 | 0006 | [Verify the addon installer on a real install](0006-verify-addon-installer-real-install.md) | verification | The first-run path for players: the installer is untested on any real install. |  |
 | 0011 | [Supply the addon page URL](0011-addon-page-url.md) | prerequisite | First-run step 1 is plain text until an addon page URL exists. |  |
 | 0012 | [Addon release flow and update tracking](0012-addon-releases-and-updates.md) | feature | Players need release artefacts and a version flow before launch. |  |
@@ -83,5 +82,6 @@ Priority was set on 2026-11-21 by one question: what must be true before real pl
 |---|--------|------|
 | 0009 | [Load a chosen private key into an instance](0009-load-private-key-into-instance.md) | done, folded into 0043 |
 | 0047 | [A headless trusted peer does not introduce players to each other](0047-headless-trusted-peer-introduces-nobody.md) | Fixed by the membership topic (ADR 0040); verified on one machine |
+| 0048 | [Build the DHT lookup, published addresses and the headless relay](0048-build-address-lookup-and-headless-relay.md) | built (ADR 0041) |
 | 0038 | [Address lookup, published addresses and a headless relay (decision)](0038-self-host-iroh-relay.md) | decided in ADR 0041 |
 | 0043 | [Key management: export, import and reset keys from the CLI](0043-key-management.md) | Part 1 done; Part 2 is 0044 |
