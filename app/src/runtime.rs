@@ -136,8 +136,6 @@ fn show_old(old: &OldKey) -> String {
     }
 }
 
-const CHANGED_WARNING: &str = "Other nodes now see a new peer ID.";
-
 /// The `key` subcommands (ADR 0039). Takes the data directory lock first, so it refuses while the
 /// app (or another `key` command) uses the directory. Output goes to `out` (data) and `err`
 /// (notes), and `confirm` answers the reset prompt, so tests can drive it.
@@ -174,26 +172,19 @@ pub fn run_key_command<O: Write, E: Write>(
         KeyCommand::Export(ExportArgs { stdout: true, .. }) => {
             let (peer, text) = keys::export_text(&store).map_err(key_error)?;
             write!(out, "{text}")?;
-            writeln!(err, "peer {peer}")?;
+            writeln!(err, "peer: {peer}")?;
         }
         KeyCommand::Export(ExportArgs {
             file: Some(path), ..
         }) => {
             let peer = keys::export_to_file(&store, path).map_err(key_error)?;
-            writeln!(out, "wrote the key for peer {peer} to {}", path.display())?;
+            writeln!(out, "peer: {peer}\nfile: {}", path.display())?;
         }
         KeyCommand::Export(_) => return Err("give a file, or --stdout".into()),
         KeyCommand::Import { file, force } => {
             let r = keys::import_from_file(&store, file, *force).map_err(key_error)?;
-            writeln!(
-                out,
-                "imported the key; peer {} -> {}",
-                show_old(&r.old),
-                r.new
-            )?;
-            if r.old != OldKey::None {
-                writeln!(err, "{CHANGED_WARNING}")?;
-            }
+            // Only `KEY: VALUE` lines, like reset.
+            writeln!(out, "old: {}\nnew: {}", show_old(&r.old), r.new)?;
         }
         KeyCommand::Reset { yes } => {
             let old = keys::old_key(&store).map_err(key_error)?;

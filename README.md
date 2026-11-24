@@ -78,7 +78,7 @@ Every install has one permanent ed25519 key. Its public half is the peer ID. Hea
 
 - `key show` prints one line of JSON: `{"peer_id": <hex, the form used in `BUILTIN` and `trusted_peers`>, "public_key": <OpenSSH public key line>}`. Read a field with `jq -r .peer_id`. `key show` and `key export` create a key if there is none.
 - `key export <file>` writes the key as an unencrypted OpenSSH ed25519 key file: a new file, owner-only, never overwriting. `key export --stdout` prints it instead (a shell redirect creates the file with your umask, so `chmod 600` it). The file works with `ssh-keygen -y -f <file>` and `age -d -i <file>`.
-- `key import <file>` replaces the stored key. It refuses if a key is already stored, unless you pass `--force`. A key created by an earlier `key show` counts, so import into a fresh data directory before anything else, or use `--force`.
+- `key import <file>` replaces the stored key and prints `old: <peer ID or none>` and `new: <peer ID>`; `key export <file>` prints `peer: <peer ID>` and `file: <path>`. It refuses if a key is already stored, unless you pass `--force`. A key created by an earlier `key show` counts, so import into a fresh data directory before anything else, or use `--force`.
 - `key reset` makes a new key after a confirmation prompt (`--yes` skips it) and prints only `old: <peer ID or none>` and `new: <peer ID>`. Other nodes see a new peer ID.
 - The commands take a lock on the data directory, so they refuse while the app or a headless node is running on it. Stop the node first. Back up before you reset or force an import.
 - Not supported on Windows release builds yet (no console, ticket 0046).

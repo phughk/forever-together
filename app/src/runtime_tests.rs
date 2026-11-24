@@ -118,8 +118,8 @@ fn a_key_made_by_show_needs_force_before_import_replaces_it() {
     assert!(e.contains("--force") && e.contains(&first), "{e}");
     assert_eq!(peer_of(&key(&d, KeyCommand::Show, false).unwrap().0), first);
     let (out, err) = key(&d, import(true), false).unwrap();
-    assert!(out.contains(&first));
-    assert!(err.contains("new peer ID"));
+    assert!(out.starts_with(&format!("old: {first}\nnew: ")), "{out}");
+    assert!(err.is_empty(), "{err}");
     assert_ne!(peer_of(&key(&d, KeyCommand::Show, false).unwrap().0), first);
     let _ = std::fs::remove_file(file);
     let _ = std::fs::remove_dir_all(d);
@@ -141,7 +141,7 @@ fn export_to_stdout_prints_the_key_and_notes_the_peer_on_stderr() {
     .unwrap();
     assert!(out.starts_with("-----BEGIN OPENSSH PRIVATE KEY-----"));
     assert!(!err.contains("BEGIN"));
-    assert!(err.contains(&peer));
+    assert_eq!(err, format!("peer: {peer}\n"));
     let _ = std::fs::remove_dir_all(d);
 }
 
